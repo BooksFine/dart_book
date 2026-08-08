@@ -238,6 +238,19 @@ class EpubEncoder implements BookEncoder {
           buffer.write(
             '<img src="resources/${img.ref.id}" alt="${_escapeHtml(img.alt ?? '')}"/>',
           );
+        case BookAudioBlock audio:
+          buffer.write(
+            '<audio src="resources/${audio.ref.id}"${audio.controls ? ' controls="controls"' : ''}></audio>',
+          );
+        case BookVideoBlock video:
+          final posterAttr = video.posterRef != null ? ' poster="resources/${video.posterRef!.id}"' : '';
+          buffer.write(
+            '<video src="resources/${video.ref.id}"$posterAttr${video.controls ? ' controls="controls"' : ''}></video>',
+          );
+        case BookMathBlock math:
+          buffer.write(math.mathml);
+        case BookSvgBlock svg:
+          buffer.write(svg.svg);
         case BookHorizontalRule():
           buffer.write('<hr/>');
         case BookEmptyLine():

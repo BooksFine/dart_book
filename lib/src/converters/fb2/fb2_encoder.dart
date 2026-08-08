@@ -348,6 +348,18 @@ class Fb2Encoder implements BookEncoder {
         case BookImageBlock image:
           builder.element('image', attributes: {'l:href': '#${image.ref.id}'});
 
+        case BookAudioBlock audio:
+          builder.element('p', nest: '[Audio: ${audio.ref.id}]');
+
+        case BookVideoBlock video:
+          builder.element('p', nest: '[Video: ${video.ref.id}]');
+
+        case BookMathBlock math:
+          builder.element('p', nest: _stripTags(math.mathml));
+
+        case BookSvgBlock():
+          builder.element('p', nest: '[SVG Graphic]');
+
         case BookHorizontalRule() || BookEmptyLine():
           builder.element('empty-line');
 

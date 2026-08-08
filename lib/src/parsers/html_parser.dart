@@ -71,11 +71,40 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       ],
       'hr' => const [BookHorizontalRule()],
       'img' => [_parseImageBlock(node)],
+      'audio' => [_parseAudioBlock(node)],
+      'video' => [_parseVideoBlock(node)],
+      'math' => [BookMathBlock(mathml: node.outerHtml)],
+      'svg' => [BookSvgBlock(svg: node.outerHtml)],
       'table' => [_parseTable(node)],
       'br' => const [BookEmptyLine()],
       'div' || 'main' || 'body' => parse(node.nodes),
       _ => [BookRawHtmlBlock(node.outerHtml)],
     };
+  }
+
+  BookAudioBlock _parseAudioBlock(dom.Element element) {
+    final src = element.attributes['src'] ??
+        element.querySelector('source')?.attributes['src'] ??
+        '';
+    final id = registrar?.call(src, isInline: false) ?? src;
+    return BookAudioBlock(
+      ref: BookResourceRef(id),
+      controls: element.attributes.containsKey('controls'),
+    );
+  }
+
+  BookVideoBlock _parseVideoBlock(dom.Element element) {
+    final src = element.attributes['src'] ??
+        element.querySelector('source')?.attributes['src'] ??
+        '';
+    final poster = element.attributes['poster'];
+    final id = registrar?.call(src, isInline: false) ?? src;
+    final posterId = poster != null ? registrar?.call(poster, isInline: false) ?? poster : null;
+    return BookVideoBlock(
+      ref: BookResourceRef(id),
+      posterRef: posterId != null ? BookResourceRef(posterId) : null,
+      controls: element.attributes.containsKey('controls'),
+    );
   }
 
   BookSection _parseSection(dom.Element element) {

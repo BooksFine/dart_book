@@ -326,3 +326,43 @@ class BookRawXmlInline extends BookInline {
 
   const BookRawXmlInline(this.xml, {super.attributes});
 }
+
+/// Блочный аудиоэлемент (`<audio>`).
+class BookAudioBlock extends BookBlock {
+  final BookResourceRef ref;
+  final bool controls;
+
+  const BookAudioBlock({
+    required this.ref,
+    this.controls = true,
+    super.attributes,
+  });
+}
+
+/// Блочный видеоэлемент (`<video>`).
+class BookVideoBlock extends BookBlock {
+  final BookResourceRef ref;
+  final BookResourceRef? posterRef;
+  final bool controls;
+
+  const BookVideoBlock({
+    required this.ref,
+    this.posterRef,
+    this.controls = true,
+    super.attributes,
+  });
+}
+
+/// Блок с математической формулой (MathML `<math>`).
+class BookMathBlock extends BookBlock {
+  final String mathml;
+
+  const BookMathBlock({required this.mathml, super.attributes});
+}
+
+/// Векторный графический блок (SVG `<svg>`).
+class BookSvgBlock extends BookBlock {
+  final String svg;
+
+  const BookSvgBlock({required this.svg, super.attributes});
+}

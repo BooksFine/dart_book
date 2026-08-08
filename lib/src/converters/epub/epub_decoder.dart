@@ -29,20 +29,17 @@ class EpubDecoder implements BookDecoder {
   Future<Book> decode(Uint8List bytes, {BookDecodingOptions? options}) async {
     final archive = ZipDecoder().decodeBytes(bytes);
 
-    final containerFile = archive.findFile('META-INF/container.xml');
-    if (containerFile == null) {
-      throw Exception('Invalid EPUB: META-INF/container.xml not found');
+    // 1. OCF & DRM check
+    final encryptedPaths = OcfContainer.parseEncryptionPaths(archive);
+    if (encryptedPaths.isNotEmpty) {
+      throw EpubEncryptedResourceException(encryptedPaths);
     }
 
-    final containerXml = XmlDocument.parse(utf8.decode(containerFile.content));
-    final opfPath = containerXml
-        .findAllElements('rootfile')
-        .first
-        .getAttribute('full-path');
-    if (opfPath == null) throw Exception('Invalid EPUB: OPF path not found');
+    final ocfContainer = OcfContainer.fromArchive(archive);
+    final opfPath = ocfContainer.primaryOpfPath;
 
     final opfFile = archive.findFile(opfPath);
-    if (opfFile == null) throw Exception('Invalid EPUB: OPF file not found');
+    if (opfFile == null) throw Exception('Invalid EPUB: OPF file not found at $opfPath');
 
     final opfXml = XmlDocument.parse(utf8.decode(opfFile.content));
     final opfDir = opfPath.contains('/')
@@ -57,6 +54,42 @@ class EpubDecoder implements BookDecoder {
       final href = element.getAttribute('href')!;
       final mediaType = element.getAttribute('media-type')!;
       manifest[itemId] = _EpubItem(itemId, href, mediaType);
+    }
+
+    // 2. Parse TOC (nav.xhtml or toc.ncx)
+    final navTitlesByHref = <String, String>{};
+    final navItem = manifest.values.firstWhere(
+      (item) => item.mediaType == 'application/xhtml+xml' && item.href.contains('nav'),
+      orElse: () => _EpubItem('', '', ''),
+    );
+    if (navItem.href.isNotEmpty) {
+      final navFile = archive.findFile(_joinPath(opfDir, navItem.href));
+      if (navFile != null) {
+        final navDoc = EpubNavDocument.parseFromString(utf8.decode(navFile.content));
+        for (final entry in navDoc.toc) {
+          if (entry.title.isNotEmpty && entry.href.isNotEmpty) {
+            navTitlesByHref[entry.href.split('#').first] = entry.title;
+          }
+        }
+      }
+    }
+
+    if (navTitlesByHref.isEmpty) {
+      final ncxItem = manifest.values.firstWhere(
+        (item) => item.mediaType == 'application/x-dtbncx+xml' || item.href.endsWith('.ncx'),
+        orElse: () => _EpubItem('', '', ''),
+      );
+      if (ncxItem.href.isNotEmpty) {
+        final ncxFile = archive.findFile(_joinPath(opfDir, ncxItem.href));
+        if (ncxFile != null) {
+          final ncxDoc = EpubNcxDocument.parseFromString(utf8.decode(ncxFile.content));
+          for (final entry in ncxDoc.navMap) {
+            if (entry.title.isNotEmpty && entry.href.isNotEmpty) {
+              navTitlesByHref[entry.href.split('#').first] = entry.title;
+            }
+          }
+        }
+      }
     }
 
     final spine = opfXml
@@ -105,17 +138,25 @@ class EpubDecoder implements BookDecoder {
       final chapterHtml = utf8.decode(chapterFile.content);
       final chapterBlocks = htmlParser.parseFromString(chapterHtml);
 
+      final title = navTitlesByHref[item.href] ?? item.id;
       blocks.add(
         BookSection(
           id: idref,
-          title: [BookText(item.id)],
+          title: [BookText(title)],
           blocks: chapterBlocks,
         ),
       );
     }
 
+    // 3. Extract all image, font, and css resources
     for (final item in manifest.values) {
-      if (item.mediaType.startsWith('image/')) {
+      final isImage = item.mediaType.startsWith('image/');
+      final isFont = item.mediaType.startsWith('font/') ||
+          item.mediaType.contains('font') ||
+          item.mediaType.contains('opentype');
+      final isCss = item.mediaType == 'text/css';
+
+      if (isImage || isFont || isCss) {
         final path = _joinPath(opfDir, item.href);
         final file = archive.findFile(path);
         if (file != null) {
@@ -124,6 +165,7 @@ class EpubDecoder implements BookDecoder {
             id: resId,
             mediaType: item.mediaType,
             bytes: Uint8List.fromList(file.content),
+            fileName: item.href.split('/').last,
           );
         }
       }
@@ -149,21 +191,42 @@ class EpubDecoder implements BookDecoder {
         metadataElement.findAllElements('dc:language').firstOrNull?.innerText ??
         'en';
 
+    final descriptionText =
+        metadataElement.findAllElements('dc:description').firstOrNull?.innerText;
+    final annotation = descriptionText != null && descriptionText.isNotEmpty
+        ? BookContent(blocks: [BookParagraph(inlines: [BookText(descriptionText)])])
+        : null;
+
     final contributors = <BookContributor>[];
     for (final element in metadataElement.findAllElements('dc:creator')) {
       contributors.add(
         BookContributor(
           role: BookContributorRole.author,
-          name: PersonName(display: element.innerText),
+          name: PersonName(display: element.innerText.trim()),
         ),
       );
     }
+    for (final element in metadataElement.findAllElements('dc:contributor')) {
+      contributors.add(
+        BookContributor(
+          role: BookContributorRole.other,
+          name: PersonName(display: element.innerText.trim()),
+        ),
+      );
+    }
+
+    final subjects = metadataElement
+        .findAllElements('dc:subject')
+        .map((e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()))
+        .toList();
 
     return (
       BookMetadata(
         title: title,
         language: language,
         contributors: contributors,
+        genres: subjects,
+        annotation: annotation,
       ),
       id,
     );
