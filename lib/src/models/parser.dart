@@ -15,8 +15,7 @@ abstract interface class Parser<T> {
 
   /// Опциональный callback для нормализации ссылок на ресурсы
   /// в [BookResourceRef].
-  final BookResourceRegistrar? registrar;
-  Parser({this.registrar});
+  BookResourceRegistrar? get registrar;
 }
 
 /// Callback-функция для регистрации ресурсов при парсинге.

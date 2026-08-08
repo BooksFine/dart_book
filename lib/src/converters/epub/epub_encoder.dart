@@ -188,17 +188,64 @@ class EpubEncoder implements BookEncoder {
         case BookHeading h:
           buffer.write('<h${h.level}>${_inlinesToXhtml(h.text)}</h${h.level}>');
         case BookSection s:
+          final idAttr = s.id != null && s.id!.isNotEmpty ? ' id="${s.id}"' : '';
+          buffer.write('<section$idAttr>');
           if (s.title.isNotEmpty) {
             buffer.write('<h2>${_inlinesToXhtml(s.title)}</h2>');
           }
           buffer.write(_blocksToXhtml(s.blocks));
           buffer.write(_blocksToXhtml(s.children));
+          buffer.write('</section>');
+        case BookQuote q:
+          buffer.write('<blockquote>');
+          buffer.write(_blocksToXhtml(q.blocks));
+          if (q.citation.isNotEmpty) {
+            buffer.write('<p class="citation">${_inlinesToXhtml(q.citation)}</p>');
+          }
+          buffer.write('</blockquote>');
+        case BookList l:
+          final tag = l.ordered ? 'ol' : 'ul';
+          buffer.write('<$tag>');
+          for (final item in l.items) {
+            buffer.write('<li>${_blocksToXhtml(item.blocks)}</li>');
+          }
+          buffer.write('</$tag>');
+        case BookTable t:
+          buffer.write('<table>');
+          for (final row in t.rows) {
+            buffer.write('<tr>');
+            for (final cell in row.cells) {
+              final colSpan = cell.colSpan != null ? ' colspan="${cell.colSpan}"' : '';
+              final rowSpan = cell.rowSpan != null ? ' rowspan="${cell.rowSpan}"' : '';
+              buffer.write('<td$colSpan$rowSpan>${_blocksToXhtml(cell.blocks)}</td>');
+            }
+            buffer.write('</tr>');
+          }
+          buffer.write('</table>');
+        case BookPoem poem:
+          buffer.write('<div class="poem">');
+          for (final stanza in poem.stanzas) {
+            buffer.write('<div class="stanza">');
+            for (final line in stanza.lines) {
+              buffer.write('<p class="poem-line">${_inlinesToXhtml(line.inlines)}</p>');
+            }
+            buffer.write('</div>');
+          }
+          buffer.write('</div>');
+        case BookCodeBlock code:
+          buffer.write('<pre><code>${_escapeHtml(code.code)}</code></pre>');
         case BookImageBlock img:
           buffer.write(
-            '<img src="resources/${img.ref.id}" alt="${img.alt ?? ''}"/>',
+            '<img src="resources/${img.ref.id}" alt="${_escapeHtml(img.alt ?? '')}"/>',
           );
-        default:
-          buffer.write('<div class="block"></div>');
+        case BookHorizontalRule():
+          buffer.write('<hr/>');
+        case BookEmptyLine():
+          buffer.write('<br/>');
+        case BookRawHtmlBlock rawHtml:
+          buffer.write(rawHtml.html);
+        case BookRawXmlBlock rawXml:
+          buffer.write(rawXml.xml);
       }
     }
     return buffer.toString();
@@ -209,20 +256,51 @@ class EpubEncoder implements BookEncoder {
     for (final inline in inlines) {
       switch (inline) {
         case BookText t:
-          buffer.write(t.text);
+          buffer.write(_escapeHtml(t.text));
+        case BookLineBreak():
+          buffer.write('<br/>');
         case BookStrong s:
           buffer.write('<strong>${_inlinesToXhtml(s.children)}</strong>');
         case BookEmphasis e:
           buffer.write('<em>${_inlinesToXhtml(e.children)}</em>');
+        case BookStrike st:
+          buffer.write('<s>${_inlinesToXhtml(st.children)}</s>');
+        case BookCodeSpan cs:
+          buffer.write('<code>${_escapeHtml(cs.code)}</code>');
         case BookLink l:
           buffer.write(
             '<a href="${l.href}">${_inlinesToXhtml(l.children)}</a>',
           );
-        default:
-          break;
+        case BookAnchor a:
+          buffer.write('<a id="${a.id}"></a>');
+        case BookImageInline img:
+          buffer.write(
+            '<img src="resources/${img.ref.id}" alt="${_escapeHtml(img.alt ?? '')}"/>',
+          );
+        case BookSuperscript sup:
+          buffer.write('<sup>${_inlinesToXhtml(sup.children)}</sup>');
+        case BookSubscript sub:
+          buffer.write('<sub>${_inlinesToXhtml(sub.children)}</sub>');
+        case BookFootnoteRef fn:
+          buffer.write(
+            '<a href="#${fn.id}" class="footnote-ref">${fn.label.isNotEmpty ? _inlinesToXhtml(fn.label) : '[${fn.id}]'}</a>',
+          );
+        case BookRawHtmlInline rawHtml:
+          buffer.write(rawHtml.html);
+        case BookRawXmlInline rawXml:
+          buffer.write(rawXml.xml);
       }
     }
     return buffer.toString();
+  }
+
+  String _escapeHtml(String input) {
+    return input
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
   }
 
   String _inlinesToText(List<BookInline> inlines) {

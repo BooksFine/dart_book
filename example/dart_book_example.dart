@@ -1,22 +1,43 @@
-import 'dart:typed_data';
-
 import 'package:dart_book/dart_book.dart';
 
 Future<void> main() async {
-  // Use the new API
-  final book = await DartBook.load(
-    Uint8List.fromList(
-      '<h1>Demo</h1><p>Hello <strong>world</strong></p>'.codeUnits,
+  // 1. Распарсить HTML-фрагмент в блоки книги через HtmlParser
+  final htmlParser = HtmlParser(
+    registrar: (src, {required isInline}) => 'resource-$src',
+  );
+  final blocks = htmlParser.parseFromString(
+    '<h1>Demo Book</h1><p>Hello <strong>World</strong>!</p>',
+  );
+  print('Parsed ${blocks.length} blocks from HTML content.');
+
+  // 2. Сформировать универсальную модель Book
+  final book = Book(
+    id: 'demo-1',
+    metadata: const BookMetadata(
+      title: 'Demo Book',
+      language: 'en',
+      contributors: [
+        BookContributor(
+          role: BookContributorRole.author,
+          name: PersonName(first: 'John', last: 'Doe', display: 'John Doe'),
+        ),
+      ],
     ),
-    filename: 'demo.html',
-    options: (id: 'demo-1', lang: 'en'),
+    content: BookContent(blocks: blocks),
+    resources: const [],
   );
 
-  final fb2 = await Fb2Converter.bookToFb2(book);
-  print('FB2 size: ${fb2.length} bytes');
+  // 3. Закодировать в FB2 и EPUB
+  final fb2Bytes = await Fb2Converter.bookToFb2(book);
+  print('Generated FB2 size: ${fb2Bytes.length} bytes');
 
-  final blocks = HtmlParser(
-    registrar: (src, {required isInline}) => 'resource-$src',
-  ).parseFromString('<div>Partial content</div>');
-  print('Parsed ${blocks.length} blocks from fragment');
+  final epubBytes = await EpubConverter.bookToEpub(book);
+  print('Generated EPUB size: ${epubBytes.length} bytes');
+
+  // 4. Загрузить обратно из байт через DartBook.load (авторазбор формата)
+  final loadedFb2 = await DartBook.load(fb2Bytes, filename: 'book.fb2');
+  print('Loaded FB2 title: ${loadedFb2.metadata.title}');
+
+  final loadedEpub = await DartBook.load(epubBytes, filename: 'book.epub');
+  print('Loaded EPUB title: ${loadedEpub.metadata.title}');
 }

@@ -61,10 +61,14 @@ class Fb2Decoder implements BookDecoder {
     // 1. Извлекаем метаданные
     final description = root.findElements('description').first;
     final titleInfo = description.findElements('title-info').first;
+    final docInfo = description.findElements('document-info').firstOrNull;
+    final docId = docInfo?.findElements('id').firstOrNull?.innerText;
+
     final metadata = BookMetadata(
       title: titleInfo.findElements('book-title').first.innerText,
       language: titleInfo.findElements('lang').firstOrNull?.innerText ?? 'en',
       contributors: titleInfo.findElements('author').map((e) {
+        final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
         return BookContributor(
           role: BookContributorRole.author,
           name: PersonName(
@@ -72,7 +76,7 @@ class Fb2Decoder implements BookDecoder {
             middle: e.findElements('middle-name').firstOrNull?.innerText,
             last: e.findElements('last-name').firstOrNull?.innerText,
             nickname: e.findElements('nickname').firstOrNull?.innerText,
-            display: e.innerText.trim(),
+            display: rawDisplay.isNotEmpty ? rawDisplay : null,
           ),
         );
       }).toList(),
@@ -110,7 +114,7 @@ class Fb2Decoder implements BookDecoder {
     }
 
     return Book(
-      id: options?.id ?? metadata.title.hashCode.toString(),
+      id: options?.id ?? docId ?? metadata.title.hashCode.toString(),
       metadata: metadata.copyWith(language: options?.lang ?? metadata.language),
       content: BookContent(blocks: blocks),
       resources: resources,

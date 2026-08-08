@@ -100,7 +100,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
           case 'strong':
             inlines.add(BookStrong(children: _parseFb2Inlines(child)));
           case 'emphasis':
-            inlines.add(BookEmphasis(children: _parseInlines(child)));
+            inlines.add(BookEmphasis(children: _parseFb2Inlines(child)));
           case 'a':
             final href =
                 child.getAttribute('l:href') ??
@@ -128,8 +128,4 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
     }
     return inlines;
   }
-
-  // Для совместимости с внутренним вызовом
-  List<BookInline> _parseInlines(XmlElement element) =>
-      _parseFb2Inlines(element);
 }

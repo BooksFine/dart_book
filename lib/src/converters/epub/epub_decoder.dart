@@ -49,7 +49,7 @@ class EpubDecoder implements BookDecoder {
         ? opfPath.substring(0, opfPath.lastIndexOf('/'))
         : '';
 
-    final metadata = _parseMetadata(opfXml);
+    final (metadata, opfId) = _parseMetadata(opfXml);
 
     final manifest = <String, _EpubItem>{};
     for (final element in opfXml.findAllElements('item')) {
@@ -130,16 +130,18 @@ class EpubDecoder implements BookDecoder {
     }
 
     return Book(
-      id: options?.id ?? metadata.title.hashCode.toString(),
+      id: options?.id ?? opfId ?? metadata.title.hashCode.toString(),
       metadata: metadata.copyWith(language: options?.lang ?? metadata.language),
       content: BookContent(blocks: blocks),
       resources: resourceIndex.values.toList(),
     );
   }
 
-  BookMetadata _parseMetadata(XmlDocument opfXml) {
+  (BookMetadata, String?) _parseMetadata(XmlDocument opfXml) {
     final metadataElement = opfXml.findAllElements('metadata').first;
 
+    final id =
+        metadataElement.findAllElements('dc:identifier').firstOrNull?.innerText;
     final title =
         metadataElement.findAllElements('dc:title').firstOrNull?.innerText ??
         'Untitled';
@@ -157,10 +159,13 @@ class EpubDecoder implements BookDecoder {
       );
     }
 
-    return BookMetadata(
-      title: title,
-      language: language,
-      contributors: contributors,
+    return (
+      BookMetadata(
+        title: title,
+        language: language,
+        contributors: contributors,
+      ),
+      id,
     );
   }
 
