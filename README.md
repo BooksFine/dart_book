@@ -311,6 +311,7 @@ abstract class DartBook {
 ### Fb2Converter / Fb2Decoder / Fb2Encoder
 Поддерживает спецификации **FictionBook 2.0, 2.1, 2.2**:
 - Извлечение обложек (`<coverpage>`), аннотаций, жанров, серий, ключевых слов.
+- Поддержка ссылок на серии через `<custom-info info-type="sequence-url">https://...</custom-info>` (с трансляцией в `BookSeries.url`).
 - Парсинг нативных таблиц `<table>` (`tr`, `td`, `th`, `colspan`, `rowspan`).
 - Декодирование эпиграфов (`<epigraph>`), стихов (`<poem>`), `<sub>`, `<sup>`, `<strikethrough>`, `<code>`.
 - Обработка второго тела сносок `<body name="notes">` и ссылок на сноски `<a type="note">`.
