@@ -10,6 +10,7 @@ export 'src/models/book.dart';
 export 'src/models/converter.dart';
 export 'src/models/exceptions.dart';
 export 'src/models/parser.dart';
+export 'src/builder/book_builder.dart';
 export 'src/converters/registry.dart';
 export 'src/converters/resource_resolver.dart';
 
