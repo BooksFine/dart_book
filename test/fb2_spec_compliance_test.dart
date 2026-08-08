@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:archive/archive.dart';
 import 'package:dart_book/dart_book.dart';
 import 'package:test/test.dart';
 
@@ -94,5 +95,47 @@ void main() {
       final notesSection = book.content.blocks[2] as BookSection;
       expect(notesSection.id, equals('notes'));
     });
+
+    test('Fb2Decoder decodes fb2.zip archives including Windows-1251 encoding', () {
+      final fb2XmlHeader = '''<?xml version="1.0" encoding="windows-1251"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description>
+    <title-info>
+      <book-title>Книга из ZIP архива</book-title>
+    </title-info>
+  </description>
+  <body><p>Содержимое из FB2.ZIP</p></body>
+</FictionBook>
+''';
+
+      final archiveData = _encodeWin1251(fb2XmlHeader);
+      final archive = Archive()..addFile(ArchiveFile('book.fb2', archiveData.length, archiveData));
+      final zipBytes = Uint8List.fromList(ZipEncoder().encode(archive));
+
+      final decoder = Fb2Decoder();
+      expect(decoder.canDecode(zipBytes, extension: 'fb2.zip'), isTrue);
+
+      final book = decoder.decode(zipBytes);
+      expect(book.metadata.title, equals('Книга из ZIP архива'));
+      expect(book.content.blocks.length, equals(1));
+    });
   });
+}
+
+Uint8List _encodeWin1251(String str) {
+  final list = <int>[];
+  for (final char in str.codeUnits) {
+    if (char < 128) {
+      list.add(char);
+    } else if (char >= 0x0410 && char <= 0x044F) {
+      list.add(char - 0x0410 + 0xC0);
+    } else if (char == 0x0401) {
+      list.add(0xA8);
+    } else if (char == 0x0451) {
+      list.add(0xB8);
+    } else {
+      list.add(63);
+    }
+  }
+  return Uint8List.fromList(list);
 }

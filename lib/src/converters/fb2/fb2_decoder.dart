@@ -40,20 +40,33 @@ class Fb2Decoder implements BookDecoder {
   @override
   Book decode(Uint8List bytes, {BookDecodingOptions? options}) {
     final String content;
-    if (bytes[0] == 0x50 &&
+    if (bytes.length >= 4 &&
+        bytes[0] == 0x50 &&
         bytes[1] == 0x4B &&
         bytes[2] == 0x03 &&
         bytes[3] == 0x04) {
-      final archive = ZipDecoder().decodeBytes(bytes);
-      final fb2File = archive.files.firstWhere(
-        (f) =>
-            f.name.toLowerCase().endsWith('.fb2') ||
-            f.name.toLowerCase().endsWith('.xml'),
-        orElse: () => throw Exception('No FB2 file found in ZIP archive'),
-      );
-      content = utf8.decode(fb2File.content);
+      try {
+        final archive = ZipDecoder().decodeBytes(bytes);
+        final fileList = archive.files.where((f) => f.isFile).toList();
+        if (fileList.isEmpty) {
+          throw BookFormatException('FB2 ZIP archive is empty');
+        }
+
+        final fb2File = fileList.firstWhere(
+          (f) =>
+              f.name.toLowerCase().endsWith('.fb2') ||
+              f.name.toLowerCase().endsWith('.xml'),
+          orElse: () => fileList.first,
+        );
+
+        final rawFileBytes = fb2File.content as List<int>;
+        content = _decodeXmlBytes(Uint8List.fromList(rawFileBytes));
+      } catch (e) {
+        if (e is BookException) rethrow;
+        throw BookFormatException('Failed to decode FB2 ZIP archive: $e');
+      }
     } else {
-      content = utf8.decode(bytes);
+      content = _decodeXmlBytes(bytes);
     }
 
     final document = XmlDocument.parse(content);
@@ -188,4 +201,36 @@ class Fb2Decoder implements BookDecoder {
       resources: resources,
     );
   }
+}
+
+String _decodeXmlBytes(Uint8List rawBytes) {
+  final headerSample = String.fromCharCodes(rawBytes.take(150)).toLowerCase();
+  if (headerSample.contains('encoding="windows-1251"') ||
+      headerSample.contains('encoding="cp1251"')) {
+    return _decodeWindows1251(rawBytes);
+  }
+
+  try {
+    return utf8.decode(rawBytes);
+  } catch (_) {
+    return _decodeWindows1251(rawBytes);
+  }
+}
+
+String _decodeWindows1251(Uint8List bytes) {
+  final buffer = StringBuffer();
+  for (final byte in bytes) {
+    if (byte < 0x80) {
+      buffer.writeCharCode(byte);
+    } else if (byte >= 0xC0 && byte <= 0xFF) {
+      buffer.writeCharCode(0x0410 + (byte - 0xC0));
+    } else if (byte == 0xA8) {
+      buffer.writeCharCode(0x0401); // Ё
+    } else if (byte == 0xB8) {
+      buffer.writeCharCode(0x0451); // ё
+    } else {
+      buffer.writeCharCode(byte);
+    }
+  }
+  return buffer.toString();
 }
