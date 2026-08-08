@@ -1,0 +1,10 @@
+targets:
+  $default:
+    builders:
+      freezed:
+        options:
+          map: false
+          when: false
+          build_extensions:
+            '^lib/{{dir}}/{{file}}.dart': 'lib/{{dir}}/.gen/{{file}}.freezed.dart'
+            '^lib/{{file}}.dart': 'lib/.gen/{{file}}.freezed.dart'
