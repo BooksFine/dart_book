@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:archive/archive.dart';
 import 'package:dart_book/dart_book.dart';
 import 'package:xml/xml.dart';
 
@@ -8,7 +9,7 @@ class Fb2Encoder implements BookEncoder {
   @override
   bool canEncode(String extension) {
     final ext = extension.toLowerCase();
-    return ext == 'fb2' || ext == 'xml';
+    return ext == 'fb2' || ext == 'fb2.zip' || ext == 'zip' || ext == 'xml';
   }
 
   @override
@@ -16,26 +17,39 @@ class Fb2Encoder implements BookEncoder {
     Book book, {
     bool pretty = true,
     BookResourceResolver? resourceResolver,
+    bool isZip = false,
   }) {
-    if (resourceResolver != null) {
-      return _encodeAsync(book, pretty, resourceResolver);
+    if (resourceResolver != null || isZip) {
+      return _encodeAsync(book, pretty, resourceResolver, isZip: isZip);
     }
     final xml = _buildXml(book, pretty: pretty);
-    return Uint8List.fromList(utf8.encode(xml));
+    final xmlBytes = Uint8List.fromList(utf8.encode(xml));
+    return isZip ? _zipXmlBytes(xmlBytes, book.id) : xmlBytes;
   }
 
   Future<Uint8List> _encodeAsync(
     Book book,
     bool pretty,
-    BookResourceResolver resourceResolver,
-  ) async {
-    final resolvedBook = await resolveBookResources(
-      book,
-      resourceResolver,
-      baseUri: book.metadata.source,
-    );
+    BookResourceResolver? resourceResolver, {
+    bool isZip = false,
+  }) async {
+    final resolvedBook = resourceResolver != null
+        ? await resolveBookResources(
+            book,
+            resourceResolver,
+            baseUri: book.metadata.source,
+          )
+        : book;
     final xml = _buildXml(resolvedBook, pretty: pretty);
-    return Uint8List.fromList(utf8.encode(xml));
+    final xmlBytes = Uint8List.fromList(utf8.encode(xml));
+    return isZip ? _zipXmlBytes(xmlBytes, book.id) : xmlBytes;
+  }
+
+  Uint8List _zipXmlBytes(Uint8List xmlBytes, String bookId) {
+    final archive = Archive();
+    final filename = bookId.isNotEmpty ? '$bookId.fb2' : 'book.fb2';
+    archive.addFile(ArchiveFile(filename, xmlBytes.length, xmlBytes));
+    return Uint8List.fromList(ZipEncoder().encode(archive));
   }
 
   String _buildXml(Book book, {bool pretty = true}) {

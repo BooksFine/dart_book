@@ -35,16 +35,31 @@ class Fb2Converter implements BookConverter {
   @override
   FutureOr<Uint8List> encode(Book book) => _encoder.encode(book);
 
-  /// Удобный статический метод: кодирует [book] в FB2 (байты UTF-8 XML).
+  /// Удобный статический метод: кодирует [book] в FB2 (байты UTF-8 XML или ZIP-архив).
   ///
+  /// [isZip] — при `true` упаковывает результат в `fb2.zip`.
   /// [resourceResolver] — если передан, сначала дополняет ресурсы за счёт
   /// загрузки внешних ресурсов перед кодированием.
   static Future<Uint8List> bookToFb2(
     Book book, {
+    bool isZip = false,
     BookResourceResolver? resourceResolver,
   }) async {
     return await Fb2Encoder().encode(
       book,
+      isZip: isZip,
+      resourceResolver: resourceResolver,
+    );
+  }
+
+  /// Удобный статический метод: кодирует [book] прямо в `fb2.zip` архив.
+  static Future<Uint8List> bookToFb2Zip(
+    Book book, {
+    BookResourceResolver? resourceResolver,
+  }) async {
+    return await bookToFb2(
+      book,
+      isZip: true,
       resourceResolver: resourceResolver,
     );
   }

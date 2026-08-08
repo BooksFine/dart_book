@@ -119,6 +119,32 @@ void main() {
       expect(book.metadata.title, equals('Книга из ZIP архива'));
       expect(book.content.blocks.length, equals(1));
     });
+
+    test('Fb2Encoder encodes book directly into valid fb2.zip archive', () async {
+      final book = Book(
+        id: 'test-zip-1',
+        metadata: const BookMetadata(title: 'Книга для FB2 ZIP', language: 'ru'),
+        content: const BookContent(
+          blocks: [
+            BookSection(
+              title: [BookText('Глава 1')],
+              blocks: [BookParagraph(inlines: [BookText('Текст в архиве')])],
+            ),
+          ],
+        ),
+        resources: const [],
+      );
+
+      final encoder = Fb2Encoder();
+      expect(encoder.canEncode('fb2.zip'), isTrue);
+
+      final zipBytes = await Fb2Converter.bookToFb2Zip(book);
+      expect(zipBytes[0] == 0x50 && zipBytes[1] == 0x4B, isTrue);
+
+      final decodedBook = Fb2Converter.fb2ToBook(zipBytes);
+      expect(decodedBook.metadata.title, equals('Книга для FB2 ZIP'));
+      expect(decodedBook.content.blocks.length, equals(2));
+    });
   });
 }
 
