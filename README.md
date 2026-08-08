@@ -288,7 +288,16 @@ class BookDecodingOptions {
 
 ```dart
 abstract class DartBook {
+  /// Синхронно-асинхронная загрузка книги в текущем изоляте
   static Future<Book> load(
+    Uint8List bytes, {
+    String? filename,
+    BookDecodingOptions? options,
+    BookResourceResolver? resourceResolver,
+  });
+
+  /// Загрузка книги в фоновом изоляте для 144 FPS / 120 Hz интерфейсов без дропа кадров
+  static Future<Book> loadIsolated(
     Uint8List bytes, {
     String? filename,
     BookDecodingOptions? options,
