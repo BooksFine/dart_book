@@ -42,4 +42,18 @@ abstract interface class BookDecoder {
 ///
 /// - [id] — задать идентификатор книги явно (иначе генерируется автоматически).
 /// - [lang] — код языка (ISO 639-1, например `'ru'`, `'en'`).
-typedef BookDecodingOptions = ({String? id, String? lang});
+/// - [strictMode] — при `true` падает с ошибкой при пропущенных или нераспознанных элементах вместо фолбека.
+/// - [logger] — обработчик некритических предупреждений и явных фолбеков.
+class BookDecodingOptions {
+  final String? id;
+  final String? lang;
+  final bool strictMode;
+  final void Function(String warning)? logger;
+
+  const BookDecodingOptions({
+    this.id,
+    this.lang,
+    this.strictMode = false,
+    this.logger,
+  });
+}

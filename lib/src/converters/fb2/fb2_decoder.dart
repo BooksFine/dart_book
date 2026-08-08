@@ -6,6 +6,7 @@ import 'package:xml/xml.dart';
 
 import '../../models/book.dart';
 import '../../models/converter.dart';
+import '../../models/exceptions.dart';
 import '../../parsers/fb2_parser.dart';
 
 class Fb2Decoder implements BookDecoder {
@@ -59,27 +60,43 @@ class Fb2Decoder implements BookDecoder {
     final root = document.rootElement;
 
     // 1. Извлекаем метаданные
-    final description = root.findElements('description').first;
-    final titleInfo = description.findElements('title-info').first;
-    final docInfo = description.findElements('document-info').firstOrNull;
+    final description = root.findElements('description').firstOrNull;
+    if (description == null && options?.strictMode == true) {
+      throw BookMalformedMetadataException('Missing required element <description> in FB2 metadata');
+    }
+
+    final titleInfo = description?.findElements('title-info').firstOrNull;
+    final titleElement = titleInfo?.findElements('book-title').firstOrNull;
+
+    if (titleElement == null && options?.strictMode == true) {
+      throw BookMalformedMetadataException('Missing required element <book-title> in FB2 metadata');
+    }
+    if (titleElement == null) {
+      options?.logger?.call('Warning: missing <book-title> in FB2 metadata, fallback to "Untitled"');
+    }
+    final title = titleElement?.innerText ?? 'Untitled';
+
+    final docInfo = description?.findElements('document-info').firstOrNull;
     final docId = docInfo?.findElements('id').firstOrNull?.innerText;
 
     final metadata = BookMetadata(
-      title: titleInfo.findElements('book-title').first.innerText,
-      language: titleInfo.findElements('lang').firstOrNull?.innerText ?? 'en',
-      contributors: titleInfo.findElements('author').map((e) {
-        final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
-        return BookContributor(
-          role: BookContributorRole.author,
-          name: PersonName(
-            first: e.findElements('first-name').firstOrNull?.innerText,
-            middle: e.findElements('middle-name').firstOrNull?.innerText,
-            last: e.findElements('last-name').firstOrNull?.innerText,
-            nickname: e.findElements('nickname').firstOrNull?.innerText,
-            display: rawDisplay.isNotEmpty ? rawDisplay : null,
-          ),
-        );
-      }).toList(),
+      title: title,
+      language: titleInfo?.findElements('lang').firstOrNull?.innerText ?? 'en',
+      contributors: titleInfo != null
+          ? titleInfo.findElements('author').map((e) {
+              final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
+              return BookContributor(
+                role: BookContributorRole.author,
+                name: PersonName(
+                  first: e.findElements('first-name').firstOrNull?.innerText,
+                  middle: e.findElements('middle-name').firstOrNull?.innerText,
+                  last: e.findElements('last-name').firstOrNull?.innerText,
+                  nickname: e.findElements('nickname').firstOrNull?.innerText,
+                  display: rawDisplay.isNotEmpty ? rawDisplay : null,
+                ),
+              );
+            }).toList()
+          : const [],
     );
 
     // 2. Извлекаем ресурсы (binary элементы)
@@ -100,6 +117,8 @@ class Fb2Decoder implements BookDecoder {
 
     // 3. Используем Fb2Parser для контента
     final parser = Fb2Parser(
+      strictMode: options?.strictMode ?? false,
+      logger: options?.logger,
       registrar: (src, {required isInline}) {
         // У FB2 ссылки на внутренние ресурсы начинаются с '#'
         return src.startsWith('#') ? src.substring(1) : src;

@@ -2,6 +2,7 @@ import 'package:dart_book/src/models/parser.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html;
 import '../models/book.dart';
+import '../models/exceptions.dart';
 
 /// Парсер HTML-контента в дерево [BookBlock].
 ///
@@ -17,10 +18,17 @@ import '../models/book.dart';
 /// final blocks = parser.parseFragment('<h1>Заголовок</h1><p>Текст</p>');
 /// ```
 class HtmlParser implements Parser<Iterable<dom.Node>> {
-  HtmlParser({this.registrar});
+  HtmlParser({
+    this.registrar,
+    this.strictMode = false,
+    this.logger,
+  });
 
   @override
   final BookResourceRegistrar? registrar;
+
+  final bool strictMode;
+  final void Function(String warning)? logger;
 
   @override
   List<BookBlock> parseFromString(String src) {
@@ -79,8 +87,16 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'br' => const [BookEmptyLine()],
       'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' =>
         node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
-      _ => [BookRawHtmlBlock(node.outerHtml)],
+      _ => _handleUnhandledElement(node, tag),
     };
+  }
+
+  List<BookBlock> _handleUnhandledElement(dom.Element node, String? tag) {
+    if (strictMode) {
+      throw BookParseException('Unhandled HTML element <$tag>', tag: tag);
+    }
+    logger?.call('Warning: unhandled HTML element <$tag>, fallback to BookRawHtmlBlock');
+    return [BookRawHtmlBlock(node.outerHtml)];
   }
 
   BookQuote _parseQuote(dom.Element element) {

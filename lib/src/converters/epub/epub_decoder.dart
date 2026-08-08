@@ -46,7 +46,7 @@ class EpubDecoder implements BookDecoder {
         ? opfPath.substring(0, opfPath.lastIndexOf('/'))
         : '';
 
-    final (metadata, opfId) = _parseMetadata(opfXml);
+    final (metadata, opfId) = _parseMetadata(opfXml, options);
 
     final manifest = <String, _EpubItem>{};
     for (final element in opfXml.findAllElements('item')) {
@@ -113,6 +113,8 @@ class EpubDecoder implements BookDecoder {
           : '';
 
       final htmlParser = HtmlParser(
+        strictMode: options?.strictMode ?? false,
+        logger: options?.logger,
         registrar: (src, {isInline = false}) {
           if (src.startsWith('data:')) {
             return 'data-${src.hashCode.abs()}';
@@ -179,14 +181,21 @@ class EpubDecoder implements BookDecoder {
     );
   }
 
-  (BookMetadata, String?) _parseMetadata(XmlDocument opfXml) {
+  (BookMetadata, String?) _parseMetadata(XmlDocument opfXml, BookDecodingOptions? options) {
     final metadataElement = opfXml.findAllElements('metadata').first;
 
     final id =
         metadataElement.findAllElements('dc:identifier').firstOrNull?.innerText;
-    final title =
-        metadataElement.findAllElements('dc:title').firstOrNull?.innerText ??
-        'Untitled';
+    
+    final titleElement = metadataElement.findAllElements('dc:title').firstOrNull;
+    if (titleElement == null && options?.strictMode == true) {
+      throw BookMalformedMetadataException('Missing required element <dc:title> in OPF metadata');
+    }
+    if (titleElement == null) {
+      options?.logger?.call('Warning: missing <dc:title> in OPF metadata, fallback to "Untitled"');
+    }
+    final title = titleElement?.innerText ?? 'Untitled';
+
     final language =
         metadataElement.findAllElements('dc:language').firstOrNull?.innerText ??
         'en';

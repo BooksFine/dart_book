@@ -1,5 +1,6 @@
 import 'package:xml/xml.dart';
 import '../models/book.dart';
+import '../models/exceptions.dart';
 import '../models/parser.dart';
 
 /// Парсер контента для формата FictionBook 2 (FB2).
@@ -8,7 +9,14 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
   @override
   final BookResourceRegistrar? registrar;
 
-  Fb2Parser({this.registrar});
+  final bool strictMode;
+  final void Function(String warning)? logger;
+
+  Fb2Parser({
+    this.registrar,
+    this.strictMode = false,
+    this.logger,
+  });
 
   @override
   List<BookBlock> parseFromString(String text) {
@@ -114,6 +122,10 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       case 'body':
         return parse(element.children);
       default:
+        if (strictMode) {
+          throw BookParseException('Unhandled FB2 element <$name>', tag: name);
+        }
+        logger?.call('Warning: unhandled FB2 element <$name>, parsing children');
         return parse(element.children);
     }
   }
