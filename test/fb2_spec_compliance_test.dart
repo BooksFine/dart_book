@@ -112,7 +112,7 @@ void main() {
       final archive = Archive()..addFile(ArchiveFile('book.fb2', archiveData.length, archiveData));
       final zipBytes = Uint8List.fromList(ZipEncoder().encode(archive));
 
-      final decoder = Fb2Decoder();
+      final decoder = Fb2ZipDecoder();
       expect(decoder.canDecode(zipBytes, extension: 'fb2.zip'), isTrue);
 
       final book = decoder.decode(zipBytes);
@@ -120,7 +120,7 @@ void main() {
       expect(book.content.blocks.length, equals(1));
     });
 
-    test('Fb2Encoder encodes book directly into valid fb2.zip archive', () async {
+    test('Fb2ZipEncoder and Fb2ZipConverter encode book directly into valid fb2.zip archive', () async {
       final book = Book(
         id: 'test-zip-1',
         metadata: const BookMetadata(title: 'Книга для FB2 ZIP', language: 'ru'),
@@ -135,13 +135,13 @@ void main() {
         resources: const [],
       );
 
-      final encoder = Fb2Encoder();
+      final encoder = Fb2ZipEncoder();
       expect(encoder.canEncode('fb2.zip'), isTrue);
 
-      final zipBytes = await Fb2Converter.bookToFb2Zip(book);
+      final zipBytes = await Fb2ZipConverter.bookToFb2Zip(book);
       expect(zipBytes[0] == 0x50 && zipBytes[1] == 0x4B, isTrue);
 
-      final decodedBook = Fb2Converter.fb2ToBook(zipBytes);
+      final decodedBook = Fb2ZipConverter.fb2ZipToBook(zipBytes);
       expect(decodedBook.metadata.title, equals('Книга для FB2 ZIP'));
       expect(decodedBook.content.blocks.length, equals(2));
     });

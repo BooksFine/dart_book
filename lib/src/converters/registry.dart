@@ -7,9 +7,17 @@ import 'package:dart_book/dart_book.dart';
 /// По умолчанию зарегистрированы [EpubConverter] и [Fb2Converter].
 /// Добавить поддержку нового формата можно через [registerDecoder] / [registerEncoder].
 class BookRegistry {
-  static final List<BookDecoder> _decoders = [EpubDecoder(), Fb2Decoder()];
+  static final List<BookDecoder> _decoders = [
+    EpubDecoder(),
+    Fb2ZipDecoder(),
+    Fb2Decoder(),
+  ];
 
-  static final List<BookEncoder> _encoders = [EpubEncoder(), Fb2Encoder()];
+  static final List<BookEncoder> _encoders = [
+    EpubEncoder(),
+    Fb2ZipEncoder(),
+    Fb2Encoder(),
+  ];
 
   /// Находит первый подходящий декодер для заданных [bytes].
   ///

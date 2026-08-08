@@ -27,6 +27,9 @@ export 'src/converters/epub/parsers/epub_smil_parser.dart';
 export 'src/converters/fb2/fb2_converter.dart';
 export 'src/converters/fb2/fb2_decoder.dart';
 export 'src/converters/fb2/fb2_encoder.dart';
+export 'src/converters/fb2/fb2_zip_converter.dart';
+export 'src/converters/fb2/fb2_zip_decoder.dart';
+export 'src/converters/fb2/fb2_zip_encoder.dart';
 
 export 'src/parsers/html_parser.dart';
 export 'src/parsers/fb2_parser.dart';

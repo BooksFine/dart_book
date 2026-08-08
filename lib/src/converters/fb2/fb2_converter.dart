@@ -5,6 +5,7 @@ import '../../models/book.dart';
 import '../../models/converter.dart';
 import 'fb2_decoder.dart';
 import 'fb2_encoder.dart';
+import 'fb2_zip_converter.dart';
 
 /// Конвертер для формата FictionBook 2 (FB2).
 ///
@@ -45,9 +46,14 @@ class Fb2Converter implements BookConverter {
     bool isZip = false,
     BookResourceResolver? resourceResolver,
   }) async {
+    if (isZip) {
+      return await Fb2ZipConverter.bookToFb2Zip(
+        book,
+        resourceResolver: resourceResolver,
+      );
+    }
     return await Fb2Encoder().encode(
       book,
-      isZip: isZip,
       resourceResolver: resourceResolver,
     );
   }

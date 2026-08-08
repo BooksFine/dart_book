@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
 import '../../models/book.dart';
@@ -12,26 +11,16 @@ import '../../parsers/fb2_parser.dart';
 class Fb2Decoder implements BookDecoder {
   @override
   bool canDecode(Uint8List bytes, {String? extension}) {
-    if (extension == 'fb2' || extension == 'fb2.zip') return true;
+    if (extension == 'fb2' || extension == 'xml') return true;
     if (bytes.length < 4) return false;
 
+    // Исключаем ZIP файлы в чистом Fb2Decoder
     final isZip =
         bytes[0] == 0x50 &&
         bytes[1] == 0x4B &&
         bytes[2] == 0x03 &&
         bytes[3] == 0x04;
-
-    if (isZip) {
-      if (bytes.length >= 58) {
-        final mimetypeName = String.fromCharCodes(bytes.sublist(30, 38));
-        final mimetypeContent = String.fromCharCodes(bytes.sublist(38, 58));
-        if (mimetypeName == 'mimetype' &&
-            mimetypeContent == 'application/epub+zip') {
-          return false;
-        }
-      }
-      return extension == null || extension.endsWith('.zip');
-    }
+    if (isZip) return false;
 
     final start = String.fromCharCodes(bytes.take(50)).toLowerCase();
     return start.contains('<?xml') || start.contains('<fictionbook');
@@ -39,35 +28,7 @@ class Fb2Decoder implements BookDecoder {
 
   @override
   Book decode(Uint8List bytes, {BookDecodingOptions? options}) {
-    final String content;
-    if (bytes.length >= 4 &&
-        bytes[0] == 0x50 &&
-        bytes[1] == 0x4B &&
-        bytes[2] == 0x03 &&
-        bytes[3] == 0x04) {
-      try {
-        final archive = ZipDecoder().decodeBytes(bytes);
-        final fileList = archive.files.where((f) => f.isFile).toList();
-        if (fileList.isEmpty) {
-          throw BookFormatException('FB2 ZIP archive is empty');
-        }
-
-        final fb2File = fileList.firstWhere(
-          (f) =>
-              f.name.toLowerCase().endsWith('.fb2') ||
-              f.name.toLowerCase().endsWith('.xml'),
-          orElse: () => fileList.first,
-        );
-
-        final rawFileBytes = fb2File.content as List<int>;
-        content = _decodeXmlBytes(Uint8List.fromList(rawFileBytes));
-      } catch (e) {
-        if (e is BookException) rethrow;
-        throw BookFormatException('Failed to decode FB2 ZIP archive: $e');
-      }
-    } else {
-      content = _decodeXmlBytes(bytes);
-    }
+    final content = _decodeXmlBytes(bytes);
 
     final document = XmlDocument.parse(content);
     final root = document.rootElement;
