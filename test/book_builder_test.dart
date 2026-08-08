@@ -56,5 +56,36 @@ void main() {
       expect(epubBytes, isNotEmpty);
       expect(fb2Bytes, isNotEmpty);
     });
+
+    test('BookResourceNamingPolicy supports custom generator function and preset strategies', () async {
+      final builderCustom = BookBuilder(
+        title: 'Тест Кастомного Именования',
+        namingPolicy: BookResourceNamingPolicy.custom(
+          (src, {required isInline, required index}) => 'chap_image_$index.jpg',
+        ),
+      );
+
+      await builderCustom.addChapterHtml('<p><img src="http://site.com/image.png"/></p>');
+      final bookCustom = await builderCustom.build();
+
+      final section = bookCustom.content.blocks.first as BookSection;
+      final paragraph = section.blocks.first as BookParagraph;
+      final img = paragraph.inlines.first as BookImageInline;
+
+      expect(img.ref.id, equals('chap_image_1.jpg'));
+
+      final builderSequential = BookBuilder(
+        title: 'Тест Последовательного Именования',
+        namingPolicy: BookResourceNamingPolicy.sequential,
+      );
+      await builderSequential.addChapterHtml('<p><img src="http://site.com/pic.jpg"/></p>');
+      final bookSequential = await builderSequential.build();
+
+      final secSeq = bookSequential.content.blocks.first as BookSection;
+      final pSeq = secSeq.blocks.first as BookParagraph;
+      final imgSeq = pSeq.inlines.first as BookImageInline;
+
+      expect(imgSeq.ref.id, equals('img_001.jpg'));
+    });
   });
 }

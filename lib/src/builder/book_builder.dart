@@ -12,6 +12,7 @@ class BookBuilder {
   final BookSeries? series;
   final Uri? source;
   final BookResourceResolver? resourceResolver;
+  final BookResourceNamingPolicy namingPolicy;
 
   BookContent? _annotation;
   BookCover? _cover;
@@ -28,6 +29,7 @@ class BookBuilder {
     this.series,
     this.source,
     this.resourceResolver,
+    this.namingPolicy = BookResourceNamingPolicy.preserve,
   });
 
   /// Устанавливает обложку книги по ссылке [ref] или байтам.
@@ -62,13 +64,11 @@ class BookBuilder {
       strictMode: strictMode,
       logger: logger,
       registrar: (src, {required isInline}) {
-        if (src.startsWith('data:')) {
-          final resId = 'res-data-${src.hashCode.abs()}';
-          return resId;
-        }
-
-        // Генерируем стабильный ресурсный ID
-        final resId = 'res-${++_resourceCounter}-${src.split('/').last.split('?').first}';
+        final resId = namingPolicy.generateName(
+          src,
+          isInline: isInline,
+          index: ++_resourceCounter,
+        );
         pendingResources[resId] = src;
         return resId;
       },
