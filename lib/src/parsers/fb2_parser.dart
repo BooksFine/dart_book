@@ -117,6 +117,13 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
           rows.add(BookTableRow(cells: cells));
         }
         return [BookTable(rows: rows)];
+      case 'epigraph':
+        final textAuthor = element.findElements('text-author').firstOrNull;
+        final citation = textAuthor != null ? _parseFb2Inlines(textAuthor) : const <BookInline>[];
+        final innerBlocks = parse(
+          element.children.where((e) => e is! XmlElement || e.localName != 'text-author'),
+        );
+        return [BookQuote(blocks: innerBlocks, citation: citation)];
       case 'code' || 'pre':
         return [BookCodeBlock(code: element.innerText)];
       case 'body':
@@ -142,17 +149,31 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             inlines.add(BookStrong(children: _parseFb2Inlines(child)));
           case 'emphasis':
             inlines.add(BookEmphasis(children: _parseFb2Inlines(child)));
+          case 'sub':
+            inlines.add(BookSubscript(children: _parseFb2Inlines(child)));
+          case 'sup':
+            inlines.add(BookSuperscript(children: _parseFb2Inlines(child)));
+          case 'strikethrough' || 'strike':
+            inlines.add(BookStrike(children: _parseFb2Inlines(child)));
+          case 'code':
+            inlines.add(BookCodeSpan(child.innerText));
           case 'a':
             final href =
                 child.getAttribute('l:href') ??
                 child.getAttribute('href') ??
                 '';
-            inlines.add(
-              BookLink(
-                href: Uri.parse(href),
-                children: _parseFb2Inlines(child),
-              ),
-            );
+            final type = child.getAttribute('type');
+            if (type == 'note' || href.startsWith('#n_') || href.startsWith('#note')) {
+              final id = href.startsWith('#') ? href.substring(1) : href;
+              inlines.add(BookFootnoteRef(id: id, label: _parseFb2Inlines(child)));
+            } else {
+              inlines.add(
+                BookLink(
+                  href: Uri.parse(href),
+                  children: _parseFb2Inlines(child),
+                ),
+              );
+            }
           case 'image':
             final href =
                 child.getAttribute('l:href') ??

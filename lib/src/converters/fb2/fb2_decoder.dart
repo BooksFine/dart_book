@@ -75,9 +75,53 @@ class Fb2Decoder implements BookDecoder {
       options?.logger?.call('Warning: missing <book-title> in FB2 metadata, fallback to "Untitled"');
     }
     final title = titleElement?.innerText ?? 'Untitled';
-
     final docInfo = description?.findElements('document-info').firstOrNull;
     final docId = docInfo?.findElements('id').firstOrNull?.innerText;
+
+    // 3. Используем Fb2Parser для контента
+    final parser = Fb2Parser(
+      strictMode: options?.strictMode ?? false,
+      logger: options?.logger,
+      registrar: (src, {required isInline}) {
+        // У FB2 ссылки на внутренние ресурсы начинаются с '#'
+        return src.startsWith('#') ? src.substring(1) : src;
+      },
+    );
+
+    final genres = titleInfo
+            ?.findElements('genre')
+            .map((e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()))
+            .toList() ??
+        const [];
+
+    final annotationElem = titleInfo?.findElements('annotation').firstOrNull;
+    final annotation = annotationElem != null
+        ? BookContent(blocks: parser.parse(annotationElem.children))
+        : null;
+
+    final coverHref = titleInfo
+            ?.findElements('coverpage')
+            .firstOrNull
+            ?.findElements('image')
+            .firstOrNull
+            ?.getAttribute('l:href') ??
+        '';
+    final coverId = coverHref.startsWith('#') ? coverHref.substring(1) : coverHref;
+    final cover = coverId.isNotEmpty ? BookCover(ref: BookResourceRef(coverId)) : null;
+
+    final seqElem = titleInfo?.findElements('sequence').firstOrNull;
+    final seriesName = seqElem?.getAttribute('name');
+    final series = seriesName != null && seriesName.isNotEmpty
+        ? BookSeries(
+            name: seriesName,
+            number: int.tryParse(seqElem?.getAttribute('number') ?? ''),
+          )
+        : null;
+
+    final keywordsText = titleInfo?.findElements('keywords').firstOrNull?.innerText;
+    final keywords = keywordsText != null
+        ? keywordsText.split(RegExp(r'[,;]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        : const <String>[];
 
     final metadata = BookMetadata(
       title: title,
@@ -97,6 +141,11 @@ class Fb2Decoder implements BookDecoder {
               );
             }).toList()
           : const [],
+      genres: genres,
+      annotation: annotation,
+      cover: cover,
+      series: series,
+      keywords: keywords,
     );
 
     // 2. Извлекаем ресурсы (binary элементы)
@@ -115,21 +164,21 @@ class Fb2Decoder implements BookDecoder {
       }
     }
 
-    // 3. Используем Fb2Parser для контента
-    final parser = Fb2Parser(
-      strictMode: options?.strictMode ?? false,
-      logger: options?.logger,
-      registrar: (src, {required isInline}) {
-        // У FB2 ссылки на внутренние ресурсы начинаются с '#'
-        return src.startsWith('#') ? src.substring(1) : src;
-      },
-    );
-
     final blocks = <BookBlock>[];
     for (final body in root.findElements('body')) {
-      if (body.getAttribute('name') == 'notes') continue;
-      // Мы передаем фрагмент XML (body) парсеру
-      blocks.addAll(parser.parse(body.children));
+      final isNotes = body.getAttribute('name') == 'notes';
+      final bodyBlocks = parser.parse(body.children);
+      if (isNotes) {
+        blocks.add(
+          BookSection(
+            id: 'notes',
+            title: const [BookText('Примечания')],
+            blocks: bodyBlocks,
+          ),
+        );
+      } else {
+        blocks.addAll(bodyBlocks);
+      }
     }
 
     return Book(
