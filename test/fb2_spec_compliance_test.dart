@@ -145,6 +145,33 @@ void main() {
       expect(decodedBook.metadata.title, equals('Книга для FB2 ZIP'));
       expect(decodedBook.content.blocks.length, equals(2));
     });
+
+    test('Fb2Decoder and Fb2Encoder handle custom-info info-type="sequence-url"', () async {
+      final fb2Xml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description>
+    <title-info>
+      <book-title>Книга с URL серии</book-title>
+      <sequence name="Авторская Серия" number="3"/>
+    </title-info>
+    <custom-info info-type="sequence-url">https://author.today/work/series/12345</custom-info>
+  </description>
+  <body><p>Текст</p></body>
+</FictionBook>
+''';
+
+      final decoder = Fb2Decoder();
+      final book = decoder.decode(Uint8List.fromList(utf8.encode(fb2Xml)));
+
+      expect(book.metadata.series, isNotNull);
+      expect(book.metadata.series!.name, equals('Авторская Серия'));
+      expect(book.metadata.series!.number, equals(3));
+      expect(book.metadata.series!.url, equals(Uri.parse('https://author.today/work/series/12345')));
+
+      final encodedXml = utf8.decode(await Fb2Encoder().encode(book));
+      expect(encodedXml, contains('<custom-info info-type="sequence-url">https://author.today/work/series/12345</custom-info>'));
+    });
   });
 }
 

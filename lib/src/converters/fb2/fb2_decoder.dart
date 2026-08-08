@@ -83,14 +83,25 @@ class Fb2Decoder implements BookDecoder {
     final coverId = coverHref.startsWith('#') ? coverHref.substring(1) : coverHref;
     final cover = coverId.isNotEmpty ? BookCover(ref: BookResourceRef(coverId)) : null;
 
+    final customInfoSeqUrl = description
+        ?.findElements('custom-info')
+        .where((e) => e.getAttribute('info-type') == 'sequence-url')
+        .firstOrNull
+        ?.innerText
+        .trim();
+    final seriesUrl = customInfoSeqUrl != null && customInfoSeqUrl.isNotEmpty
+        ? Uri.tryParse(customInfoSeqUrl)
+        : null;
+
     final seqElem = titleInfo?.findElements('sequence').firstOrNull;
     final seriesName = seqElem?.getAttribute('name');
     final series = seriesName != null && seriesName.isNotEmpty
         ? BookSeries(
             name: seriesName,
             number: int.tryParse(seqElem?.getAttribute('number') ?? ''),
+            url: seriesUrl,
           )
-        : null;
+        : (seriesUrl != null ? BookSeries(name: '', url: seriesUrl) : null);
 
     final keywordsText = titleInfo?.findElements('keywords').firstOrNull?.innerText;
     final keywords = keywordsText != null

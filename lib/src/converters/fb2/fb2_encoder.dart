@@ -174,6 +174,14 @@ class Fb2Encoder implements BookEncoder {
             builder.element('program-used', nest: 'dart_book');
           },
         );
+
+        if (metadata.series?.url != null) {
+          builder.element(
+            'custom-info',
+            attributes: {'info-type': 'sequence-url'},
+            nest: metadata.series!.url.toString(),
+          );
+        }
       },
     );
   }
