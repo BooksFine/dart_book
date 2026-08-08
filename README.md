@@ -24,6 +24,7 @@ Dart-библиотека для чтения, генерации и конве�
 - [Конвертеры](#конвертеры)
   - [EpubConverter / EpubDecoder / EpubEncoder](#epubconverter--epubdecoder--epubencoder)
   - [Fb2Converter / Fb2Decoder / Fb2Encoder](#fb2converter--fb2decoder--fb2encoder)
+  - [Fb2ZipConverter / Fb2ZipDecoder / Fb2ZipEncoder](#fb2zipconverter--fb2zipdecoder--fb2zipencoder)
 - [Реестр конвертеров (BookRegistry)](#реестр-конвертеров-bookregistry)
 - [Парсеры](#парсеры)
   - [HtmlParser](#htmlparser)
@@ -313,6 +314,11 @@ abstract class DartBook {
 - Парсинг нативных таблиц `<table>` (`tr`, `td`, `th`, `colspan`, `rowspan`).
 - Декодирование эпиграфов (`<epigraph>`), стихов (`<poem>`), `<sub>`, `<sup>`, `<strikethrough>`, `<code>`.
 - Обработка второго тела сносок `<body name="notes">` и ссылок на сноски `<a type="note">`.
+
+### Fb2ZipConverter / Fb2ZipDecoder / Fb2ZipEncoder
+Специализированный декоратор формата **FB2.ZIP**:
+- Упаковка и распаковка ZIP-архивов с сохранением кодировок (автодекодирование `Windows-1251`).
+- Полное соблюдение принципа единственной ответственности (SRP).
 
 ---
 
