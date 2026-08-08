@@ -82,10 +82,39 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             registrar?.call(href, isInline: false) ??
             (href.startsWith('#') ? href.substring(1) : href);
         return [BookImageBlock(ref: BookResourceRef(id))];
+      case 'cite':
+        final textAuthor = element.findElements('text-author').firstOrNull;
+        final citation = textAuthor != null ? _parseFb2Inlines(textAuthor) : const <BookInline>[];
+        final innerBlocks = parse(
+          element.children.where((e) => e is! XmlElement || e.localName != 'text-author'),
+        );
+        return [BookQuote(blocks: innerBlocks, citation: citation)];
+      case 'poem':
+        final stanzas = <BookStanza>[];
+        for (final stanzaElem in element.findElements('stanza')) {
+          final lines = <BookPoemLine>[];
+          for (final v in stanzaElem.findElements('v')) {
+            lines.add(BookPoemLine(inlines: _parseFb2Inlines(v)));
+          }
+          stanzas.add(BookStanza(lines: lines));
+        }
+        return [BookPoem(stanzas: stanzas)];
+      case 'table':
+        final rows = <BookTableRow>[];
+        for (final tr in element.findElements('tr')) {
+          final cells = <BookTableCell>[];
+          for (final cell in tr.children.whereType<XmlElement>().where((e) => e.localName == 'td' || e.localName == 'th')) {
+            cells.add(BookTableCell(blocks: [BookParagraph(inlines: _parseFb2Inlines(cell))]));
+          }
+          rows.add(BookTableRow(cells: cells));
+        }
+        return [BookTable(rows: rows)];
+      case 'code' || 'pre':
+        return [BookCodeBlock(code: element.innerText)];
       case 'body':
         return parse(element.children);
       default:
-        return [];
+        return parse(element.children);
     }
   }
 

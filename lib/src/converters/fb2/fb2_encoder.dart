@@ -308,20 +308,26 @@ class Fb2Encoder implements BookEncoder {
           }
 
         case BookTable table:
-          for (final row in table.rows) {
-            builder.element(
-              'p',
-              nest: () {
-                var first = true;
-                for (final cell in row.cells) {
-                  if (!first) builder.text(' | ');
-                  first = false;
-                  final plain = _blocksToPlainText(cell.blocks);
-                  builder.text(plain);
-                }
-              },
-            );
-          }
+          builder.element(
+            'table',
+            nest: () {
+              for (final row in table.rows) {
+                builder.element(
+                  'tr',
+                  nest: () {
+                    for (final cell in row.cells) {
+                      builder.element(
+                        'td',
+                        nest: () {
+                          _writeBlocks(builder, cell.blocks);
+                        },
+                      );
+                    }
+                  },
+                );
+              }
+            },
+          );
 
         case BookPoem poem:
           builder.element(
@@ -468,51 +474,6 @@ class Fb2Encoder implements BookEncoder {
       }
     }
   }
-
-  String _blocksToPlainText(List<BookBlock> blocks) {
-    final buffer = StringBuffer();
-    for (final block in blocks) {
-      final chunk = _blockToPlainText(block);
-      if (chunk.isNotEmpty) {
-        if (buffer.isNotEmpty) {
-          buffer.write(' ');
-        }
-        buffer.write(chunk);
-      }
-    }
-    return buffer.toString().trim();
-  }
-
-  String _blockToPlainText(BookBlock block) => switch (block) {
-    BookParagraph paragraph => _inlinesToPlainText(paragraph.inlines),
-    BookHeading heading => _inlinesToPlainText(heading.text),
-    BookCodeBlock codeBlock => codeBlock.code,
-    BookRawHtmlBlock rawHtmlBlock => _stripTags(rawHtmlBlock.html),
-    BookRawXmlBlock rawXmlBlock => rawXmlBlock.xml,
-    _ => '',
-  };
-
-  String _inlinesToPlainText(List<BookInline> inlines) {
-    final buffer = StringBuffer();
-    for (final inline in inlines) {
-      buffer.write(_inlineToPlainText(inline));
-    }
-    return buffer.toString();
-  }
-
-  String _inlineToPlainText(BookInline inline) => switch (inline) {
-    BookText text => text.text,
-    BookCodeSpan codeSpan => codeSpan.code,
-    BookLink link => _inlinesToPlainText(link.children),
-    BookEmphasis emphasis => _inlinesToPlainText(emphasis.children),
-    BookStrong strong => _inlinesToPlainText(strong.children),
-    BookStrike strike => _inlinesToPlainText(strike.children),
-    BookSuperscript superscript => _inlinesToPlainText(superscript.children),
-    BookSubscript subscript => _inlinesToPlainText(subscript.children),
-    BookRawHtmlInline rawHtmlInline => _stripTags(rawHtmlInline.html),
-    BookRawXmlInline rawXmlInline => rawXmlInline.xml,
-    _ => '',
-  };
 
   String _stripTags(String raw) {
     return raw.replaceAll(RegExp(r'<[^>]+>'), '');

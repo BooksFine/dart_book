@@ -58,7 +58,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'section' || 'article' => [_parseSection(node)],
       'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6' => [_parseHeading(node)],
       'p' => [BookParagraph(inlines: _parseInlines(node.nodes))],
-      'blockquote' => [BookQuote(blocks: parse(node.nodes))],
+      'blockquote' => [_parseQuote(node)],
       'ul' || 'ol' => [_parseList(node, ordered: tag == 'ol')],
       'pre' => [
         BookCodeBlock(
@@ -77,9 +77,39 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'svg' => [BookSvgBlock(svg: node.outerHtml)],
       'table' => [_parseTable(node)],
       'br' => const [BookEmptyLine()],
-      'div' || 'main' || 'body' => parse(node.nodes),
+      'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' =>
+        node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
       _ => [BookRawHtmlBlock(node.outerHtml)],
     };
+  }
+
+  BookQuote _parseQuote(dom.Element element) {
+    final citationElem = element.querySelector('.citation, cite, footer');
+    final citation = citationElem != null ? _parseInlines(citationElem.nodes) : const <BookInline>[];
+
+    final blockNodes = element.nodes.where(
+      (n) => !identical(n, citationElem) && (citationElem == null || !citationElem.contains(n)),
+    );
+
+    return BookQuote(blocks: parse(blockNodes), citation: citation);
+  }
+
+  BookPoem _parsePoem(dom.Element element) {
+    final stanzas = <BookStanza>[];
+    final stanzaElems = element.querySelectorAll('.stanza');
+    final targets = stanzaElems.isNotEmpty ? stanzaElems : [element];
+
+    for (final stanzaElem in targets) {
+      final lines = <BookPoemLine>[];
+      for (final p in stanzaElem.querySelectorAll('.poem-line, p')) {
+        lines.add(BookPoemLine(inlines: _parseInlines(p.nodes)));
+      }
+      if (lines.isNotEmpty) {
+        stanzas.add(BookStanza(lines: lines));
+      }
+    }
+
+    return BookPoem(stanzas: stanzas);
   }
 
   BookAudioBlock _parseAudioBlock(dom.Element element) {
@@ -108,18 +138,15 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   }
 
   BookSection _parseSection(dom.Element element) {
-    final titleNode = element.children.firstWhere(
-      (child) => RegExp(r'h[1-6]').hasMatch(child.localName ?? ''),
-      orElse: () => dom.Element.tag(''),
-    );
+    final titleNode = element.querySelector('h1, h2, h3, h4, h5, h6');
 
-    final title = titleNode.localName == null || titleNode.localName!.isEmpty
+    final title = titleNode == null
         ? const <BookInline>[]
         : _parseInlines(titleNode.nodes);
 
     final contentNodes = <dom.Node>[];
     for (final child in element.nodes) {
-      if (identical(child, titleNode)) continue;
+      if (identical(child, titleNode) || (titleNode != null && titleNode.contains(child))) continue;
       contentNodes.add(child);
     }
 
@@ -165,7 +192,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       );
 
       final blocks = hasBlockChild
-          ? parse(child.nodes)
+          ? parse(child.children)
           : <BookBlock>[BookParagraph(inlines: _parseInlines(child.nodes))];
       items.add(BookListItem(blocks: blocks));
     }
