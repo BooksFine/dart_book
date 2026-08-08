@@ -68,15 +68,8 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'p' => [BookParagraph(inlines: _parseInlines(node.nodes))],
       'blockquote' => [_parseQuote(node)],
       'ul' || 'ol' => [_parseList(node, ordered: tag == 'ol')],
-      'pre' => [
-        BookCodeBlock(
-          code: node.text,
-          language:
-              node.attributes['data-language'] ??
-              node.attributes['lang'] ??
-              node.attributes['class'],
-        ),
-      ],
+      'pre' => [_parseCodeBlock(node)],
+      'figure' => [_parseFigure(node)],
       'hr' => const [BookHorizontalRule()],
       'img' => [_parseImageBlock(node)],
       'audio' => [_parseAudioBlock(node)],
@@ -85,10 +78,49 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'svg' => [BookSvgBlock(svg: node.outerHtml)],
       'table' => [_parseTable(node)],
       'br' => const [BookEmptyLine()],
-      'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' =>
+      'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' || 'details' || 'summary' || 'address' =>
         node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
       _ => _handleUnhandledElement(node, tag),
     };
+  }
+
+  BookCodeBlock _parseCodeBlock(dom.Element node) {
+    final codeElem = node.querySelector('code') ?? node;
+    final lang = codeElem.attributes['data-language'] ??
+        codeElem.attributes['lang'] ??
+        codeElem.attributes['class'] ??
+        node.attributes['data-language'] ??
+        node.attributes['lang'] ??
+        node.attributes['class'];
+
+    var languageClean = lang;
+    if (languageClean != null && languageClean.contains('language-')) {
+      languageClean = languageClean.split('language-').last.split(' ').first;
+    }
+
+    return BookCodeBlock(
+      code: node.text,
+      language: languageClean,
+    );
+  }
+
+  BookBlock _parseFigure(dom.Element element) {
+    final imgElem = element.querySelector('img');
+    final captionElem = element.querySelector('figcaption');
+    final captionText = captionElem?.text.trim();
+
+    if (imgElem != null) {
+      final src = (imgElem.attributes['src'] ?? '').trim();
+      final alt = captionText ?? imgElem.attributes['alt'];
+      final id = registrar?.call(src, isInline: false) ?? src;
+      return BookImageBlock(
+        ref: BookResourceRef(id),
+        alt: alt,
+        title: imgElem.attributes['title'],
+      );
+    }
+
+    return BookParagraph(inlines: _parseInlines(element.nodes));
   }
 
   List<BookBlock> _handleUnhandledElement(dom.Element node, String? tag) {
@@ -282,21 +314,37 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     }
 
     final tag = node.localName?.toLowerCase();
-    return switch (tag) {
+    final id = node.attributes['id'] ?? node.attributes['name'];
+    final inlines = <BookInline>[];
+
+    if (id != null && id.isNotEmpty && tag != 'a') {
+      inlines.add(BookAnchor(id));
+    }
+
+    final parsedInlines = switch (tag) {
       'br' => const [BookLineBreak()],
       'strong' || 'b' => [BookStrong(children: _parseInlines(node.nodes))],
-      'em' || 'i' || 'u' => [BookEmphasis(children: _parseInlines(node.nodes))],
-      's' ||
-      'del' ||
-      'strike' => [BookStrike(children: _parseInlines(node.nodes))],
-      'code' => [BookCodeSpan(node.text)],
+      'em' || 'i' || 'u' || 'cite' || 'var' => [BookEmphasis(children: _parseInlines(node.nodes))],
+      's' || 'del' || 'strike' => [BookStrike(children: _parseInlines(node.nodes))],
+      'code' || 'kbd' || 'samp' => [BookCodeSpan(node.text)],
       'sup' => [BookSuperscript(children: _parseInlines(node.nodes))],
       'sub' => [BookSubscript(children: _parseInlines(node.nodes))],
       'a' => _parseLink(node),
       'img' => _parseInlineImage(node),
-      'span' || 'small' || 'mark' || 'abbr' => _parseInlines(node.nodes),
-      _ => [BookRawHtmlInline(node.outerHtml)],
+      'span' || 'small' || 'mark' || 'abbr' || 'q' || 'time' => _parseInlines(node.nodes),
+      _ => _handleUnhandledInline(node, tag),
     };
+
+    inlines.addAll(parsedInlines);
+    return inlines;
+  }
+
+  List<BookInline> _handleUnhandledInline(dom.Element node, String? tag) {
+    if (strictMode) {
+      throw BookParseException('Unhandled HTML inline element <$tag>', tag: tag);
+    }
+    logger?.call('Warning: unhandled HTML inline element <$tag>, fallback to BookRawHtmlInline');
+    return [BookRawHtmlInline(node.outerHtml)];
   }
 
   List<BookInline> _parseInlineImage(dom.Element node) {
@@ -314,10 +362,30 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   List<BookInline> _parseLink(dom.Element node) {
     final href = (node.attributes['href'] ?? '').trim();
     final children = _parseInlines(node.nodes);
-    final uri = Uri.tryParse(href);
-    if (uri != null && href.isNotEmpty) {
-      return [BookLink(href: uri, children: children)];
+    final id = node.attributes['id'] ?? node.attributes['name'];
+    final epubType = node.attributes['epub:type'] ?? node.attributes['role'] ?? '';
+
+    if (epubType.contains('noteref') || epubType.contains('doc-noteref')) {
+      final noteId = href.startsWith('#') ? href.substring(1) : href;
+      return [BookFootnoteRef(id: noteId.isNotEmpty ? noteId : (id ?? ''), label: children)];
     }
-    return [BookRawHtmlInline(node.outerHtml)];
+
+    if (href.isEmpty) {
+      if (id != null && id.isNotEmpty) {
+        return [BookAnchor(id), ...children];
+      }
+      return children;
+    }
+
+    final uri = Uri.tryParse(href);
+    if (uri != null) {
+      final link = BookLink(href: uri, children: children);
+      if (id != null && id.isNotEmpty) {
+        return [BookAnchor(id), link];
+      }
+      return [link];
+    }
+
+    return children;
   }
 }
