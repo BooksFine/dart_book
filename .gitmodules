@@ -1,3 +1,6 @@
 [submodule "specs/epub-specs"]
 	path = specs/epub-specs
 	url = https://github.com/w3c/epub-specs
+[submodule "test/fixtures/epub3-samples"]
+	path = test/fixtures/epub3-samples
+	url = https://github.com/IDPF/epub3-samples
