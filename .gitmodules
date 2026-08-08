@@ -4,3 +4,6 @@
 [submodule "test/fixtures/epub3-samples"]
 	path = test/fixtures/epub3-samples
 	url = https://github.com/IDPF/epub3-samples
+[submodule "specs/fb2-specs"]
+	path = specs/fb2-specs
+	url = https://github.com/dngulin/fb2schema
