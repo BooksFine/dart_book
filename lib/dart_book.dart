@@ -1,5 +1,6 @@
 library;
 
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'src/models/converter.dart';
 import 'src/converters/registry.dart';
@@ -86,5 +87,25 @@ abstract class DartBook {
     }
 
     return book;
+  }
+
+  /// Загружает книгу в БЭКГРАУНД ИЗОЛЯТЕ (`Isolate.run`).
+  ///
+  /// Рекомендуется для приложений с высокой частотой обновления (144 FPS / 120 Hz ProMotion),
+  /// чтобы гарантировать 0 миллисекунд блокировки основного потока отрисовки (UI).
+  static Future<Book> loadIsolated(
+    Uint8List bytes, {
+    String? filename,
+    BookDecodingOptions? options,
+    BookResourceResolver? resourceResolver,
+  }) {
+    return Isolate.run(
+      () => load(
+        bytes,
+        filename: filename,
+        options: options,
+        resourceResolver: resourceResolver,
+      ),
+    );
   }
 }
