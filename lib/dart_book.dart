@@ -9,12 +9,14 @@ import 'src/models/book.dart';
 
 export 'src/models/book.dart';
 export 'src/models/converter.dart';
+export 'src/models/encoding_options.dart';
 export 'src/models/exceptions.dart';
 export 'src/models/parser.dart';
 export 'src/models/resource_naming_policy.dart';
 export 'src/builder/book_builder.dart';
 export 'src/converters/registry.dart';
 export 'src/converters/resource_resolver.dart';
+export 'src/converters/resource_requests_collector.dart';
 
 export 'src/converters/epub/epub_converter.dart';
 export 'src/converters/epub/epub_decoder.dart';
@@ -79,8 +81,7 @@ abstract class DartBook {
     var book = await decoder.decode(bytes, options: options);
 
     if (resourceResolver != null) {
-      book = await resolveBookResources(
-        book,
+      book = await book.resolveResources(
         resourceResolver,
         baseUri: book.metadata.source,
       );

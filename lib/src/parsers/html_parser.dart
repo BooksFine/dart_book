@@ -80,7 +80,11 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'br' => const [BookEmptyLine()],
       'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' || 'details' || 'summary' || 'address' =>
         node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
-      _ => _handleUnhandledElement(node, tag),
+      _ => () {
+        final inlines = _parseInlines([node]);
+        if (inlines.isEmpty) return const <BookBlock>[];
+        return <BookBlock>[BookParagraph(inlines: inlines)];
+      }(),
     };
   }
 
@@ -123,13 +127,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     return BookParagraph(inlines: _parseInlines(element.nodes));
   }
 
-  List<BookBlock> _handleUnhandledElement(dom.Element node, String? tag) {
-    if (strictMode) {
-      throw BookParseException('Unhandled HTML element <$tag>', tag: tag);
-    }
-    logger?.call('Warning: unhandled HTML element <$tag>, fallback to BookRawHtmlBlock');
-    return [BookRawHtmlBlock(node.outerHtml)];
-  }
+
 
   BookQuote _parseQuote(dom.Element element) {
     final citationElem = element.querySelector('.citation, cite, footer');

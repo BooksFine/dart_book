@@ -4,8 +4,8 @@ import 'package:test/test.dart';
 
 void main() {
   final sampleBook = Book(
-    id: 'test-book-1',
     metadata: const BookMetadata(
+      id: 'test-book-1',
       title: 'Test Book Title',
       language: 'ru',
       contributors: [
@@ -68,7 +68,7 @@ void main() {
       expect(bytes, isNotEmpty);
 
       final decoded = await EpubConverter.epubToBook(bytes);
-      expect(decoded.id, equals('test-book-1'));
+      expect(decoded.metadata.id, equals('test-book-1'));
       expect(decoded.metadata.title, equals('Test Book Title'));
       expect(decoded.metadata.language, equals('ru'));
       expect(decoded.metadata.contributors.length, equals(1));

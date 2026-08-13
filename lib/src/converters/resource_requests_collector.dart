@@ -2,6 +2,15 @@ import '../models/book.dart';
 
 List<BookResourceRequest> collectResourceRequestsFromBook(Book book) {
   final output = <BookResourceRequest>[];
+  if (book.metadata.cover != null) {
+    output.add(
+      BookResourceRequest(
+        id: book.metadata.cover!.ref.id,
+        source: book.metadata.cover!.ref.id,
+        isInline: false,
+      ),
+    );
+  }
   _crrFromBlocks(book.content.blocks, output);
   if (book.metadata.annotation != null) {
     _crrFromBlocks(book.metadata.annotation!.blocks, output);

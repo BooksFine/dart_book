@@ -51,7 +51,10 @@ class BookResourceRef with _$BookResourceRef {
 ///
 /// Используется в [DartBook.load] и [resolveBookResources].
 typedef BookResourceResolver =
-    FutureOr<BookResource?> Function(BookResourceRequest request);
+    FutureOr<BookResource?> Function(
+      BookResourceRequest request, {
+      void Function(int receivedBytes, int? totalBytes)? onByteProgress,
+    });
 
 /// Запрос на получение ресурса от резолвера.
 @freezed

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../../models/book.dart';
 import '../../models/converter.dart';
+import '../../models/encoding_options.dart';
 import 'fb2_zip_decoder.dart';
 import 'fb2_zip_encoder.dart';
 
@@ -23,7 +24,8 @@ class Fb2ZipConverter implements BookConverter {
   bool canEncode(String extension) => _encoder.canEncode(extension);
 
   @override
-  FutureOr<Uint8List> encode(Book book) => _encoder.encode(book);
+  FutureOr<Uint8List> encode(Book book, {BookEncodingOptions? options}) =>
+      _encoder.encode(book, options: options);
 
   /// Удобный статический метод: кодирует [book] прямо в `fb2.zip` архив.
   static Future<Uint8List> bookToFb2Zip(

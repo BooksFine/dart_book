@@ -42,7 +42,7 @@ void main() {
       final book = decoder.decode(xmlBytes);
       stopwatch.stop();
 
-      print('[BENCHMARK] Fb2Decoder 5,000 sections: ${stopwatch.elapsedMilliseconds} ms (book.id: ${book.id})');
+      print('[BENCHMARK] Fb2Decoder 5,000 sections: ${stopwatch.elapsedMilliseconds} ms (book.metadata.id: ${book.metadata.id})');
       expect(book.content.blocks.length, equals(5000));
       expect(stopwatch.elapsedMilliseconds, lessThan(3000));
     });

@@ -7,8 +7,8 @@ void main() {
   group('Deep AST Lossless Conversion Tests', () {
     test('Verifies 100% loss-less AST equivalence for all BookBlock and BookInline node types in EPUB & FB2', () async {
       final originalBook = Book(
-        id: 'ast-test-1',
         metadata: const BookMetadata(
+          id: 'ast-test-1',
           title: 'Full AST Test Book',
           language: 'ru',
           contributors: [

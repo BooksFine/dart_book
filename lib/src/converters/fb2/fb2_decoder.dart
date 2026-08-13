@@ -109,6 +109,7 @@ class Fb2Decoder implements BookDecoder {
         : const <String>[];
 
     final metadata = BookMetadata(
+      id: docId ?? title.hashCode.toString(),
       title: title,
       language: titleInfo?.findElements('lang').firstOrNull?.innerText ?? 'en',
       contributors: titleInfo != null
@@ -166,9 +167,12 @@ class Fb2Decoder implements BookDecoder {
       }
     }
 
+    final finalId = options?.id ?? docId ?? metadata.id;
     return Book(
-      id: options?.id ?? docId ?? metadata.title.hashCode.toString(),
-      metadata: metadata.copyWith(language: options?.lang ?? metadata.language),
+      metadata: metadata.copyWith(
+        id: finalId,
+        language: options?.lang ?? metadata.language,
+      ),
       content: BookContent(blocks: blocks),
       resources: resources,
     );

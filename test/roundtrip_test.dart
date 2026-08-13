@@ -6,8 +6,8 @@ void main() {
     test('EPUB -> Book -> FB2 -> Book', () async {
       // 1. Create a base book
       final original = Book(
-        id: 'roundtrip-1',
         metadata: const BookMetadata(
+          id: 'roundtrip-1',
           title: 'Roundtrip Test Book',
           language: 'ru',
           contributors: [

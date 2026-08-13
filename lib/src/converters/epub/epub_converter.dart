@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../../models/book.dart';
 import '../../models/converter.dart';
+import '../../models/encoding_options.dart';
 import 'epub_decoder.dart';
 import 'epub_encoder.dart';
 
@@ -35,7 +36,8 @@ class EpubConverter implements BookConverter {
   bool canEncode(String extension) => _encoder.canEncode(extension);
 
   @override
-  FutureOr<Uint8List> encode(Book book) => _encoder.encode(book);
+  FutureOr<Uint8List> encode(Book book, {BookEncodingOptions? options}) =>
+      _encoder.encode(book, options: options);
 
   /// Удобный статический метод: кодирует [book] в EPUB.
   static Future<Uint8List> bookToEpub(Book book) async =>

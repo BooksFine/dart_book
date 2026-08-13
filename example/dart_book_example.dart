@@ -12,8 +12,8 @@ Future<void> main() async {
 
   // 2. Сформировать универсальную модель Book
   final book = Book(
-    id: 'demo-1',
     metadata: const BookMetadata(
+      id: 'demo-1',
       title: 'Demo Book',
       language: 'en',
       contributors: [

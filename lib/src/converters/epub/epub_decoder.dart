@@ -173,9 +173,12 @@ class EpubDecoder implements BookDecoder {
       }
     }
 
+    final finalId = options?.id ?? opfId ?? metadata.id;
     return Book(
-      id: options?.id ?? opfId ?? metadata.title.hashCode.toString(),
-      metadata: metadata.copyWith(language: options?.lang ?? metadata.language),
+      metadata: metadata.copyWith(
+        id: finalId,
+        language: options?.lang ?? metadata.language,
+      ),
       content: BookContent(blocks: blocks),
       resources: resourceIndex.values.toList(),
     );
@@ -229,8 +232,11 @@ class EpubDecoder implements BookDecoder {
         .map((e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()))
         .toList();
 
+    final metadataId = id ?? title.hashCode.toString();
+
     return (
       BookMetadata(
+        id: metadataId,
         title: title,
         language: language,
         contributors: contributors,

@@ -33,7 +33,7 @@ void main() {
       final decoder = Fb2Decoder();
       final book = decoder.decode(Uint8List.fromList(utf8.encode(fb2Xml)));
 
-      expect(book.id, equals('doc-guid-12345'));
+      expect(book.metadata.id, equals('doc-guid-12345'));
       expect(book.metadata.title, equals('Тестовая Книга FB2 2.2'));
       expect(book.metadata.language, equals('ru'));
       expect(book.metadata.genres.length, equals(2));
@@ -122,8 +122,7 @@ void main() {
 
     test('Fb2ZipEncoder and Fb2ZipConverter encode book directly into valid fb2.zip archive', () async {
       final book = Book(
-        id: 'test-zip-1',
-        metadata: const BookMetadata(title: 'Книга для FB2 ZIP', language: 'ru'),
+        metadata: const BookMetadata(id: 'test-zip-1', title: 'Книга для FB2 ZIP', language: 'ru'),
         content: const BookContent(
           blocks: [
             BookSection(

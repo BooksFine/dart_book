@@ -116,9 +116,10 @@ class BookBuilder {
 
   /// Собирает итоговую готовую модель [Book].
   Future<Book> build() async {
+    final bookId = title.hashCode.abs().toString();
     var book = Book(
-      id: title.hashCode.abs().toString(),
       metadata: BookMetadata(
+        id: bookId,
         title: title,
         language: language,
         contributors: contributors,
@@ -135,7 +136,7 @@ class BookBuilder {
 
     // Финальная проверка и загрузка отсутствующих ресурсов при наличии resolver
     if (resourceResolver != null) {
-      book = await resolveBookResources(book, resourceResolver!, baseUri: source);
+      book = await book.resolveResources(resourceResolver!, baseUri: source);
     }
 
     return book;
