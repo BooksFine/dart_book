@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'book.dart';
 
+import 'encoding_options.dart';
+
 /// Совмещённый интерфейс конвертера книги: объединяет [BookEncoder] и [BookDecoder].
 ///
 /// Реализуйте этот интерфейс, если ваш класс поддерживает
@@ -19,7 +21,7 @@ abstract interface class BookEncoder {
   bool canEncode(String extension);
 
   /// Кодирует [book] в байты формата.
-  FutureOr<Uint8List> encode(Book book);
+  FutureOr<Uint8List> encode(Book book, {BookEncodingOptions? options});
 }
 
 /// Интерфейс декодировщика книги.

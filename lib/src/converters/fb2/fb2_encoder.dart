@@ -5,6 +5,10 @@ import 'package:dart_book/dart_book.dart';
 import 'package:xml/xml.dart';
 
 class Fb2Encoder implements BookEncoder {
+  final String programUsed;
+
+  const Fb2Encoder({this.programUsed = 'Re: UCM'});
+
   @override
   bool canEncode(String extension) {
     final ext = extension.toLowerCase();
@@ -14,31 +18,34 @@ class Fb2Encoder implements BookEncoder {
   @override
   FutureOr<Uint8List> encode(
     Book book, {
+    BookEncodingOptions? options,
     bool pretty = true,
     BookResourceResolver? resourceResolver,
   }) {
+    final effectivePretty = options?.pretty ?? pretty;
     if (resourceResolver != null) {
-      return _encodeAsync(book, pretty, resourceResolver);
+      return _encodeAsync(book, options, effectivePretty, resourceResolver);
     }
-    final xml = _buildXml(book, pretty: pretty);
+    final xml = _buildXml(book, options: options, pretty: effectivePretty);
     return Uint8List.fromList(utf8.encode(xml));
   }
 
   Future<Uint8List> _encodeAsync(
     Book book,
+    BookEncodingOptions? options,
     bool pretty,
     BookResourceResolver resourceResolver,
   ) async {
-    final resolvedBook = await resolveBookResources(
-      book,
+    final resolvedBook = await book.resolveResources(
       resourceResolver,
       baseUri: book.metadata.source,
     );
-    final xml = _buildXml(resolvedBook, pretty: pretty);
+    final xml = _buildXml(resolvedBook, options: options, pretty: pretty);
     return Uint8List.fromList(utf8.encode(xml));
   }
 
-  String _buildXml(Book book, {bool pretty = true}) {
+  String _buildXml(Book book, {BookEncodingOptions? options, bool pretty = true}) {
+    final ctx = _Fb2Context(book, options);
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="utf-8"');
     builder.element(
@@ -48,10 +55,10 @@ class Fb2Encoder implements BookEncoder {
         'xmlns:l': 'http://www.w3.org/1999/xlink',
       },
       nest: () {
-        _buildDescription(builder, book);
-        _buildMainBody(builder, book);
-        _buildNotesBody(builder, book.content);
-        _buildBinaries(builder, book.resources);
+        _buildDescription(builder, ctx);
+        _buildMainBody(builder, ctx);
+        _buildNotesBody(builder, ctx);
+        _buildBinaries(builder, ctx);
       },
     );
 
@@ -59,8 +66,8 @@ class Fb2Encoder implements BookEncoder {
     return document.toXmlString(pretty: pretty, indent: '  ');
   }
 
-  void _buildDescription(XmlBuilder builder, Book book) {
-    final metadata = book.metadata;
+  void _buildDescription(XmlBuilder builder, _Fb2Context ctx) {
+    final metadata = ctx.book.metadata;
 
     builder.element(
       'description',
@@ -112,7 +119,7 @@ class Fb2Encoder implements BookEncoder {
               builder.element(
                 'annotation',
                 nest: () {
-                  _writeBlocks(builder, metadata.annotation!.blocks);
+                  _writeBlocks(builder, metadata.annotation!.blocks, ctx);
                 },
               );
             }
@@ -145,12 +152,13 @@ class Fb2Encoder implements BookEncoder {
             }
 
             if (metadata.cover != null) {
+              final cleanId = ctx.getId(metadata.cover!.ref.id, isCover: true);
               builder.element(
                 'coverpage',
                 nest: () {
                   builder.element(
                     'image',
-                    attributes: {'l:href': '#${metadata.cover!.ref.id}'},
+                    attributes: {'l:href': '#$cleanId'},
                   );
                 },
               );
@@ -161,7 +169,8 @@ class Fb2Encoder implements BookEncoder {
         builder.element(
           'document-info',
           nest: () {
-            builder.element('id', nest: book.id);
+            final docId = ctx.options?.documentId ?? metadata.id;
+            builder.element('id', nest: docId);
             builder.element('version', nest: '1.0');
             builder.element(
               'date',
@@ -171,7 +180,8 @@ class Fb2Encoder implements BookEncoder {
             if (metadata.source != null) {
               builder.element('src-url', nest: metadata.source.toString());
             }
-            builder.element('program-used', nest: 'dart_book');
+            final prog = ctx.options?.programUsed ?? programUsed;
+            builder.element('program-used', nest: prog);
           },
         );
 
@@ -186,29 +196,29 @@ class Fb2Encoder implements BookEncoder {
     );
   }
 
-  void _buildMainBody(XmlBuilder builder, Book book) {
+  void _buildMainBody(XmlBuilder builder, _Fb2Context ctx) {
     builder.element(
       'body',
       nest: () {
         builder.element(
           'title',
           nest: () {
-            builder.element('p', nest: book.metadata.title);
+            builder.element('p', nest: ctx.book.metadata.title);
           },
         );
-        _writeBlocks(builder, book.content.blocks);
+        _writeBlocks(builder, ctx.book.content.blocks, ctx);
       },
     );
   }
 
-  void _buildNotesBody(XmlBuilder builder, BookContent content) {
-    if (content.footnotes.isEmpty) return;
+  void _buildNotesBody(XmlBuilder builder, _Fb2Context ctx) {
+    if (ctx.book.content.footnotes.isEmpty) return;
 
     builder.element(
       'body',
       attributes: {'name': 'notes'},
       nest: () {
-        for (final footnote in content.footnotes) {
+        for (final footnote in ctx.book.content.footnotes) {
           builder.element(
             'section',
             attributes: {'id': footnote.id},
@@ -219,7 +229,7 @@ class Fb2Encoder implements BookEncoder {
                   builder.element('p', nest: footnote.id);
                 },
               );
-              _writeBlocks(builder, footnote.blocks);
+              _writeBlocks(builder, footnote.blocks, ctx);
             },
           );
         }
@@ -227,17 +237,19 @@ class Fb2Encoder implements BookEncoder {
     );
   }
 
-  void _buildBinaries(XmlBuilder builder, List<BookResource> resources) {
-    for (final resource in resources) {
+  void _buildBinaries(XmlBuilder builder, _Fb2Context ctx) {
+    for (final resource in ctx.book.resources) {
+      final isCover = ctx.book.metadata.cover?.ref.id == resource.id;
+      final cleanId = ctx.getId(resource.id, isCover: isCover);
       builder.element(
         'binary',
-        attributes: {'id': resource.id, 'content-type': resource.mediaType},
+        attributes: {'id': cleanId, 'content-type': resource.mediaType},
         nest: base64Encode(resource.bytes),
       );
     }
   }
 
-  void _writeBlocks(XmlBuilder builder, List<BookBlock> blocks) {
+  void _writeBlocks(XmlBuilder builder, List<BookBlock> blocks, _Fb2Context ctx) {
     for (final block in blocks) {
       switch (block) {
         case BookSection section:
@@ -252,14 +264,14 @@ class Fb2Encoder implements BookEncoder {
                     builder.element(
                       'p',
                       nest: () {
-                        _writeInlines(builder, section.title);
+                        _writeInlines(builder, section.title, ctx);
                       },
                     );
                   },
                 );
               }
-              _writeBlocks(builder, section.blocks);
-              _writeBlocks(builder, section.children);
+              _writeBlocks(builder, section.blocks, ctx);
+              _writeBlocks(builder, section.children, ctx);
             },
           );
 
@@ -267,7 +279,7 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'subtitle',
             nest: () {
-              _writeInlines(builder, heading.text);
+              _writeInlines(builder, heading.text, ctx);
             },
           );
 
@@ -275,7 +287,7 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'p',
             nest: () {
-              _writeInlines(builder, paragraph.inlines);
+              _writeInlines(builder, paragraph.inlines, ctx);
             },
           );
 
@@ -283,12 +295,12 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'cite',
             nest: () {
-              _writeBlocks(builder, quote.blocks);
+              _writeBlocks(builder, quote.blocks, ctx);
               if (quote.citation.isNotEmpty) {
                 builder.element(
                   'text-author',
                   nest: () {
-                    _writeInlines(builder, quote.citation);
+                    _writeInlines(builder, quote.citation, ctx);
                   },
                 );
               }
@@ -306,11 +318,11 @@ class Fb2Encoder implements BookEncoder {
                     nest: () {
                       final prefix = list.ordered ? '${index++}. ' : '• ';
                       builder.text(prefix);
-                      _writeInlines(builder, paragraph.inlines);
+                      _writeInlines(builder, paragraph.inlines, ctx);
                     },
                   );
                 default:
-                  _writeBlocks(builder, [itemBlock]);
+                  _writeBlocks(builder, [itemBlock], ctx);
               }
             }
           }
@@ -327,7 +339,7 @@ class Fb2Encoder implements BookEncoder {
                       builder.element(
                         'td',
                         nest: () {
-                          _writeBlocks(builder, cell.blocks);
+                          _writeBlocks(builder, cell.blocks, ctx);
                         },
                       );
                     }
@@ -349,7 +361,7 @@ class Fb2Encoder implements BookEncoder {
                       builder.element(
                         'v',
                         nest: () {
-                          _writeInlines(builder, line.inlines);
+                          _writeInlines(builder, line.inlines, ctx);
                         },
                       );
                     }
@@ -360,7 +372,8 @@ class Fb2Encoder implements BookEncoder {
           );
 
         case BookImageBlock image:
-          builder.element('image', attributes: {'l:href': '#${image.ref.id}'});
+          final cleanId = ctx.getId(image.ref.id, isCover: false);
+          builder.element('image', attributes: {'l:href': '#$cleanId'});
 
         case BookAudioBlock audio:
           builder.element('p', nest: '[Audio: ${audio.ref.id}]');
@@ -391,7 +404,7 @@ class Fb2Encoder implements BookEncoder {
     }
   }
 
-  void _writeInlines(XmlBuilder builder, List<BookInline> inlines) {
+  void _writeInlines(XmlBuilder builder, List<BookInline> inlines, _Fb2Context ctx) {
     for (final inline in inlines) {
       switch (inline) {
         case BookText text:
@@ -404,7 +417,7 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'emphasis',
             nest: () {
-              _writeInlines(builder, emphasis.children);
+              _writeInlines(builder, emphasis.children, ctx);
             },
           );
 
@@ -412,7 +425,7 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'strong',
             nest: () {
-              _writeInlines(builder, strong.children);
+              _writeInlines(builder, strong.children, ctx);
             },
           );
 
@@ -420,7 +433,7 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'strikethrough',
             nest: () {
-              _writeInlines(builder, strike.children);
+              _writeInlines(builder, strike.children, ctx);
             },
           );
 
@@ -432,7 +445,7 @@ class Fb2Encoder implements BookEncoder {
             'a',
             attributes: {'l:href': link.href.toString()},
             nest: () {
-              _writeInlines(builder, link.children);
+              _writeInlines(builder, link.children, ctx);
             },
           );
 
@@ -440,16 +453,17 @@ class Fb2Encoder implements BookEncoder {
           builder.element('a', attributes: {'id': anchor.id});
 
         case BookImageInline imageInline:
+          final cleanId = ctx.getId(imageInline.ref.id, isCover: false);
           builder.element(
             'image',
-            attributes: {'l:href': '#${imageInline.ref.id}'},
+            attributes: {'l:href': '#$cleanId'},
           );
 
         case BookSuperscript superscript:
           builder.element(
             'sup',
             nest: () {
-              _writeInlines(builder, superscript.children);
+              _writeInlines(builder, superscript.children, ctx);
             },
           );
 
@@ -457,7 +471,7 @@ class Fb2Encoder implements BookEncoder {
           builder.element(
             'sub',
             nest: () {
-              _writeInlines(builder, subscript.children);
+              _writeInlines(builder, subscript.children, ctx);
             },
           );
 
@@ -467,7 +481,7 @@ class Fb2Encoder implements BookEncoder {
             attributes: {'l:href': '#${footnoteRef.id}', 'type': 'note'},
             nest: () {
               if (footnoteRef.label.isNotEmpty) {
-                _writeInlines(builder, footnoteRef.label);
+                _writeInlines(builder, footnoteRef.label, ctx);
               } else {
                 builder.text('[${footnoteRef.id}]');
               }
@@ -498,4 +512,57 @@ class Fb2Encoder implements BookEncoder {
     final day = value.day.toString().padLeft(2, '0');
     return '$year-$month-$day';
   }
+}
+
+class _Fb2Context {
+  final Book book;
+  final BookEncodingOptions? options;
+  final Map<String, String> _cache = {};
+  int _imageCounter = 0;
+
+  _Fb2Context(this.book, this.options);
+
+  String getId(String src, {required bool isCover}) {
+    if (_cache.containsKey(src)) return _cache[src]!;
+
+    BookResource? res;
+    for (final r in book.resources) {
+      if (r.id == src) {
+        res = r;
+        break;
+      }
+    }
+
+    final ext = _extensionForMedia(res?.mediaType ?? '', src);
+    final String cleanId;
+    if (isCover) {
+      final name = options?.coverFilename ?? 'cover';
+      cleanId = name.contains('.') ? name : '$name.$ext';
+    } else {
+      final policy = options?.namingPolicy ?? BookResourceNamingPolicy.sequential;
+      final generated = policy.generateName(src, isInline: false, index: ++_imageCounter);
+      cleanId = generated.contains('.') ? generated : '$generated.$ext';
+    }
+
+    _cache[src] = cleanId;
+    return cleanId;
+  }
+}
+
+String _extensionForMedia(String mediaType, String src) {
+  final mt = mediaType.toLowerCase();
+  if (mt.contains('jpeg') || mt.contains('jpg')) return 'jpg';
+  if (mt.contains('png')) return 'png';
+  if (mt.contains('webp')) return 'webp';
+  if (mt.contains('gif')) return 'gif';
+  if (mt.contains('svg')) return 'svg';
+
+  final clean = src.split('?').first.split('#').first;
+  if (clean.contains('.')) {
+    final ext = clean.split('.').last.toLowerCase();
+    if (ext.length <= 4 && RegExp(r'^[a-z0-9]+$').hasMatch(ext)) {
+      return ext;
+    }
+  }
+  return 'jpg';
 }
