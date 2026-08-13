@@ -10,11 +10,20 @@ part '.gen/metadata.freezed.dart';
 /// Метаданные книги: название, язык, авторы, жанры, обложка и т.д.
 @freezed
 class BookMetadata with _$BookMetadata {
+  /// Уникальный идентификатор книги.
+  final String id;
+
   /// Название книги.
   final String title;
 
   /// Код языка книги (ISO 639-1, например `'ru'`, `'en'`).
   final String language;
+
+  /// Флаг завершенности книги.
+  final bool isFinished;
+
+  /// Длина текста (в символах или словах).
+  final int? textLength;
 
   /// Участники создания книги: авторы, переводчики, редакторы и пр.
   final List<BookContributor> contributors;
@@ -44,8 +53,11 @@ class BookMetadata with _$BookMetadata {
   final DateTime? publishedAt;
 
   const BookMetadata({
+    required this.id,
     required this.title,
     required this.language,
+    this.isFinished = true,
+    this.textLength,
     this.contributors = const [],
     this.genres = const [],
     this.keywords = const [],

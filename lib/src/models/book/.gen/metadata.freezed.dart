@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$BookMetadata {
 
- String get title; String get language; List<BookContributor> get contributors; List<BookGenre> get genres; List<String> get keywords; BookContent? get annotation; BookSeries? get series; BookCover? get cover; Uri? get source; DateTime? get updatedAt; DateTime? get publishedAt;
+ String get id; String get title; String get language; bool get isFinished; int? get textLength; List<BookContributor> get contributors; List<BookGenre> get genres; List<String> get keywords; BookContent? get annotation; BookSeries? get series; BookCover? get cover; Uri? get source; DateTime? get updatedAt; DateTime? get publishedAt;
 /// Create a copy of BookMetadata
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $BookMetadataCopyWith<BookMetadata> get copyWith => _$BookMetadataCopyWithImpl<B
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BookMetadata&&(identical(other.title, title) || other.title == title)&&(identical(other.language, language) || other.language == language)&&const DeepCollectionEquality().equals(other.contributors, contributors)&&const DeepCollectionEquality().equals(other.genres, genres)&&const DeepCollectionEquality().equals(other.keywords, keywords)&&(identical(other.annotation, annotation) || other.annotation == annotation)&&(identical(other.series, series) || other.series == series)&&(identical(other.cover, cover) || other.cover == cover)&&(identical(other.source, source) || other.source == source)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BookMetadata&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.language, language) || other.language == language)&&(identical(other.isFinished, isFinished) || other.isFinished == isFinished)&&(identical(other.textLength, textLength) || other.textLength == textLength)&&const DeepCollectionEquality().equals(other.contributors, contributors)&&const DeepCollectionEquality().equals(other.genres, genres)&&const DeepCollectionEquality().equals(other.keywords, keywords)&&(identical(other.annotation, annotation) || other.annotation == annotation)&&(identical(other.series, series) || other.series == series)&&(identical(other.cover, cover) || other.cover == cover)&&(identical(other.source, source) || other.source == source)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,title,language,const DeepCollectionEquality().hash(contributors),const DeepCollectionEquality().hash(genres),const DeepCollectionEquality().hash(keywords),annotation,series,cover,source,updatedAt,publishedAt);
+int get hashCode => Object.hash(runtimeType,id,title,language,isFinished,textLength,const DeepCollectionEquality().hash(contributors),const DeepCollectionEquality().hash(genres),const DeepCollectionEquality().hash(keywords),annotation,series,cover,source,updatedAt,publishedAt);
 
 @override
 String toString() {
-  return 'BookMetadata(title: $title, language: $language, contributors: $contributors, genres: $genres, keywords: $keywords, annotation: $annotation, series: $series, cover: $cover, source: $source, updatedAt: $updatedAt, publishedAt: $publishedAt)';
+  return 'BookMetadata(id: $id, title: $title, language: $language, isFinished: $isFinished, textLength: $textLength, contributors: $contributors, genres: $genres, keywords: $keywords, annotation: $annotation, series: $series, cover: $cover, source: $source, updatedAt: $updatedAt, publishedAt: $publishedAt)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $BookMetadataCopyWith<$Res>  {
   factory $BookMetadataCopyWith(BookMetadata value, $Res Function(BookMetadata) _then) = _$BookMetadataCopyWithImpl;
 @useResult
 $Res call({
- String title, String language, List<BookContributor> contributors, List<BookGenre> genres, List<String> keywords, BookContent? annotation, BookSeries? series, BookCover? cover, Uri? source, DateTime? updatedAt, DateTime? publishedAt
+ String id, String title, String language, bool isFinished, int? textLength, List<BookContributor> contributors, List<BookGenre> genres, List<String> keywords, BookContent? annotation, BookSeries? series, BookCover? cover, Uri? source, DateTime? updatedAt, DateTime? publishedAt
 });
 
 
@@ -62,11 +62,14 @@ class _$BookMetadataCopyWithImpl<$Res>
 
 /// Create a copy of BookMetadata
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? title = null,Object? language = null,Object? contributors = null,Object? genres = null,Object? keywords = null,Object? annotation = freezed,Object? series = freezed,Object? cover = freezed,Object? source = freezed,Object? updatedAt = freezed,Object? publishedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? language = null,Object? isFinished = null,Object? textLength = freezed,Object? contributors = null,Object? genres = null,Object? keywords = null,Object? annotation = freezed,Object? series = freezed,Object? cover = freezed,Object? source = freezed,Object? updatedAt = freezed,Object? publishedAt = freezed,}) {
   return _then(BookMetadata(
-title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,language: null == language ? _self.language : language // ignore: cast_nullable_to_non_nullable
-as String,contributors: null == contributors ? _self.contributors : contributors // ignore: cast_nullable_to_non_nullable
+as String,isFinished: null == isFinished ? _self.isFinished : isFinished // ignore: cast_nullable_to_non_nullable
+as bool,textLength: freezed == textLength ? _self.textLength : textLength // ignore: cast_nullable_to_non_nullable
+as int?,contributors: null == contributors ? _self.contributors : contributors // ignore: cast_nullable_to_non_nullable
 as List<BookContributor>,genres: null == genres ? _self.genres : genres // ignore: cast_nullable_to_non_nullable
 as List<BookGenre>,keywords: null == keywords ? _self.keywords : keywords // ignore: cast_nullable_to_non_nullable
 as List<String>,annotation: freezed == annotation ? _self.annotation : annotation // ignore: cast_nullable_to_non_nullable

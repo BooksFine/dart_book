@@ -14,9 +14,6 @@ part '.gen/book.freezed.dart';
 /// и встроенные ресурсы ([resources]) в формато-независимом виде.
 @freezed
 class Book with _$Book {
-  /// Уникальный идентификатор книги.
-  final String id;
-
   /// Метаданные: название, авторы, язык, жанры и пр.
   final BookMetadata metadata;
 
@@ -27,7 +24,6 @@ class Book with _$Book {
   final List<BookResource> resources;
 
   const Book({
-    required this.id,
     required this.metadata,
     required this.content,
     required this.resources,
