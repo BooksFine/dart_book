@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dart_book/dart_book.dart';
-import 'package:xml/xml.dart';
 
 class Fb2Encoder implements BookEncoder {
   final String programUsed;
@@ -46,266 +45,204 @@ class Fb2Encoder implements BookEncoder {
 
   String _buildXml(Book book, {BookEncodingOptions? options, bool pretty = true}) {
     final ctx = _Fb2Context(book, options);
-    final builder = XmlBuilder();
-    builder.processing('xml', 'version="1.0" encoding="utf-8"');
-    builder.element(
+    final writer = _Fb2XmlWriter(pretty: pretty);
+
+    writer.processing('xml', 'version="1.0" encoding="utf-8"');
+    writer.openElement(
       'FictionBook',
       attributes: {
         'xmlns': 'http://www.gribuser.ru/xml/fictionbook/2.0',
         'xmlns:l': 'http://www.w3.org/1999/xlink',
       },
-      nest: () {
-        _buildDescription(builder, ctx);
-        _buildMainBody(builder, ctx);
-        _buildNotesBody(builder, ctx);
-        _buildBinaries(builder, ctx);
-      },
     );
 
-    final document = builder.buildDocument();
-    return document.toXmlString(pretty: pretty, indent: '  ');
+    _buildDescription(writer, ctx);
+    _buildMainBody(writer, ctx);
+    _buildNotesBody(writer, ctx);
+    _buildBinaries(writer, ctx);
+
+    writer.closeElement('FictionBook');
+    return writer.toString();
   }
 
-  void _buildDescription(XmlBuilder builder, _Fb2Context ctx) {
+  void _buildDescription(_Fb2XmlWriter writer, _Fb2Context ctx) {
     final metadata = ctx.book.metadata;
 
-    builder.element(
-      'description',
-      nest: () {
-        builder.element(
-          'title-info',
-          nest: () {
-            for (final genre in metadata.genres) {
-              builder.element('genre', nest: genre.code);
-            }
+    writer.openElement('description');
+    writer.openElement('title-info');
 
-            final authors = metadata.contributorsByRole(
-              BookContributorRole.author,
-            );
-            for (final author in authors) {
-              builder.element(
-                'author',
-                nest: () {
-                  final name = author.name;
-                  if (name.first?.trim().isNotEmpty == true) {
-                    builder.element('first-name', nest: name.first!.trim());
-                  }
-                  if (name.middle?.trim().isNotEmpty == true) {
-                    builder.element('middle-name', nest: name.middle!.trim());
-                  }
-                  if (name.last?.trim().isNotEmpty == true) {
-                    builder.element('last-name', nest: name.last!.trim());
-                  }
-                  if (name.nickname?.trim().isNotEmpty == true) {
-                    builder.element('nickname', nest: name.nickname!.trim());
-                  }
-                  if (author.homePage != null) {
-                    builder.element(
-                      'home-page',
-                      nest: author.homePage.toString(),
-                    );
-                  }
-                  if (author.email != null && author.email!.trim().isNotEmpty) {
-                    builder.element('email', nest: author.email!.trim());
-                  }
-                },
-              );
-            }
+    for (final genre in metadata.genres) {
+      writer.element('genre', text: genre.code, inline: true);
+    }
 
-            builder.element('book-title', nest: metadata.title);
-            builder.element('lang', nest: metadata.language);
+    final authors = metadata.contributorsByRole(BookContributorRole.author);
+    for (final author in authors) {
+      writer.openElement('author');
+      final name = author.name;
+      if (name.first?.trim().isNotEmpty == true) {
+        writer.element('first-name', text: name.first!.trim());
+      }
+      if (name.middle?.trim().isNotEmpty == true) {
+        writer.element('middle-name', text: name.middle!.trim());
+      }
+      if (name.last?.trim().isNotEmpty == true) {
+        writer.element('last-name', text: name.last!.trim());
+      }
+      if (name.nickname?.trim().isNotEmpty == true) {
+        writer.element('nickname', text: name.nickname!.trim());
+      }
+      if (author.homePage != null) {
+        writer.element('home-page', text: author.homePage.toString());
+      }
+      if (author.email != null && author.email!.trim().isNotEmpty) {
+        writer.element('email', text: author.email!.trim());
+      }
+      writer.closeElement('author');
+    }
 
-            if (metadata.annotation != null) {
-              builder.element(
-                'annotation',
-                nest: () {
-                  _writeBlocks(builder, metadata.annotation!.blocks, ctx);
-                },
-              );
-            }
+    writer.element('book-title', text: metadata.title, inline: true);
+    writer.element('lang', text: metadata.language, inline: true);
 
-            if (metadata.keywords.isNotEmpty) {
-              builder.element('keywords', nest: metadata.keywords.join(', '));
-            }
+    if (metadata.annotation != null) {
+      writer.openElement('annotation');
+      _writeBlocks(writer, metadata.annotation!.blocks, ctx);
+      writer.closeElement('annotation');
+    }
 
-            if (metadata.updatedAt != null) {
-              builder.element(
-                'date',
-                attributes: {'value': _formatDate(metadata.updatedAt!)},
-                nest: _formatDate(metadata.updatedAt!),
-              );
-            } else if (metadata.publishedAt != null) {
-              builder.element(
-                'date',
-                attributes: {'value': _formatDate(metadata.publishedAt!)},
-                nest: _formatDate(metadata.publishedAt!),
-              );
-            }
+    if (metadata.keywords.isNotEmpty) {
+      writer.element('keywords', text: metadata.keywords.join(', '), inline: true);
+    }
 
-            if (metadata.series != null) {
-              final series = metadata.series!;
-              final attributes = <String, String>{'name': series.name};
-              if (series.number != null) {
-                attributes['number'] = series.number.toString();
-              }
-              builder.element('sequence', attributes: attributes);
-            }
+    if (metadata.updatedAt != null) {
+      writer.element(
+        'date',
+        attributes: {'value': _formatDate(metadata.updatedAt!)},
+        text: _formatDate(metadata.updatedAt!),
+        inline: true,
+      );
+    } else if (metadata.publishedAt != null) {
+      writer.element(
+        'date',
+        attributes: {'value': _formatDate(metadata.publishedAt!)},
+        text: _formatDate(metadata.publishedAt!),
+        inline: true,
+      );
+    }
 
-            if (metadata.cover != null) {
-              final cleanId = ctx.getId(metadata.cover!.ref.id, isCover: true);
-              builder.element(
-                'coverpage',
-                nest: () {
-                  builder.element(
-                    'image',
-                    attributes: {'l:href': '#$cleanId'},
-                  );
-                },
-              );
-            }
-          },
-        );
+    if (metadata.series != null) {
+      final series = metadata.series!;
+      final attributes = <String, String>{'name': series.name};
+      if (series.number != null) {
+        attributes['number'] = series.number.toString();
+      }
+      writer.element('sequence', attributes: attributes);
+    }
 
-        builder.element(
-          'document-info',
-          nest: () {
-            final docId = ctx.options?.documentId ?? metadata.id;
-            builder.element('id', nest: docId);
-            builder.element('version', nest: '1.0');
-            builder.element(
-              'date',
-              attributes: {'value': _formatDate(DateTime.now())},
-              nest: _formatDate(DateTime.now()),
-            );
-            if (metadata.source != null) {
-              builder.element('src-url', nest: metadata.source.toString());
-            }
-            final prog = ctx.options?.programUsed ?? programUsed;
-            builder.element('program-used', nest: prog);
-          },
-        );
+    if (metadata.cover != null) {
+      final cleanId = ctx.getId(metadata.cover!.ref.id, isCover: true);
+      writer.openElement('coverpage');
+      writer.element('image', attributes: {'l:href': '#$cleanId'});
+      writer.closeElement('coverpage');
+    }
 
-        if (metadata.series?.url != null) {
-          builder.element(
-            'custom-info',
-            attributes: {'info-type': 'sequence-url'},
-            nest: metadata.series!.url.toString(),
-          );
-        }
-      },
+    writer.closeElement('title-info');
+
+    writer.openElement('document-info');
+    final docId = ctx.options?.documentId ?? metadata.id;
+    writer.element('id', text: docId, inline: true);
+    writer.element('version', text: '1.0', inline: true);
+    writer.element(
+      'date',
+      attributes: {'value': _formatDate(DateTime.now())},
+      text: _formatDate(DateTime.now()),
+      inline: true,
     );
+    if (metadata.source != null) {
+      writer.element('src-url', text: metadata.source.toString(), inline: true);
+    }
+    final prog = ctx.options?.programUsed ?? programUsed;
+    writer.element('program-used', text: prog, inline: true);
+    writer.closeElement('document-info');
+
+    if (metadata.series?.url != null) {
+      writer.element(
+        'custom-info',
+        attributes: {'info-type': 'sequence-url'},
+        text: metadata.series!.url.toString(),
+        inline: true,
+      );
+    }
+
+    writer.closeElement('description');
   }
 
-  void _buildMainBody(XmlBuilder builder, _Fb2Context ctx) {
-    builder.element(
-      'body',
-      nest: () {
-        builder.element(
-          'title',
-          nest: () {
-            builder.element('p', nest: ctx.book.metadata.title);
-          },
-        );
-        _writeBlocks(builder, ctx.book.content.blocks, ctx);
-      },
-    );
+  void _buildMainBody(_Fb2XmlWriter writer, _Fb2Context ctx) {
+    writer.openElement('body');
+    writer.openElement('title');
+    writer.element('p', text: ctx.book.metadata.title, inline: true);
+    writer.closeElement('title');
+    _writeBlocks(writer, ctx.book.content.blocks, ctx);
+    writer.closeElement('body');
   }
 
-  void _buildNotesBody(XmlBuilder builder, _Fb2Context ctx) {
+  void _buildNotesBody(_Fb2XmlWriter writer, _Fb2Context ctx) {
     if (ctx.book.content.footnotes.isEmpty) return;
 
-    builder.element(
-      'body',
-      attributes: {'name': 'notes'},
-      nest: () {
-        for (final footnote in ctx.book.content.footnotes) {
-          builder.element(
-            'section',
-            attributes: {'id': footnote.id},
-            nest: () {
-              builder.element(
-                'title',
-                nest: () {
-                  builder.element('p', nest: footnote.id);
-                },
-              );
-              _writeBlocks(builder, footnote.blocks, ctx);
-            },
-          );
-        }
-      },
-    );
+    writer.openElement('body', attributes: {'name': 'notes'});
+    for (final footnote in ctx.book.content.footnotes) {
+      writer.openElement('section', attributes: {'id': footnote.id});
+      writer.openElement('title');
+      writer.element('p', text: footnote.id, inline: true);
+      writer.closeElement('title');
+      _writeBlocks(writer, footnote.blocks, ctx);
+      writer.closeElement('section');
+    }
+    writer.closeElement('body');
   }
 
-  void _buildBinaries(XmlBuilder builder, _Fb2Context ctx) {
+  void _buildBinaries(_Fb2XmlWriter writer, _Fb2Context ctx) {
     for (final resource in ctx.book.resources) {
       final isCover = ctx.book.metadata.cover?.ref.id == resource.id;
       final cleanId = ctx.getId(resource.id, isCover: isCover);
-      builder.element(
-        'binary',
-        attributes: {'id': cleanId, 'content-type': resource.mediaType},
-        nest: base64Encode(resource.bytes),
-      );
+      writer.binaryElement(cleanId, resource.mediaType, resource.bytes);
     }
   }
 
-  void _writeBlocks(XmlBuilder builder, List<BookBlock> blocks, _Fb2Context ctx) {
+  void _writeBlocks(_Fb2XmlWriter writer, List<BookBlock> blocks, _Fb2Context ctx) {
     for (final block in blocks) {
       switch (block) {
         case BookSection section:
-          builder.element(
-            'section',
-            attributes: _idAttribute(section.id),
-            nest: () {
-              if (section.title.isNotEmpty) {
-                builder.element(
-                  'title',
-                  nest: () {
-                    builder.element(
-                      'p',
-                      nest: () {
-                        _writeInlines(builder, section.title, ctx);
-                      },
-                    );
-                  },
-                );
-              }
-              _writeBlocks(builder, section.blocks, ctx);
-              _writeBlocks(builder, section.children, ctx);
-            },
-          );
+          writer.openElement('section', attributes: _idAttribute(section.id));
+          if (section.title.isNotEmpty) {
+            writer.openElement('title');
+            writer.openElement('p', inline: true);
+            _writeInlines(writer, section.title, ctx);
+            writer.closeElement('p', inline: true);
+            writer.closeElement('title');
+          }
+          _writeBlocks(writer, section.blocks, ctx);
+          _writeBlocks(writer, section.children, ctx);
+          writer.closeElement('section');
 
         case BookHeading heading:
-          builder.element(
-            'subtitle',
-            nest: () {
-              _writeInlines(builder, heading.text, ctx);
-            },
-          );
+          writer.openElement('subtitle', inline: true);
+          _writeInlines(writer, heading.text, ctx);
+          writer.closeElement('subtitle', inline: true);
 
         case BookParagraph paragraph:
-          builder.element(
-            'p',
-            nest: () {
-              _writeInlines(builder, paragraph.inlines, ctx);
-            },
-          );
+          writer.openElement('p', inline: true);
+          _writeInlines(writer, paragraph.inlines, ctx);
+          writer.closeElement('p', inline: true);
 
         case BookQuote quote:
-          builder.element(
-            'cite',
-            nest: () {
-              _writeBlocks(builder, quote.blocks, ctx);
-              if (quote.citation.isNotEmpty) {
-                builder.element(
-                  'text-author',
-                  nest: () {
-                    _writeInlines(builder, quote.citation, ctx);
-                  },
-                );
-              }
-            },
-          );
+          writer.openElement('cite');
+          _writeBlocks(writer, quote.blocks, ctx);
+          if (quote.citation.isNotEmpty) {
+            writer.openElement('text-author', inline: true);
+            _writeInlines(writer, quote.citation, ctx);
+            writer.closeElement('text-author', inline: true);
+          }
+          writer.closeElement('cite');
 
         case BookList list:
           var index = 1;
@@ -313,186 +250,139 @@ class Fb2Encoder implements BookEncoder {
             for (final itemBlock in item.blocks) {
               switch (itemBlock) {
                 case BookParagraph paragraph:
-                  builder.element(
-                    'p',
-                    nest: () {
-                      final prefix = list.ordered ? '${index++}. ' : '• ';
-                      builder.text(prefix);
-                      _writeInlines(builder, paragraph.inlines, ctx);
-                    },
-                  );
+                  writer.openElement('p', inline: true);
+                  final prefix = list.ordered ? '${index++}. ' : '• ';
+                  writer.text(prefix);
+                  _writeInlines(writer, paragraph.inlines, ctx);
+                  writer.closeElement('p', inline: true);
                 default:
-                  _writeBlocks(builder, [itemBlock], ctx);
+                  _writeBlocks(writer, [itemBlock], ctx);
               }
             }
           }
 
         case BookTable table:
-          builder.element(
-            'table',
-            nest: () {
-              for (final row in table.rows) {
-                builder.element(
-                  'tr',
-                  nest: () {
-                    for (final cell in row.cells) {
-                      builder.element(
-                        'td',
-                        nest: () {
-                          _writeBlocks(builder, cell.blocks, ctx);
-                        },
-                      );
-                    }
-                  },
-                );
-              }
-            },
-          );
+          writer.openElement('table');
+          for (final row in table.rows) {
+            writer.openElement('tr');
+            for (final cell in row.cells) {
+              writer.openElement('td');
+              _writeBlocks(writer, cell.blocks, ctx);
+              writer.closeElement('td');
+            }
+            writer.closeElement('tr');
+          }
+          writer.closeElement('table');
 
         case BookPoem poem:
-          builder.element(
-            'poem',
-            nest: () {
-              for (final stanza in poem.stanzas) {
-                builder.element(
-                  'stanza',
-                  nest: () {
-                    for (final line in stanza.lines) {
-                      builder.element(
-                        'v',
-                        nest: () {
-                          _writeInlines(builder, line.inlines, ctx);
-                        },
-                      );
-                    }
-                  },
-                );
-              }
-            },
-          );
+          writer.openElement('poem');
+          for (final stanza in poem.stanzas) {
+            writer.openElement('stanza');
+            for (final line in stanza.lines) {
+              writer.openElement('v', inline: true);
+              _writeInlines(writer, line.inlines, ctx);
+              writer.closeElement('v', inline: true);
+            }
+            writer.closeElement('stanza');
+          }
+          writer.closeElement('poem');
 
         case BookImageBlock image:
           final cleanId = ctx.getId(image.ref.id, isCover: false);
-          builder.element('image', attributes: {'l:href': '#$cleanId'});
+          writer.element('image', attributes: {'l:href': '#$cleanId'});
 
         case BookAudioBlock audio:
-          builder.element('p', nest: '[Audio: ${audio.ref.id}]');
+          writer.element('p', text: '[Audio: ${audio.ref.id}]', inline: true);
 
         case BookVideoBlock video:
-          builder.element('p', nest: '[Video: ${video.ref.id}]');
+          writer.element('p', text: '[Video: ${video.ref.id}]', inline: true);
 
         case BookMathBlock math:
-          builder.element('p', nest: _stripTags(math.mathml));
+          writer.element('p', text: _stripTags(math.mathml), inline: true);
 
         case BookSvgBlock():
-          builder.element('p', nest: '[SVG Graphic]');
+          writer.element('p', text: '[SVG Graphic]', inline: true);
 
         case BookHorizontalRule() || BookEmptyLine():
-          builder.element('empty-line');
+          writer.element('empty-line');
 
         case BookCodeBlock code:
           for (final line in const LineSplitter().convert(code.code)) {
-            builder.element('p', nest: line);
+            writer.element('p', text: line, inline: true);
           }
 
         case BookRawHtmlBlock rawHtml:
-          builder.element('p', nest: _stripTags(rawHtml.html));
+          writer.element('p', text: _stripTags(rawHtml.html), inline: true);
 
         case BookRawXmlBlock rawXml:
-          builder.element('p', nest: rawXml.xml);
+          writer.element('p', text: rawXml.xml, inline: true);
       }
     }
   }
 
-  void _writeInlines(XmlBuilder builder, List<BookInline> inlines, _Fb2Context ctx) {
+  void _writeInlines(_Fb2XmlWriter writer, List<BookInline> inlines, _Fb2Context ctx) {
     for (final inline in inlines) {
       switch (inline) {
         case BookText text:
-          builder.text(text.text);
+          writer.text(text.text);
 
         case BookLineBreak():
-          builder.element('empty-line');
+          writer.element('empty-line');
 
         case BookEmphasis emphasis:
-          builder.element(
-            'emphasis',
-            nest: () {
-              _writeInlines(builder, emphasis.children, ctx);
-            },
-          );
+          writer.openElement('emphasis', inline: true);
+          _writeInlines(writer, emphasis.children, ctx);
+          writer.closeElement('emphasis', inline: true);
 
         case BookStrong strong:
-          builder.element(
-            'strong',
-            nest: () {
-              _writeInlines(builder, strong.children, ctx);
-            },
-          );
+          writer.openElement('strong', inline: true);
+          _writeInlines(writer, strong.children, ctx);
+          writer.closeElement('strong', inline: true);
 
         case BookStrike strike:
-          builder.element(
-            'strikethrough',
-            nest: () {
-              _writeInlines(builder, strike.children, ctx);
-            },
-          );
+          writer.openElement('strikethrough', inline: true);
+          _writeInlines(writer, strike.children, ctx);
+          writer.closeElement('strikethrough', inline: true);
 
         case BookCodeSpan codeSpan:
-          builder.text(codeSpan.code);
+          writer.text(codeSpan.code);
 
         case BookLink link:
-          builder.element(
-            'a',
-            attributes: {'l:href': link.href.toString()},
-            nest: () {
-              _writeInlines(builder, link.children, ctx);
-            },
-          );
+          writer.openElement('a', attributes: {'l:href': link.href.toString()}, inline: true);
+          _writeInlines(writer, link.children, ctx);
+          writer.closeElement('a', inline: true);
 
         case BookAnchor anchor:
-          builder.element('a', attributes: {'id': anchor.id});
+          writer.element('a', attributes: {'id': anchor.id}, inline: true);
 
         case BookImageInline imageInline:
           final cleanId = ctx.getId(imageInline.ref.id, isCover: false);
-          builder.element(
-            'image',
-            attributes: {'l:href': '#$cleanId'},
-          );
+          writer.element('image', attributes: {'l:href': '#$cleanId'}, inline: true);
 
         case BookSuperscript superscript:
-          builder.element(
-            'sup',
-            nest: () {
-              _writeInlines(builder, superscript.children, ctx);
-            },
-          );
+          writer.openElement('sup', inline: true);
+          _writeInlines(writer, superscript.children, ctx);
+          writer.closeElement('sup', inline: true);
 
         case BookSubscript subscript:
-          builder.element(
-            'sub',
-            nest: () {
-              _writeInlines(builder, subscript.children, ctx);
-            },
-          );
+          writer.openElement('sub', inline: true);
+          _writeInlines(writer, subscript.children, ctx);
+          writer.closeElement('sub', inline: true);
 
         case BookFootnoteRef footnoteRef:
-          builder.element(
-            'a',
-            attributes: {'l:href': '#${footnoteRef.id}', 'type': 'note'},
-            nest: () {
-              if (footnoteRef.label.isNotEmpty) {
-                _writeInlines(builder, footnoteRef.label, ctx);
-              } else {
-                builder.text('[${footnoteRef.id}]');
-              }
-            },
-          );
+          writer.openElement('a', attributes: {'l:href': '#${footnoteRef.id}', 'type': 'note'}, inline: true);
+          if (footnoteRef.label.isNotEmpty) {
+            _writeInlines(writer, footnoteRef.label, ctx);
+          } else {
+            writer.text('[${footnoteRef.id}]');
+          }
+          writer.closeElement('a', inline: true);
 
         case BookRawHtmlInline rawHtmlInline:
-          builder.text(_stripTags(rawHtmlInline.html));
+          writer.text(_stripTags(rawHtmlInline.html));
 
         case BookRawXmlInline rawXmlInline:
-          builder.text(rawXmlInline.xml);
+          writer.text(rawXmlInline.xml);
       }
     }
   }
@@ -539,7 +429,7 @@ class _Fb2Context {
       final name = options?.coverFilename ?? 'cover';
       cleanId = name.contains('.') ? name : '$name.$ext';
     } else {
-      final policy = options?.namingPolicy ?? BookResourceNamingPolicy.sequential;
+      final policy = options?.namingPolicy ?? BookResourceNamingPolicy.preserve;
       final generated = policy.generateName(src, isInline: false, index: ++_imageCounter);
       cleanId = generated.contains('.') ? generated : '$generated.$ext';
     }
@@ -547,6 +437,94 @@ class _Fb2Context {
     _cache[src] = cleanId;
     return cleanId;
   }
+}
+
+class _Fb2XmlWriter {
+  final StringBuffer _buffer = StringBuffer();
+  final bool pretty;
+  int _indentLevel = 0;
+
+  _Fb2XmlWriter({required this.pretty});
+
+  void _indent() {
+    if (!pretty) return;
+    _buffer.write('  ' * _indentLevel);
+  }
+
+  void _newline() {
+    if (!pretty) return;
+    _buffer.write('\n');
+  }
+
+  void processing(String target, String text) {
+    _buffer.write('<?$target $text?>');
+    _newline();
+  }
+
+  void openElement(String name, {Map<String, String>? attributes, bool selfClosing = false, bool inline = false}) {
+    if (!inline) _indent();
+    _buffer.write('<$name');
+    if (attributes != null && attributes.isNotEmpty) {
+      for (final entry in attributes.entries) {
+        if (entry.value.isNotEmpty || entry.key == 'id' || entry.key == 'name') {
+          _buffer.write(' ${entry.key}="${_escape(entry.value)}"');
+        }
+      }
+    }
+    if (selfClosing) {
+      _buffer.write('/>');
+      if (!inline) _newline();
+    } else {
+      _buffer.write('>');
+      if (!inline) {
+        _newline();
+        _indentLevel++;
+      }
+    }
+  }
+
+  void closeElement(String name, {bool inline = false}) {
+    if (!inline) {
+      _indentLevel--;
+      _indent();
+    }
+    _buffer.write('</$name>');
+    if (!inline) _newline();
+  }
+
+  void text(String text) {
+    _buffer.write(_escape(text));
+  }
+
+  void element(String name, {Map<String, String>? attributes, String? text, bool inline = false}) {
+    if (text == null || text.isEmpty) {
+      openElement(name, attributes: attributes, selfClosing: true, inline: inline);
+    } else {
+      openElement(name, attributes: attributes, inline: inline);
+      this.text(text);
+      closeElement(name, inline: true);
+    }
+  }
+
+  void binaryElement(String id, String mediaType, Uint8List bytes) {
+    if (pretty) _indent();
+    _buffer.write('<binary id="${_escape(id)}" content-type="${_escape(mediaType)}">');
+    _buffer.write(base64Encode(bytes));
+    _buffer.write('</binary>');
+    if (pretty) _newline();
+  }
+
+  String _escape(String input) {
+    return input
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;');
+  }
+
+  @override
+  String toString() => _buffer.toString();
 }
 
 String _extensionForMedia(String mediaType, String src) {
