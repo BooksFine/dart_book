@@ -51,7 +51,15 @@ class EpubEncoder implements BookEncoder {
       final isCover = coverRawId != null && coverRawId == res.id;
       final cleanId = ctx.getId(res.id, isCover: isCover);
       final href = 'resources/$cleanId';
-      archive.addFile(ArchiveFile('OEBPS/$href', res.bytes.length, res.bytes));
+      final isImage = res.mediaType.startsWith('image/') ||
+          res.mediaType.startsWith('font/') ||
+          res.mediaType.contains('audio/') ||
+          res.mediaType.contains('video/');
+      if (isImage) {
+        archive.addFile(ArchiveFile.noCompress('OEBPS/$href', res.bytes.length, res.bytes));
+      } else {
+        archive.addFile(ArchiveFile('OEBPS/$href', res.bytes.length, res.bytes));
+      }
 
       final coverProperty = isCover ? ' properties="cover-image"' : '';
       manifestItems.add(
@@ -225,7 +233,7 @@ class EpubEncoder implements BookEncoder {
           buffer.write(_blocksToXhtml(s.children, ctx));
           buffer.write('</section>');
         case BookQuote q:
-          buffer.write('blockquote>');
+          buffer.write('<blockquote>');
           buffer.write(_blocksToXhtml(q.blocks, ctx));
           if (q.citation.isNotEmpty) {
             buffer.write('<p class="citation">${_inlinesToXhtml(q.citation, ctx)}</p>');
@@ -400,7 +408,7 @@ class _EpubContext {
       final name = options?.coverFilename ?? 'cover';
       cleanId = name.contains('.') ? name : '$name.$ext';
     } else {
-      final policy = options?.namingPolicy ?? BookResourceNamingPolicy.sequential;
+      final policy = options?.namingPolicy ?? BookResourceNamingPolicy.preserve;
       final generated = policy.generateName(src, isInline: false, index: ++_imageCounter);
       cleanId = generated.contains('.') ? generated : '$generated.$ext';
     }

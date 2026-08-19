@@ -43,7 +43,11 @@ class Fb2ZipEncoder implements BookEncoder {
       final cleanName = rawName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_').trim();
       filename = cleanName.isNotEmpty ? '$cleanName.fb2' : 'book.fb2';
     }
-    archive.addFile(ArchiveFile(filename, xmlBytes.length, xmlBytes));
+    final compress = options?.compressZip ?? true;
+    final file = compress
+        ? ArchiveFile(filename, xmlBytes.length, xmlBytes)
+        : ArchiveFile.noCompress(filename, xmlBytes.length, xmlBytes);
+    archive.addFile(file);
     return Uint8List.fromList(ZipEncoder().encode(archive));
   }
 }

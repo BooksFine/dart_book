@@ -19,12 +19,17 @@ class BookEncodingOptions {
   /// Форматировать ли XML с отступами.
   final bool pretty;
 
+  /// Сжимать ли ZIP-архив при упаковке FB2.ZIP (по умолчанию: true).
+  /// Установка в false отключает Deflate-сжатие, ускоряя сохранение в десятки раз.
+  final bool compressZip;
+
   const BookEncodingOptions({
     this.documentId,
     this.programUsed,
     this.entryFilename,
-    this.namingPolicy = BookResourceNamingPolicy.sequential,
+    this.namingPolicy = BookResourceNamingPolicy.preserve,
     this.coverFilename = 'cover',
     this.pretty = true,
+    this.compressZip = true,
   });
 }
