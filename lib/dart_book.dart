@@ -3,6 +3,7 @@ library;
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'src/models/converter.dart';
+import 'src/models/encoding_options.dart';
 import 'src/converters/registry.dart';
 import 'src/converters/resource_resolver.dart';
 import 'src/models/book.dart';
@@ -108,5 +109,25 @@ abstract class DartBook {
         resourceResolver: resourceResolver,
       ),
     );
+  }
+
+  /// Кодирует книгу в указанный формат в БЭКГРАУНД ИЗОЛЯТЕ (`Isolate.run`).
+  ///
+  /// Рекомендуется для кодирования тяжелых файлов (FB2.ZIP / EPUB) с претификацией и сжатием,
+  /// чтобы гарантировать 0 миллисекунд блокировки основного потока отрисовки (UI).
+  static Future<Uint8List> encodeIsolated(
+    Book book,
+    String extension, {
+    BookEncodingOptions? options,
+  }) {
+    return Isolate.run(() async {
+      final encoder = BookRegistry.findEncoder(extension);
+      if (encoder == null) {
+        throw Exception(
+          'Не удалось найти подходящий кодировщик для расширения $extension',
+        );
+      }
+      return await encoder.encode(book, options: options);
+    });
   }
 }

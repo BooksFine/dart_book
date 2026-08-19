@@ -16,7 +16,7 @@ void main() {
             name: PersonName(display: 'Автор Веб-Ранобэ'),
           ),
         ],
-        resourceResolver: (request) async {
+        resourceResolver: (request, {onByteProgress}) async {
           // Кастомная функция загрузки с ресурса (поддержка User-Agent, Cookies, Proxy)
           if (request.source != null) {
             downloadedUrls.add(request.source!);

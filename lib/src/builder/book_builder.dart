@@ -84,26 +84,28 @@ class BookBuilder {
 
     _sections.add(section);
 
-    // Дозагружаем медиа-ресурсы через кастомный resourceResolver при его наличии
+    // Дозагружаем медиа-ресурсы через кастомный resourceResolver при его наличии (параллельно)
     if (resourceResolver != null) {
-      for (final entry in pendingResources.entries) {
-        final resId = entry.key;
-        final src = entry.value;
+      await Future.wait(
+        pendingResources.entries.map((entry) async {
+          final resId = entry.key;
+          final src = entry.value;
 
-        if (_resources.containsKey(resId)) continue;
+          if (_resources.containsKey(resId)) return;
 
-        final resolved = await resourceResolver!(
-          BookResourceRequest(
-            id: resId,
-            source: src,
-            baseUri: source,
-            isInline: false,
-          ),
-        );
-        if (resolved != null) {
-          _resources[resId] = resolved;
-        }
-      }
+          final resolved = await resourceResolver!(
+            BookResourceRequest(
+              id: resId,
+              source: src,
+              baseUri: source,
+              isInline: false,
+            ),
+          );
+          if (resolved != null) {
+            _resources[resId] = resolved;
+          }
+        }),
+      );
     }
 
     return section;
