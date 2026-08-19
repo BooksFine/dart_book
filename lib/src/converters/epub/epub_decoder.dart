@@ -100,6 +100,12 @@ class EpubDecoder implements BookDecoder {
     final blocks = <BookBlock>[];
     final resourceIndex = <String, BookResource>{};
 
+    final manifestByPath = <String, _EpubItem>{};
+    for (final item in manifest.values) {
+      manifestByPath[item.href] = item;
+      manifestByPath[_joinPath(opfDir, item.href)] = item;
+    }
+
     for (final idref in spine) {
       final item = manifest[idref];
       if (item == null) continue;
@@ -121,15 +127,9 @@ class EpubDecoder implements BookDecoder {
           }
 
           final absolutePath = _resolveRelativePath(chapterDir, src);
+          final manifestItem = manifestByPath[absolutePath];
 
-          final manifestItem = manifest.values.firstWhere(
-            (item) =>
-                item.href == absolutePath ||
-                _joinPath(opfDir, item.href) == absolutePath,
-            orElse: () => _EpubItem('', '', ''),
-          );
-
-          if (manifestItem.id.isNotEmpty) {
+          if (manifestItem != null && manifestItem.id.isNotEmpty) {
             return 'epub-res-${manifestItem.id}';
           }
 
