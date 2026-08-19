@@ -81,9 +81,11 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' || 'details' || 'summary' || 'address' =>
         node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
       _ => () {
-        final inlines = _parseInlines([node]);
-        if (inlines.isEmpty) return const <BookBlock>[];
-        return <BookBlock>[BookParagraph(inlines: inlines)];
+        if (strictMode) {
+          throw BookParseException('Unhandled HTML element <$tag>', tag: tag);
+        }
+        logger?.call('Warning: unhandled HTML element <$tag>, fallback to BookRawHtmlBlock');
+        return <BookBlock>[BookRawHtmlBlock(node.outerHtml)];
       }(),
     };
   }
