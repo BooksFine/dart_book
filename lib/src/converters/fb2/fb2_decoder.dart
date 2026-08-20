@@ -93,15 +93,22 @@ class Fb2Decoder implements BookDecoder {
         ? Uri.tryParse(customInfoSeqUrl)
         : null;
 
-    final seqElem = titleInfo?.findElements('sequence').firstOrNull;
-    final seriesName = seqElem?.getAttribute('name');
-    final series = seriesName != null && seriesName.isNotEmpty
-        ? BookSeries(
-            name: seriesName,
-            number: int.tryParse(seqElem?.getAttribute('number') ?? ''),
+    final seriesList = <BookSeries>[];
+    for (final seqElem in titleInfo?.findElements('sequence') ?? const <XmlElement>[]) {
+      final name = seqElem.getAttribute('name');
+      if (name != null && name.isNotEmpty) {
+        seriesList.add(
+          BookSeries(
+            name: name,
+            number: int.tryParse(seqElem.getAttribute('number') ?? ''),
             url: seriesUrl,
-          )
-        : (seriesUrl != null ? BookSeries(name: '', url: seriesUrl) : null);
+          ),
+        );
+      }
+    }
+    if (seriesList.isEmpty && seriesUrl != null) {
+      seriesList.add(BookSeries(name: '', url: seriesUrl));
+    }
 
     final keywordsText = titleInfo?.findElements('keywords').firstOrNull?.innerText;
     final keywords = keywordsText != null
@@ -176,6 +183,61 @@ class Fb2Decoder implements BookDecoder {
       }
     }
 
+    final pubInfoElem = description?.findElements('publish-info').firstOrNull;
+    BookPublishInfo? publishInfo;
+    if (pubInfoElem != null) {
+      final publisher = pubInfoElem.findElements('publisher').firstOrNull?.innerText.trim();
+      final city = pubInfoElem.findElements('city').firstOrNull?.innerText.trim();
+      final yearStr = pubInfoElem.findElements('year').firstOrNull?.innerText.trim();
+      final isbn = pubInfoElem.findElements('isbn').firstOrNull?.innerText.trim();
+      publishInfo = BookPublishInfo(
+        publisher: publisher?.isNotEmpty == true ? publisher : null,
+        city: city?.isNotEmpty == true ? city : null,
+        year: yearStr != null ? int.tryParse(yearStr) : null,
+        isbn: isbn?.isNotEmpty == true ? isbn : null,
+      );
+    }
+
+    final srcLang = titleInfo?.findElements('src-lang').firstOrNull?.innerText.trim();
+    final srcTitleInfoElem = description?.findElements('src-title-info').firstOrNull;
+    BookSourceTitleInfo? srcTitleInfo;
+    if (srcTitleInfoElem != null) {
+      final srcTitle = srcTitleInfoElem.findElements('book-title').firstOrNull?.innerText.trim();
+      final srcLanguage = srcTitleInfoElem.findElements('lang').firstOrNull?.innerText.trim();
+      final srcAuthors = <BookContributor>[];
+      for (final e in srcTitleInfoElem.findElements('author')) {
+        final firstName = e.findElements('first-name').firstOrNull?.innerText.trim();
+        final middleName = e.findElements('middle-name').firstOrNull?.innerText.trim();
+        final lastName = e.findElements('last-name').firstOrNull?.innerText.trim();
+        final nickname = e.findElements('nickname').firstOrNull?.innerText.trim();
+        final nameParts = [
+          if (firstName != null && firstName.isNotEmpty) firstName,
+          if (middleName != null && middleName.isNotEmpty) middleName,
+          if (lastName != null && lastName.isNotEmpty) lastName,
+        ];
+        final display = nameParts.isNotEmpty
+            ? nameParts.join(' ')
+            : (nickname != null && nickname.isNotEmpty ? nickname : null);
+        srcAuthors.add(
+          BookContributor(
+            role: BookContributorRole.author,
+            name: PersonName(
+              first: firstName?.isNotEmpty == true ? firstName : null,
+              middle: middleName?.isNotEmpty == true ? middleName : null,
+              last: lastName?.isNotEmpty == true ? lastName : null,
+              nickname: nickname?.isNotEmpty == true ? nickname : null,
+              display: display,
+            ),
+          ),
+        );
+      }
+      srcTitleInfo = BookSourceTitleInfo(
+        title: srcTitle?.isNotEmpty == true ? srcTitle : null,
+        language: srcLanguage?.isNotEmpty == true ? srcLanguage : null,
+        authors: srcAuthors,
+      );
+    }
+
     final dateElem = titleInfo?.findElements('date').firstOrNull ??
         docInfo?.findElements('date').firstOrNull;
     final dateValue = dateElem?.getAttribute('value');
@@ -196,8 +258,11 @@ class Fb2Decoder implements BookDecoder {
       genres: genres,
       annotation: annotation,
       cover: cover,
-      series: series,
+      series: seriesList,
       keywords: keywords,
+      publishInfo: publishInfo,
+      srcLang: srcLang?.isNotEmpty == true ? srcLang : null,
+      srcTitleInfo: srcTitleInfo,
       publishedAt: parsedDate,
     );
 
@@ -275,6 +340,22 @@ String _decodeXmlBytes(Uint8List rawBytes) {
   }
 }
 
+const _win1251Lookup = <int, int>{
+  0x80: 0x0402, 0x81: 0x0403, 0x82: 0x201A, 0x83: 0x0453, 0x84: 0x201E,
+  0x85: 0x2026, 0x86: 0x2020, 0x87: 0x2021, 0x88: 0x20AC, 0x89: 0x2030,
+  0x8A: 0x0409, 0x8B: 0x2039, 0x8C: 0x040A, 0x8D: 0x040C, 0x8E: 0x040B,
+  0x8F: 0x040F, 0x90: 0x0452, 0x91: 0x2018, 0x92: 0x2019, 0x93: 0x201C,
+  0x94: 0x201D, 0x95: 0x2022, 0x96: 0x2013, 0x97: 0x2014, 0x99: 0x2122,
+  0x9A: 0x0459, 0x9B: 0x203A, 0x9C: 0x045A, 0x9D: 0x045C, 0x9E: 0x045B,
+  0x9F: 0x045F, 0xA0: 0x00A0, 0xA1: 0x040E, 0xA2: 0x045E, 0xA3: 0x0408,
+  0xA4: 0x00A4, 0xA5: 0x0490, 0xA6: 0x00A6, 0xA7: 0x00A7, 0xA8: 0x0401,
+  0xA9: 0x00A9, 0xAA: 0x0404, 0xAB: 0x00AB, 0xAC: 0x00AC, 0xAD: 0x00AD,
+  0xAE: 0x00AE, 0xAF: 0x0407, 0xB0: 0x00B0, 0xB1: 0x00B1, 0xB2: 0x0406,
+  0xB3: 0x0456, 0xB4: 0x0491, 0xB5: 0x00B5, 0xB6: 0x00B6, 0xB7: 0x00B7,
+  0xB8: 0x0451, 0xB9: 0x2116, 0xBA: 0x0454, 0xBB: 0x00BB, 0xBC: 0x0458,
+  0xBD: 0x0405, 0xBE: 0x0455, 0xBF: 0x0457,
+};
+
 String _decodeWindows1251(Uint8List bytes) {
   final buffer = StringBuffer();
   for (final byte in bytes) {
@@ -282,12 +363,9 @@ String _decodeWindows1251(Uint8List bytes) {
       buffer.writeCharCode(byte);
     } else if (byte >= 0xC0 && byte <= 0xFF) {
       buffer.writeCharCode(0x0410 + (byte - 0xC0));
-    } else if (byte == 0xA8) {
-      buffer.writeCharCode(0x0401); // Ё
-    } else if (byte == 0xB8) {
-      buffer.writeCharCode(0x0451); // ё
     } else {
-      buffer.writeCharCode(byte);
+      final code = _win1251Lookup[byte] ?? byte;
+      buffer.writeCharCode(code);
     }
   }
   return buffer.toString();

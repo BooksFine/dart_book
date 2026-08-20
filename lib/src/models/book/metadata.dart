@@ -7,7 +7,19 @@ import 'resources.dart';
 
 part '.gen/metadata.freezed.dart';
 
-/// Метаданные книги: название, язык, авторы, жанры, обложка и т.д.
+/// Режим отображения/верстки книги.
+enum BookLayout {
+  /// Адаптивная текстовая верстка (по умолчанию).
+  reflowable,
+
+  /// Фиксированная верстка (комиксы, манга, фотокниги).
+  fixedLayout,
+
+  /// Непрерывный вертикальный скролл (вебтуны).
+  roll,
+}
+
+/// Метаданные книги: название, язык, авторы, жанры, обложка, издательство и т.д.
 @freezed
 class BookMetadata with _$BookMetadata {
   /// Уникальный идентификатор книги.
@@ -37,14 +49,26 @@ class BookMetadata with _$BookMetadata {
   /// Аннотация к книге в виде блоков контента.
   final BookContent? annotation;
 
-  /// Серия, в которую входит книга.
-  final BookSeries? series;
+  /// Серии, в которые входит книга.
+  final List<BookSeries> series;
 
   /// Обложка книги.
   final BookCover? cover;
 
   /// Оригинальный URI источника (например, адрес веб-страницы или epub-файла).
   final Uri? source;
+
+  /// Сведения об издании (издательство, город, год, ISBN).
+  final BookPublishInfo? publishInfo;
+
+  /// Язык оригинального произведения (для переводных книг).
+  final String? srcLang;
+
+  /// Сведения об оригинальном произведении.
+  final BookSourceTitleInfo? srcTitleInfo;
+
+  /// Режим верстки/отображения (reflowable, fixedLayout, roll).
+  final BookLayout layout;
 
   /// Дата последнего обновления документа.
   final DateTime? updatedAt;
@@ -62,12 +86,19 @@ class BookMetadata with _$BookMetadata {
     this.genres = const [],
     this.keywords = const [],
     this.annotation,
-    this.series,
+    this.series = const [],
     this.cover,
     this.source,
+    this.publishInfo,
+    this.srcLang,
+    this.srcTitleInfo,
+    this.layout = BookLayout.reflowable,
     this.updatedAt,
     this.publishedAt,
   });
+
+  /// Возвращает первую (основную) серию книги для удобства.
+  BookSeries? get primarySeries => series.firstOrNull;
 
   /// Возвращает всех участников с заданной [role].
   ///
@@ -82,6 +113,48 @@ class BookMetadata with _$BookMetadata {
       }
     }
   }
+}
+
+/// Сведения об издании книги (издательство, город, год, ISBN).
+@freezed
+class BookPublishInfo with _$BookPublishInfo {
+  /// Название издательства.
+  final String? publisher;
+
+  /// Город издания.
+  final String? city;
+
+  /// Год издания.
+  final int? year;
+
+  /// Международный стандартный книжный номер (ISBN).
+  final String? isbn;
+
+  const BookPublishInfo({
+    this.publisher,
+    this.city,
+    this.year,
+    this.isbn,
+  });
+}
+
+/// Сведения об оригинале произведения (для переводных книг).
+@freezed
+class BookSourceTitleInfo with _$BookSourceTitleInfo {
+  /// Оригинальное название.
+  final String? title;
+
+  /// Язык оригинала.
+  final String? language;
+
+  /// Авторы оригинального произведения.
+  final List<BookContributor> authors;
+
+  const BookSourceTitleInfo({
+    this.title,
+    this.language,
+    this.authors = const [],
+  });
 }
 
 /// Жанр книги.

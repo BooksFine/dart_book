@@ -41,9 +41,9 @@ void main() {
       expect(book.metadata.annotation, isNotNull);
       expect(book.metadata.cover, isNotNull);
       expect(book.metadata.cover!.ref.id, equals('cover.jpg'));
-      expect(book.metadata.series, isNotNull);
-      expect(book.metadata.series!.name, equals('Космическая Одиссея'));
-      expect(book.metadata.series!.number, equals(1));
+      expect(book.metadata.series, isNotEmpty);
+      expect(book.metadata.series.first.name, equals('Космическая Одиссея'));
+      expect(book.metadata.series.first.number, equals(1));
       expect(book.metadata.keywords, contains('детектив'));
     });
 
@@ -165,10 +165,10 @@ void main() {
       final decoder = Fb2Decoder();
       final book = decoder.decode(Uint8List.fromList(utf8.encode(fb2Xml)));
 
-      expect(book.metadata.series, isNotNull);
-      expect(book.metadata.series!.name, equals('Авторская Серия'));
-      expect(book.metadata.series!.number, equals(3));
-      expect(book.metadata.series!.url, equals(Uri.parse('https://author.today/work/series/12345')));
+      expect(book.metadata.series, isNotEmpty);
+      expect(book.metadata.series.first.name, equals('Авторская Серия'));
+      expect(book.metadata.series.first.number, equals(3));
+      expect(book.metadata.series.first.url, equals(Uri.parse('https://author.today/work/series/12345')));
 
       final encodedXml = utf8.decode(await Fb2Encoder().encode(book));
       expect(encodedXml, contains('<custom-info info-type="sequence-url">https://author.today/work/series/12345</custom-info>'));
@@ -391,6 +391,197 @@ void main() {
       final rtTable = rtSection.blocks[1] as BookTable;
       expect(rtTable.rows[0].cells[0].colSpan, equals(2));
       expect(rtTable.rows[0].cells[1].rowSpan, equals(2));
+    });
+
+    test('FB2 2.1: Full compliance & roundtrip test for all 2.1 features', () async {
+      final originalBook = Book(
+        metadata: const BookMetadata(
+          id: 'fb2-21-full-test',
+          title: 'Переводная Книга FB2 2.1',
+          language: 'ru',
+          srcLang: 'en',
+          srcTitleInfo: BookSourceTitleInfo(
+            title: 'Original Book Title',
+            language: 'en',
+            authors: [
+              BookContributor(
+                role: BookContributorRole.author,
+                name: PersonName(
+                  first: 'John',
+                  middle: 'R.',
+                  last: 'Doe',
+                  nickname: 'JD',
+                  display: 'John R. Doe',
+                ),
+              ),
+            ],
+          ),
+        ),
+        content: const BookContent(
+          blocks: [
+            BookSection(
+              title: [BookText('Глава 1: FB2 2.1 Нововведения')],
+              blocks: [
+                BookParagraph(inlines: [
+                  BookText('Текст с формулой '),
+                  BookSubscript(children: [BookText('2')]),
+                  BookText(', степенью '),
+                  BookSuperscript(children: [BookText('10')]),
+                  BookText(', зачеркиванием '),
+                  BookStrike(children: [BookText('удаленный текст')]),
+                  BookText(' и кодом '),
+                  BookCodeSpan('void main() {}'),
+                  BookText('.'),
+                ]),
+                BookTable(
+                  rows: [
+                    BookTableRow(
+                      cells: [
+                        BookTableCell(
+                          blocks: [BookParagraph(inlines: [BookText('Заголовок 1+2')])],
+                          colSpan: 2,
+                          align: 'center',
+                          vAlign: 'top',
+                        ),
+                        BookTableCell(
+                          blocks: [BookParagraph(inlines: [BookText('Боковая ячейка 1+2')])],
+                          rowSpan: 2,
+                          align: 'right',
+                          vAlign: 'middle',
+                        ),
+                      ],
+                    ),
+                    BookTableRow(
+                      cells: [
+                        BookTableCell(
+                          blocks: [BookParagraph(inlines: [BookText('Ячейка 2.1')])],
+                          align: 'left',
+                          vAlign: 'bottom',
+                        ),
+                        BookTableCell(
+                          blocks: [BookParagraph(inlines: [BookText('Ячейка 2.2')])],
+                          align: 'justify',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                BookImageBlock(
+                  id: 'block-img-1',
+                  ref: BookResourceRef('diagram.png'),
+                  alt: 'Диаграмма архитектуры',
+                  title: 'Рисунок 1.1',
+                ),
+                BookParagraph(inlines: [
+                  BookText('Текст перед иконкой '),
+                  BookImageInline(
+                    id: 'inline-img-1',
+                    ref: BookResourceRef('icon.png'),
+                    alt: 'Иконка',
+                    title: 'Подсказка иконки',
+                  ),
+                  BookText(' текст после.'),
+                ]),
+              ],
+            ),
+          ],
+        ),
+        resources: [
+          BookResource(
+            id: 'diagram.png',
+            mediaType: 'image/png',
+            bytes: Uint8List.fromList([1, 2, 3]),
+          ),
+          BookResource(
+            id: 'icon.png',
+            mediaType: 'image/png',
+            bytes: Uint8List.fromList([4, 5, 6]),
+          ),
+        ],
+      );
+
+      final encoder = Fb2Encoder();
+      final decoder = Fb2Decoder();
+
+      final fb2Bytes = await encoder.encode(originalBook);
+      final fb2Xml = utf8.decode(fb2Bytes);
+
+      // Verify XML schema structure and order
+      expect(fb2Xml, contains('<src-title-info>'));
+      expect(fb2Xml, contains('<first-name>John</first-name>'));
+      expect(fb2Xml, contains('<middle-name>R.</middle-name>'));
+      expect(fb2Xml, contains('<last-name>Doe</last-name>'));
+      expect(fb2Xml, contains('<book-title>Original Book Title</book-title>'));
+      expect(fb2Xml, contains('<lang>en</lang>'));
+
+      // Verify table attributes in XML
+      expect(fb2Xml, contains('colspan="2"'));
+      expect(fb2Xml, contains('rowspan="2"'));
+      expect(fb2Xml, contains('align="center"'));
+      expect(fb2Xml, contains('valign="top"'));
+      expect(fb2Xml, contains('align="right"'));
+      expect(fb2Xml, contains('valign="middle"'));
+
+      // Verify image attributes in XML
+      expect(fb2Xml, contains('id="block-img-1"'));
+      expect(fb2Xml, contains('alt="Диаграмма архитектуры"'));
+      expect(fb2Xml, contains('title="Рисунок 1.1"'));
+      expect(fb2Xml, contains('id="inline-img-1"'));
+      expect(fb2Xml, contains('alt="Иконка"'));
+      expect(fb2Xml, contains('title="Подсказка иконки"'));
+
+      // Verify inline tags in XML
+      expect(fb2Xml, contains('<sub>2</sub>'));
+      expect(fb2Xml, contains('<sup>10</sup>'));
+      expect(fb2Xml, contains('<strikethrough>удаленный текст</strikethrough>'));
+      expect(fb2Xml, contains('<code>void main() {}</code>'));
+
+      // Decode and verify AST
+      final decodedBook = decoder.decode(fb2Bytes);
+
+      // 1. src-title-info verification
+      expect(decodedBook.metadata.srcLang, equals('en'));
+      expect(decodedBook.metadata.srcTitleInfo, isNotNull);
+      expect(decodedBook.metadata.srcTitleInfo!.title, equals('Original Book Title'));
+      expect(decodedBook.metadata.srcTitleInfo!.language, equals('en'));
+      expect(decodedBook.metadata.srcTitleInfo!.authors.length, equals(1));
+      final srcAuthor = decodedBook.metadata.srcTitleInfo!.authors.first;
+      expect(srcAuthor.name.first, equals('John'));
+      expect(srcAuthor.name.middle, equals('R.'));
+      expect(srcAuthor.name.last, equals('Doe'));
+
+      // 2. Section & Inlines verification
+      final section = decodedBook.content.blocks.first as BookSection;
+      final p1 = section.blocks[0] as BookParagraph;
+      expect(p1.inlines.any((i) => i is BookSubscript && (i.children.first as BookText).text == '2'), isTrue);
+      expect(p1.inlines.any((i) => i is BookSuperscript && (i.children.first as BookText).text == '10'), isTrue);
+      expect(p1.inlines.any((i) => i is BookStrike && (i.children.first as BookText).text == 'удаленный текст'), isTrue);
+      expect(p1.inlines.any((i) => i is BookCodeSpan && i.code == 'void main() {}'), isTrue);
+
+      // 3. Table verification
+      final table = section.blocks[1] as BookTable;
+      expect(table.rows.length, equals(2));
+      expect(table.rows[0].cells[0].colSpan, equals(2));
+      expect(table.rows[0].cells[0].align, equals('center'));
+      expect(table.rows[0].cells[0].vAlign, equals('top'));
+      expect(table.rows[0].cells[1].rowSpan, equals(2));
+      expect(table.rows[0].cells[1].align, equals('right'));
+      expect(table.rows[0].cells[1].vAlign, equals('middle'));
+      expect(table.rows[1].cells[0].align, equals('left'));
+      expect(table.rows[1].cells[0].vAlign, equals('bottom'));
+      expect(table.rows[1].cells[1].align, equals('justify'));
+
+      // 4. Image verification
+      final blockImg = section.blocks[2] as BookImageBlock;
+      expect(blockImg.id, equals('block-img-1'));
+      expect(blockImg.alt, equals('Диаграмма архитектуры'));
+      expect(blockImg.title, equals('Рисунок 1.1'));
+
+      final p2 = section.blocks[3] as BookParagraph;
+      final inlineImg = p2.inlines.whereType<BookImageInline>().first;
+      expect(inlineImg.id, equals('inline-img-1'));
+      expect(inlineImg.alt, equals('Иконка'));
+      expect(inlineImg.title, equals('Подсказка иконки'));
     });
   });
 }

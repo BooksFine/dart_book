@@ -161,7 +161,19 @@ class BookTableCell {
   /// Количество объединяемых строк (`rowspan`).
   final int? rowSpan;
 
-  const BookTableCell({this.blocks = const [], this.colSpan, this.rowSpan});
+  /// Горизонтальное выравнивание ('left', 'center', 'right', 'justify').
+  final String? align;
+
+  /// Вертикальное выравнивание ('top', 'middle', 'bottom', 'baseline').
+  final String? vAlign;
+
+  const BookTableCell({
+    this.blocks = const [],
+    this.colSpan,
+    this.rowSpan,
+    this.align,
+    this.vAlign,
+  });
 }
 
 /// Стихотворное произведение, состоящее из строф.
@@ -190,6 +202,9 @@ class BookPoemLine {
 
 /// Блочное изображение.
 class BookImageBlock extends BookBlock {
+  /// Уникальный идентификатор изображения.
+  final String? id;
+
   /// Ссылка на ресурс изображения.
   final BookResourceRef ref;
 
@@ -200,6 +215,7 @@ class BookImageBlock extends BookBlock {
   final String? title;
 
   const BookImageBlock({
+    this.id,
     required this.ref,
     this.alt,
     this.title,
@@ -286,10 +302,40 @@ class BookAnchor extends BookInline {
 }
 
 class BookImageInline extends BookInline {
+  /// Уникальный идентификатор изображения.
+  final String? id;
+
+  /// Ссылка на ресурс изображения.
   final BookResourceRef ref;
+
+  /// Альтернативный текст.
   final String? alt;
 
-  const BookImageInline({required this.ref, this.alt, super.attributes});
+  /// Всплывающая подсказка.
+  final String? title;
+
+  const BookImageInline({
+    this.id,
+    required this.ref,
+    this.alt,
+    this.title,
+    super.attributes,
+  });
+}
+
+/// Именованный пользовательский стиль текста (`<style name="...">` в FB2).
+class BookNamedStyle extends BookInline {
+  /// Имя стиля.
+  final String name;
+
+  /// Дочерние инлайн-элементы.
+  final List<BookInline> inlines;
+
+  const BookNamedStyle({
+    required this.name,
+    this.inlines = const [],
+    super.attributes,
+  });
 }
 
 class BookSuperscript extends BookInline {

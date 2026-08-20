@@ -259,6 +259,17 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       )) {
         final colSpan = int.tryParse(cell.attributes['colspan'] ?? '');
         final rowSpan = int.tryParse(cell.attributes['rowspan'] ?? '');
+        var align = cell.attributes['align'];
+        var vAlign = cell.attributes['valign'];
+        final style = cell.attributes['style'] ?? '';
+        if (align == null && style.contains('text-align:')) {
+          final match = RegExp(r'text-align\s*:\s*([a-zA-Z]+)').firstMatch(style);
+          align = match?.group(1);
+        }
+        if (vAlign == null && style.contains('vertical-align:')) {
+          final match = RegExp(r'vertical-align\s*:\s*([a-zA-Z]+)').firstMatch(style);
+          vAlign = match?.group(1);
+        }
 
         final blocks = parse(cell.nodes);
         cells.add(
@@ -268,6 +279,8 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
                 : blocks,
             colSpan: colSpan,
             rowSpan: rowSpan,
+            align: align,
+            vAlign: vAlign,
           ),
         );
       }
@@ -280,6 +293,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     final src = (element.attributes['src'] ?? '').trim();
     final alt = element.attributes['alt'];
     final title = element.attributes['title'];
+    final elemId = element.attributes['id'];
     final id = registrar?.call(src, isInline: false) ?? src;
 
     final attributes = <String, String>{};
@@ -288,6 +302,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     }
 
     return BookImageBlock(
+      id: elemId,
       ref: BookResourceRef(id),
       alt: alt,
       title: title,
@@ -331,12 +346,22 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'sub' => [BookSubscript(children: _parseInlines(node.nodes))],
       'a' => _parseLink(node),
       'img' => _parseInlineImage(node),
-      'span' || 'small' || 'mark' || 'abbr' || 'q' || 'time' => _parseInlines(node.nodes),
+      'span' => _parseSpan(node),
+      'small' || 'mark' || 'abbr' || 'q' || 'time' => _parseInlines(node.nodes),
       _ => _handleUnhandledInline(node, tag),
     };
 
     inlines.addAll(parsedInlines);
     return inlines;
+  }
+
+  List<BookInline> _parseSpan(dom.Element node) {
+    final className = node.attributes['class'];
+    if (className != null && className.startsWith('style-')) {
+      final styleName = className.substring('style-'.length);
+      return [BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes))];
+    }
+    return _parseInlines(node.nodes);
   }
 
   List<BookInline> _handleUnhandledInline(dom.Element node, String? tag) {
@@ -349,11 +374,16 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
   List<BookInline> _parseInlineImage(dom.Element node) {
     final src = (node.attributes['src'] ?? '').trim();
+    final alt = node.attributes['alt'];
+    final title = node.attributes['title'];
+    final elemId = node.attributes['id'];
     final id = registrar?.call(src, isInline: true) ?? src;
     return [
       BookImageInline(
+        id: elemId,
         ref: BookResourceRef(id),
-        alt: node.attributes['alt'],
+        alt: alt,
+        title: title,
         attributes: src.isEmpty ? const {} : {'source-src': src},
       ),
     ];

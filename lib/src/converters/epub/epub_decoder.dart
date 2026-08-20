@@ -278,6 +278,94 @@ class EpubDecoder implements BookDecoder {
         .map((e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()))
         .toList();
 
+    // Publisher & ISBN
+    final publisher = metadataElement.findAllElements('dc:publisher').firstOrNull?.innerText.trim();
+    String? isbn;
+    for (final ident in metadataElement.findAllElements('dc:identifier')) {
+      final scheme = ident.getAttribute('opf:scheme')?.toUpperCase();
+      final text = ident.innerText.trim();
+      if (scheme == 'ISBN' || text.toLowerCase().startsWith('urn:isbn:')) {
+        isbn = text.replaceFirst(RegExp(r'^urn:isbn:', caseSensitive: false), '').trim();
+        break;
+      }
+    }
+    final dateElem = metadataElement.findAllElements('dc:date').firstOrNull;
+    final dateText = dateElem?.innerText.trim();
+    DateTime? publishedAt;
+    if (dateText != null && dateText.isNotEmpty) {
+      publishedAt = DateTime.tryParse(dateText);
+    }
+    final publishInfo = (publisher != null || isbn != null || publishedAt != null)
+        ? BookPublishInfo(
+            publisher: publisher?.isNotEmpty == true ? publisher : null,
+            isbn: isbn?.isNotEmpty == true ? isbn : null,
+            year: publishedAt?.year,
+          )
+        : null;
+
+    // Series (EPUB 3 belongs-to-collection or Calibre metadata)
+    final seriesList = <BookSeries>[];
+    for (final meta in metadataElement.findAllElements('meta')) {
+      final prop = meta.getAttribute('property');
+      if (prop == 'belongs-to-collection') {
+        final collectionName = meta.innerText.trim();
+        final collectionId = meta.getAttribute('id');
+        int? position;
+        if (collectionId != null) {
+          final posElem = metadataElement
+              .findAllElements('meta')
+              .where((e) => e.getAttribute('refines') == '#$collectionId' && e.getAttribute('property') == 'group-position')
+              .firstOrNull;
+          if (posElem != null) {
+            position = int.tryParse(posElem.innerText.trim());
+          }
+        }
+        if (collectionName.isNotEmpty) {
+          seriesList.add(BookSeries(name: collectionName, number: position));
+        }
+      }
+    }
+    if (seriesList.isEmpty) {
+      final calibreSeries = metadataElement
+          .findAllElements('meta')
+          .where((e) => e.getAttribute('name') == 'calibre:series')
+          .firstOrNull
+          ?.getAttribute('content');
+      if (calibreSeries != null && calibreSeries.isNotEmpty) {
+        final posStr = metadataElement
+            .findAllElements('meta')
+            .where((e) => e.getAttribute('name') == 'calibre:series_index')
+            .firstOrNull
+            ?.getAttribute('content');
+        seriesList.add(
+          BookSeries(name: calibreSeries, number: posStr != null ? int.tryParse(posStr) : null),
+        );
+      }
+    }
+
+    // Source info
+    final sourceText = metadataElement.findAllElements('dc:source').firstOrNull?.innerText.trim();
+    final sourceLangMeta = metadataElement
+        .findAllElements('meta')
+        .where((e) => e.getAttribute('property') == 'source-language')
+        .firstOrNull
+        ?.innerText
+        .trim();
+
+    // Layout
+    var layout = BookLayout.reflowable;
+    final layoutMeta = metadataElement
+        .findAllElements('meta')
+        .where((e) => e.getAttribute('property') == 'rendition:layout')
+        .firstOrNull
+        ?.innerText
+        .trim();
+    if (layoutMeta == 'pre-paginated') {
+      layout = BookLayout.fixedLayout;
+    } else if (layoutMeta == 'roll') {
+      layout = BookLayout.roll;
+    }
+
     final metadataId = id ?? title.hashCode.toString();
 
     return (
@@ -289,6 +377,12 @@ class EpubDecoder implements BookDecoder {
         genres: subjects,
         annotation: annotation,
         cover: cover,
+        series: seriesList,
+        publishInfo: publishInfo,
+        srcLang: sourceLangMeta?.isNotEmpty == true ? sourceLangMeta : null,
+        srcTitleInfo: sourceText?.isNotEmpty == true ? BookSourceTitleInfo(title: sourceText) : null,
+        layout: layout,
+        publishedAt: publishedAt,
       ),
       id,
     );

@@ -9,7 +9,7 @@ class BookBuilder {
   final List<BookContributor> contributors;
   final List<BookGenre> genres;
   final List<String> keywords;
-  final BookSeries? series;
+  final List<BookSeries> series;
   final Uri? source;
   final BookResourceResolver? resourceResolver;
   final BookResourceNamingPolicy namingPolicy;
@@ -26,7 +26,7 @@ class BookBuilder {
     this.contributors = const [],
     this.genres = const [],
     this.keywords = const [],
-    this.series,
+    this.series = const [],
     this.source,
     this.resourceResolver,
     this.namingPolicy = BookResourceNamingPolicy.preserve,

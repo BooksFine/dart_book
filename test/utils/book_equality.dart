@@ -69,7 +69,13 @@ void assertBlockEquals(BookBlock actual, BookBlock expected, {required String pa
           reason: '$path: число ячеек в строке $r должно совпадать',
         );
         for (var c = 0; c < a.rows[r].cells.length; c++) {
-          assertBlockListEquals(a.rows[r].cells[c].blocks, e.rows[r].cells[c].blocks);
+          final ac = a.rows[r].cells[c];
+          final ec = e.rows[r].cells[c];
+          expect(ac.colSpan, equals(ec.colSpan), reason: '$path.rows[$r].cells[$c].colSpan');
+          expect(ac.rowSpan, equals(ec.rowSpan), reason: '$path.rows[$r].cells[$c].rowSpan');
+          expect(ac.align, equals(ec.align), reason: '$path.rows[$r].cells[$c].align');
+          expect(ac.vAlign, equals(ec.vAlign), reason: '$path.rows[$r].cells[$c].vAlign');
+          assertBlockListEquals(ac.blocks, ec.blocks);
         }
       }
 
@@ -91,6 +97,9 @@ void assertBlockEquals(BookBlock actual, BookBlock expected, {required String pa
 
     case (BookImageBlock a, BookImageBlock e):
       expect(a.ref.id.endsWith(e.ref.id), isTrue, reason: '$path: id ресурса изображения должен совпадать');
+      expect(a.id, equals(e.id), reason: '$path: id изображения должен совпадать');
+      expect(a.alt, equals(e.alt), reason: '$path: alt изображения должен совпадать');
+      expect(a.title, equals(e.title), reason: '$path: title изображения должен совпадать');
 
     case (BookAudioBlock a, BookAudioBlock e):
       expect(a.ref.id, equals(e.ref.id), reason: '$path: id аудиоресурса должен совпадать');
@@ -153,7 +162,10 @@ void assertInlineEquals(BookInline actual, BookInline expected, {required String
       expect(a.id, equals(e.id), reason: '$path: id якоря должен совпадать');
 
     case (BookImageInline a, BookImageInline e):
-      expect(a.ref.id, equals(e.ref.id), reason: '$path: id встроенного изображения должен совпадать');
+      expect(a.ref.id.endsWith(e.ref.id), isTrue, reason: '$path: id встроенного изображения должен совпадать');
+      expect(a.id, equals(e.id), reason: '$path: id инлайн-изображения должен совпадать');
+      expect(a.alt, equals(e.alt), reason: '$path: alt инлайн-изображения должен совпадать');
+      expect(a.title, equals(e.title), reason: '$path: title инлайн-изображения должен совпадать');
 
     case (BookSuperscript a, BookSuperscript e):
       assertInlineListEquals(a.children, e.children, path: '$path.children');

@@ -138,6 +138,10 @@ class Fb2Encoder implements BookEncoder {
 
     writer.element('lang', text: metadata.language);
 
+    if (metadata.srcLang != null) {
+      writer.element('src-lang', text: metadata.srcLang!);
+    }
+
     final translators = metadata.contributorsByRole(BookContributorRole.translator);
     for (final translator in translators) {
       writer.openElement('translator', blockChildren: true);
@@ -165,8 +169,7 @@ class Fb2Encoder implements BookEncoder {
       writer.closeElement('translator', blockChildren: true);
     }
 
-    if (metadata.series != null) {
-      final series = metadata.series!;
+    for (final series in metadata.series) {
       final attributes = <String, String>{'name': series.name};
       if (series.number != null) {
         attributes['number'] = series.number.toString();
@@ -175,6 +178,37 @@ class Fb2Encoder implements BookEncoder {
     }
 
     writer.closeElement('title-info', blockChildren: true);
+
+    if (metadata.srcTitleInfo != null) {
+      final src = metadata.srcTitleInfo!;
+      writer.openElement('src-title-info', blockChildren: true);
+      for (final author in src.authors) {
+        writer.openElement('author', blockChildren: true);
+        final name = author.name;
+        if (name.first?.trim().isNotEmpty == true) {
+          writer.element('first-name', text: name.first!.trim());
+        }
+        if (name.middle?.trim().isNotEmpty == true) {
+          writer.element('middle-name', text: name.middle!.trim());
+        }
+        if (name.last?.trim().isNotEmpty == true) {
+          writer.element('last-name', text: name.last!.trim());
+        }
+        if (name.nickname?.trim().isNotEmpty == true) {
+          writer.element('nickname', text: name.nickname!.trim());
+        } else if (name.first == null && name.last == null && name.display?.trim().isNotEmpty == true) {
+          writer.element('nickname', text: name.display!.trim());
+        }
+        writer.closeElement('author', blockChildren: true);
+      }
+      if (src.title != null) {
+        writer.element('book-title', text: src.title!);
+      }
+      if (src.language != null) {
+        writer.element('lang', text: src.language!);
+      }
+      writer.closeElement('src-title-info', blockChildren: true);
+    }
 
     writer.openElement('document-info', blockChildren: true);
     final docId = ctx.options?.documentId ?? metadata.id;
@@ -192,12 +226,32 @@ class Fb2Encoder implements BookEncoder {
     writer.element('program-used', text: prog);
     writer.closeElement('document-info', blockChildren: true);
 
-    if (metadata.series?.url != null) {
-      writer.element(
-        'custom-info',
-        attributes: {'info-type': 'sequence-url'},
-        text: metadata.series!.url.toString(),
-      );
+    if (metadata.publishInfo != null) {
+      final pub = metadata.publishInfo!;
+      writer.openElement('publish-info', blockChildren: true);
+      if (pub.publisher != null) {
+        writer.element('publisher', text: pub.publisher!);
+      }
+      if (pub.city != null) {
+        writer.element('city', text: pub.city!);
+      }
+      if (pub.year != null) {
+        writer.element('year', text: pub.year.toString());
+      }
+      if (pub.isbn != null) {
+        writer.element('isbn', text: pub.isbn!);
+      }
+      writer.closeElement('publish-info', blockChildren: true);
+    }
+
+    for (final series in metadata.series) {
+      if (series.url != null) {
+        writer.element(
+          'custom-info',
+          attributes: {'info-type': 'sequence-url'},
+          text: series.url.toString(),
+        );
+      }
     }
 
     writer.closeElement('description', blockChildren: true);
@@ -301,6 +355,12 @@ class Fb2Encoder implements BookEncoder {
               if (cell.rowSpan != null && cell.rowSpan! > 1) {
                 attrs['rowspan'] = cell.rowSpan.toString();
               }
+              if (cell.align != null) {
+                attrs['align'] = cell.align!;
+              }
+              if (cell.vAlign != null) {
+                attrs['valign'] = cell.vAlign!;
+              }
               writer.openElement('td', attributes: attrs, blockChildren: true);
               _writeBlocks(writer, cell.blocks, ctx);
               writer.closeElement('td', blockChildren: true);
@@ -324,7 +384,11 @@ class Fb2Encoder implements BookEncoder {
 
         case BookImageBlock image:
           final cleanId = ctx.getId(image.ref.id, isCover: false);
-          writer.element('image', attributes: {'l:href': '#$cleanId'});
+          final attrs = <String, String>{'l:href': '#$cleanId'};
+          if (image.id != null) attrs['id'] = image.id!;
+          if (image.alt != null) attrs['alt'] = image.alt!;
+          if (image.title != null) attrs['title'] = image.title!;
+          writer.element('image', attributes: attrs);
 
         case BookAudioBlock audio:
           writer.element('p', text: '[Audio: ${audio.ref.id}]');
@@ -384,6 +448,11 @@ class Fb2Encoder implements BookEncoder {
           writer.text(codeSpan.code);
           writer.closeElement('code', inline: true);
 
+        case BookNamedStyle style:
+          writer.openElement('style', attributes: {'name': style.name}, inline: true);
+          _writeInlines(writer, style.inlines, ctx);
+          writer.closeElement('style', inline: true);
+
         case BookLink link:
           writer.openElement('a', attributes: {'l:href': link.href.toString()}, inline: true);
           _writeInlines(writer, link.children, ctx);
@@ -394,7 +463,11 @@ class Fb2Encoder implements BookEncoder {
 
         case BookImageInline imageInline:
           final cleanId = ctx.getId(imageInline.ref.id, isCover: false);
-          writer.element('image', attributes: {'l:href': '#$cleanId'}, inline: true);
+          final attrs = <String, String>{'l:href': '#$cleanId'};
+          if (imageInline.id != null) attrs['id'] = imageInline.id!;
+          if (imageInline.alt != null) attrs['alt'] = imageInline.alt!;
+          if (imageInline.title != null) attrs['title'] = imageInline.title!;
+          writer.element('image', attributes: attrs, inline: true);
 
         case BookSuperscript superscript:
           writer.openElement('sup', inline: true);

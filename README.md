@@ -21,7 +21,7 @@ Dart-библиотека для чтения, создания и конвер�
 | Функция спецификации EPUB 2.0.1 | Статус | Детали реализации в dart_book |
 | --- | :---: | --- |
 | OCF-контейнер (ZIP, `mimetype`, `META-INF/container.xml`) | ✅ | `mimetype` несжатый 1-й файл; автодетект формата по ZIP-сигнатуре |
-| OPF-пакет: метаданные (`dc:title`, `dc:identifier`, `dc:language`, `dc:creator`) | ⚠️ | Чтение базовых DC; энкодер генерирует пакет 3.0 и сохраняет title/id/lang/author/date |
+| OPF-пакет: метаданные (`dc:title`, `dc:identifier`, `dc:language`, `dc:creator`, `dc:publisher`, `dc:date`) | ✅ | Чтение DC метаданных, издательства (`publishInfo.publisher`), ISBN, даты; энкодер пишет пакет 3.0 |
 | OPF-пакет: `manifest` и `spine` | ⚠️ | Базовая структура; атрибут `fallback` и `linear="no"` игнорируются |
 | Обложка EPUB 2 (`<meta name="cover">`) | ✅ | Извлекается декодером в `metadata.cover`; энкодер проставляет `properties="cover-image"` |
 | Элемент `<guide>` | ❌ | Игнорируется декодером, не генерируется энкодером |
@@ -47,12 +47,12 @@ Dart-библиотека для чтения, создания и конвер�
 | Медиа `<audio>`/`<video>`/`<source>` | ✅ | Блоки и бинарные медиафайлы извлекаются декодером из манифеста и сохраняются энкодером |
 | Обложка (`properties="cover-image"`) | ✅ | Полная поддержка: извлечение в `BookCover` декодером и запись энкодером |
 | Media Overlays (SMIL 3.0) | ❌ | Парсер `EpubSmilDocument` реализован, но не подключен к декодеру/энкодеру |
-| Fixed layout (`rendition:layout`/`spread`/`viewport`) | ❌ | Rendition-метаданные не парсятся и не сохраняются |
+| Fixed layout (`rendition:layout="pre-paginated"`) | ✅ | Поддержка `BookLayout.fixedLayout` в `BookMetadata` и OPF-метаданных |
 | Шрифты WOFF / WOFF2 | ✅ | WOFF и WOFF2 извлекаются декодером и сохраняются энкодером |
 | Обфускация шрифтов (IDPF / Adobe) | ✅ | Автоматическая деобфускация шрифтов IDPF (SHA-1) и Adobe (UUID XOR) |
 | Скриптинг (`<script>`, JS) | ❌ | JS не исполняется; теги переводятся в `BookRawHtmlBlock` |
-| Метаданные OPF (`properties`, `refines`, `link`) | ⚠️ | Декодер читает базовые `dc:*`; энкодер пишет обязательный `dcterms:modified` |
-| Коллекции и серии (`<collection>`) | ❌ | Серии EPUB 3 не читаются и не пишутся |
+| Метаданные OPF (`properties`, `refines`, `link`) | ✅ | Чтение и запись `belongs-to-collection`, `source-language`, `dcterms:modified` |
+| Коллекции и серии (`<collection>`) | ✅ | Чтение и генерация `<meta property="belongs-to-collection">`, `collection-type`, `group-position` |
 | Core Media Types EPUB 3 | ✅ | Растровые изображения, SVG, шрифты (WOFF/WOFF2/TTF/OTF), аудио/видео (MP3, MP4, WebP) |
 
 ---
@@ -77,7 +77,7 @@ Dart-библиотека для чтения, создания и конвер�
 
 | Функция спецификации EPUB 3.4 | Статус | Детали реализации в dart_book |
 | --- | :---: | --- |
-| Roll layout (вебтуны / вертикальный скролл) | ❌ | Метаданные `rendition:layout="roll"` не поддерживаются |
+| Roll layout (вебтуны / вертикальный скролл) | ✅ | Поддержка `BookLayout.roll` в `BookMetadata` и `rendition:layout="roll"` |
 | EPUB Annotations 1.0 (JSON-LD) | ❌ | Модель аннотаций W3C Web Annotation отсутствует |
 | Свойство `pageBreakSource` (замена `source-of`) | ❌ | Не парсится и не генерируется |
 | ITS 2.0 (i18n) атрибуты (`translate`, `dir`) | ⚠️ | Проходят транзитом только в raw-узлах `BookRawHtmlBlock` |
@@ -98,23 +98,23 @@ Dart-библиотека для чтения, создания и конвер�
 | `<title-info>`: `author` | ✅ | ФИО, псевдоним, `home-page` и `email` читаются декодером и пишутся энкодером |
 | `<title-info>`: `date` | ✅ | Чтение и запись дат в `publishedAt` / `updatedAt` |
 | `<title-info>`: `coverpage` | ✅ | Извлекается `<image l:href="#id"/>`, связывается с `BookCover` |
-| `<title-info>`: `sequence` | ⚠️ | Читается только 1-я серия книги; вложенные серии не поддерживаются |
+| `<title-info>`: `sequence` | ✅ | Полная поддержка списка серий книги (`List<BookSeries> series`) |
 | `<title-info>`: `translator` | ✅ | Чтение и запись переводчиков в `BookContributor(role: translator)` |
-| `<title-info>`: `src-lang` | ❌ | Не поддерживается |
+| `<title-info>`: `src-lang` | ✅ | Извлечение и запись языка оригинала книги (`metadata.srcLang`) |
 | `<document-info>` | ⚠️ | Читается `id` и `date`; энкодер пишет `id`, `version`, `date`, `program-used`, `src-url` |
-| `<publish-info>` | ❌ | Полностью отсутствует в модели и конвертерах |
+| `<publish-info>` | ✅ | Полная поддержка издательства, города, года и ISBN (`metadata.publishInfo`) |
 | `<custom-info>` | ⚠️ | Поддерживается только `info-type="sequence-url"` |
 | `<body>` (основное и сноски) | ✅ | Основное тело — в `content.blocks`, `<body name="notes">` — в `content.footnotes` |
 | `<section>`, `<title>`, `<subtitle>`, `<p>`, `<empty-line>` | ✅ | Иерархические разделы, подзаголовки, абзацы, пустые строки |
-| `<image>` (блочный) | ⚠️ | Ссылка `#id` поддерживается; атрибуты `alt`, `title`, `id` не сохраняются |
+| `<image>` (блочный) | ✅ | Ссылка `#id`, атрибуты `alt`, `title`, `id` в `BookImageBlock` |
 | `<poem>`, `<stanza>`, `<v>` | ✅ | Структура стихотворений (строфы, строки) |
 | `<epigraph>` | ✅ | Чтение и сериализация эпиграфов (`<epigraph>`) и цитат (`<cite>`) |
 | `<cite>`, `<text-author>` | ✅ | Цитаты и авторство цитаты |
-| `<table>` (`tr`, `th`, `td`) | ✅ | Таблицы с поддержкой `colspan` и `rowspan` |
-| Инлайн: `strong`, `emphasis`, `a`, `image` | ✅ | Полужирный, курсив, ссылки/сноски, строчные картинки |
-| Инлайн: `<style name="...">` | ❌ | Имя стиля сбрасывается, извлекаются только дочерние инлайны |
+| `<table>` (`tr`, `th`, `td`) | ✅ | Таблицы с поддержкой `colspan`, `rowspan`, `align` и `valign` |
+| Инлайн: `strong`, `emphasis`, `a`, `image` | ✅ | Полужирный, курсив, ссылки/сноски, строчные картинки с `id`/`alt`/`title` |
+| Инлайн: `<style name="...">` | ✅ | Пользовательские стили текста сохраняются в `BookNamedStyle` |
 | `<binary id="..." content-type="...">` | ✅ | Base64 кодирование и декодирование встроенных ресурсов |
-| Кодировки (UTF-8, Windows-1251) | ⚠️ | UTF-8 ✅; Win-1251 русская кириллица ✅ (спецсимволы/тире опущены) |
+| Кодировки (UTF-8, Windows-1251) | ✅ | Полная 256-байтная таблица Windows-1251 (тире `—`, кавычки `«»`, `№`, `…` и спецсимволы) |
 | Контейнер FB2.ZIP | ✅ | Чтение и запись `.fb2.zip` архивов |
 
 ---
@@ -123,14 +123,14 @@ Dart-библиотека для чтения, создания и конвер�
 
 | Функция спецификации FB2 2.1 | Статус | Детали реализации в dart_book |
 | --- | :---: | --- |
-| `<src-title-info>` (переводные книги) | ❌ | Метаданные оригинального произведения не поддерживаются |
+| `<src-title-info>` (переводные книги) | ✅ | Полная поддержка метаданных оригинала: название, язык, авторы (`srcTitleInfo`) |
 | Инлайн `sub`, `sup`, `code`, `strikethrough` | ✅ | Полная поддержка декодирования и сериализации (`<code>`, `<sub>`, `<sup>`, `<strikethrough>`) |
 | `<text-author>` как `styleType` | ⚠️ | Инлайн-стили в цитатах/эпиграфах ✅; в `<poem>` автор игнорируется |
 | `<output>` (инструкции дистрибуции) | ❌ | Не поддерживается |
 | Список жанров FB2 2.1 | ⚠️ | Прозрачный passthrough строковых кодов без словаря и валидации |
 | Таблицы: `colspan`, `rowspan` | ✅ | Полная поддержка объединения столбцов и строк в таблицах |
-| Таблицы: `align`, `valign` | ❌ | Атрибуты выравнивания ячеек не поддерживаются |
-| Атрибуты `id`, `title`, `alt` у `<image>` | ❌ | Не извлекаются парсером и не генерируются энкодером |
+| Таблицы: `align`, `valign` | ✅ | Полная поддержка выравнивания ячеек в `BookTableCell` |
+| Атрибуты `id`, `title`, `alt` у `<image>` | ✅ | Полная поддержка в `BookImageBlock` и `BookImageInline` |
 
 ---
 
@@ -144,24 +144,24 @@ Dart-библиотека для чтения, создания и конвер�
 | Список жанров FB2 2.2 | ⚠️ | Прозрачный passthrough строковых кодов |
 | Атрибут `<genre match="...">` | ❌ | Атрибут процента соответствия `match` игнорируется |
 | Атрибуты `xml:lang` на узлах | ❌ | Читается только глобальный `<lang>` книги |
-| Кастомные инлайн-стили `<style name="...">` | ❌ | Имя стиля отбрасывается, тег `<style>` не генерируется |
+| Кастомные инлайн-стили `<style name="...">` | ✅ | Полная поддержка через `BookNamedStyle` (чтение и запись) |
 
 ---
 
 ## 🌳 Единая модель данных (AST)
 
 - **`Book`**: Корневой объект книги (`metadata`, `content`, `resources`).
-- **`BookMetadata`**: Название, язык, авторы (`BookContributor`), переводчики, жанры (`BookGenre`), серии (`BookSeries`), аннотация (`BookContent`), обложка (`BookCover`), даты обновления/публикации.
+- **`BookMetadata`**: Название, язык, авторы (`BookContributor`), переводчики, жанры (`BookGenre`), список серий (`series: List<BookSeries>`), сведения об издании (`publishInfo: BookPublishInfo`), язык и сведения об оригинале (`srcLang`, `srcTitleInfo`), режим верстки (`layout: BookLayout`), аннотация (`BookContent`), обложка (`BookCover`), даты обновления/публикации.
 - **`BookBlock`**:
   - `BookSection` — раздел / глава (`title`, `blocks`, `children`).
   - `BookHeading` — заголовок (`level` от 1 до 6, `text`).
   - `BookParagraph` — абзац (`inlines`).
   - `BookQuote` — цитата / эпиграф (`blocks`, `citation`).
   - `BookList` — список (`ordered`, `items`).
-  - `BookTable` — таблица (`rows` -> `cells` с поддержкой `colSpan` и `rowSpan`).
+  - `BookTable` — таблица (`rows` -> `cells` с поддержкой `colSpan`, `rowSpan`, `align`, `vAlign`).
   - `BookPoem` — стихотворение (`stanzas` -> `lines`).
   - `BookCodeBlock` — блок кода (`code`, `language`).
-  - `BookImageBlock` — блочная иллюстрация (`ref`, `alt`, `title`).
+  - `BookImageBlock` — блочная иллюстрация (`id`, `ref`, `alt`, `title`).
   - `BookAudioBlock` / `BookVideoBlock` — медиа (`ref`, `controls`).
   - `BookMathBlock` — блок MathML (`mathml`).
   - `BookSvgBlock` — векторный SVG блок (`svg`).
@@ -171,9 +171,10 @@ Dart-библиотека для чтения, создания и конвер�
   - `BookText` — текст.
   - `BookEmphasis` / `BookStrong` / `BookStrike` — курсив, полужирный, зачёркнутый.
   - `BookCodeSpan` — строчный код.
+  - `BookNamedStyle` — именованный пользовательский стиль (`name`, `inlines`).
   - `BookLink` — ссылка (`href`, `children`).
   - `BookAnchor` — якорь внутри книги (`id`).
-  - `BookImageInline` — строчная картинка (`ref`, `alt`).
+  - `BookImageInline` — строчная картинка (`id`, `ref`, `alt`, `title`).
   - `BookFootnoteRef` — ссылка на сноску (`id`, `label`).
   - `BookSuperscript` / `BookSubscript` — верхний / нижний индекс.
   - `BookLineBreak` — перенос строки (`<br/>`).

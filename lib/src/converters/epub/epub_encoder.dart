@@ -152,6 +152,9 @@ class EpubEncoder implements BookEncoder {
     buffer.writeln('  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">');
     final docId = options?.documentId ?? book.metadata.id;
     buffer.writeln('    <dc:identifier id="pub-id">$docId</dc:identifier>');
+    if (metadata.publishInfo?.isbn != null) {
+      buffer.writeln('    <dc:identifier id="pub-isbn">urn:isbn:${_escapeHtml(metadata.publishInfo!.isbn!)}</dc:identifier>');
+    }
     buffer.writeln('    <dc:title>${_escapeHtml(metadata.title)}</dc:title>');
     buffer.writeln('    <dc:language>${metadata.language}</dc:language>');
     for (final author in authors) {
@@ -159,6 +162,38 @@ class EpubEncoder implements BookEncoder {
         '    <dc:creator>${_escapeHtml(author.name.toDisplayString())}</dc:creator>',
       );
     }
+    if (metadata.publishInfo?.publisher != null) {
+      buffer.writeln('    <dc:publisher>${_escapeHtml(metadata.publishInfo!.publisher!)}</dc:publisher>');
+    }
+    if (metadata.publishedAt != null) {
+      buffer.writeln('    <dc:date>${metadata.publishedAt!.toIso8601String().split('T').first}</dc:date>');
+    }
+    if (metadata.srcTitleInfo?.title != null) {
+      buffer.writeln('    <dc:source>${_escapeHtml(metadata.srcTitleInfo!.title!)}</dc:source>');
+    } else if (metadata.source != null) {
+      buffer.writeln('    <dc:source>${_escapeHtml(metadata.source.toString())}</dc:source>');
+    }
+    if (metadata.srcLang != null) {
+      buffer.writeln('    <meta property="source-language">${_escapeHtml(metadata.srcLang!)}</meta>');
+    }
+
+    var seriesIdx = 1;
+    for (final series in metadata.series) {
+      final collectionId = 'series-$seriesIdx';
+      buffer.writeln('    <meta property="belongs-to-collection" id="$collectionId">${_escapeHtml(series.name)}</meta>');
+      buffer.writeln('    <meta refines="#$collectionId" property="collection-type">series</meta>');
+      if (series.number != null) {
+        buffer.writeln('    <meta refines="#$collectionId" property="group-position">${series.number}</meta>');
+      }
+      seriesIdx++;
+    }
+
+    if (metadata.layout == BookLayout.fixedLayout) {
+      buffer.writeln('    <meta property="rendition:layout">pre-paginated</meta>');
+    } else if (metadata.layout == BookLayout.roll) {
+      buffer.writeln('    <meta property="rendition:layout">roll</meta>');
+    }
+
     if (options?.programUsed != null) {
       buffer.writeln('    <meta name="generator" content="${_escapeHtml(options!.programUsed!)}"/>');
     }
@@ -289,7 +324,12 @@ class EpubEncoder implements BookEncoder {
             for (final cell in row.cells) {
               final colSpan = cell.colSpan != null ? ' colspan="${cell.colSpan}"' : '';
               final rowSpan = cell.rowSpan != null ? ' rowspan="${cell.rowSpan}"' : '';
-              buffer.write('<td$colSpan$rowSpan>${_blocksToXhtml(cell.blocks, ctx)}</td>');
+              final styles = <String>[
+                if (cell.align != null) 'text-align: ${cell.align}',
+                if (cell.vAlign != null) 'vertical-align: ${cell.vAlign}',
+              ];
+              final styleAttr = styles.isNotEmpty ? ' style="${styles.join('; ')}"' : '';
+              buffer.write('<td$colSpan$rowSpan$styleAttr>${_blocksToXhtml(cell.blocks, ctx)}</td>');
             }
             buffer.write('</tr>');
           }
@@ -308,8 +348,10 @@ class EpubEncoder implements BookEncoder {
           buffer.write('<pre><code>${_escapeHtml(code.code)}</code></pre>');
         case BookImageBlock img:
           final cleanId = ctx.getId(img.ref.id, isCover: false);
+          final idAttr = img.id != null ? ' id="${_escapeHtml(img.id!)}"' : '';
+          final titleAttr = img.title != null ? ' title="${_escapeHtml(img.title!)}"' : '';
           buffer.write(
-            '<img src="resources/$cleanId" alt="${_escapeHtml(img.alt ?? '')}"/>',
+            '<img$idAttr src="resources/$cleanId" alt="${_escapeHtml(img.alt ?? '')}"$titleAttr/>',
           );
         case BookAudioBlock audio:
           final cleanId = ctx.getId(audio.ref.id, isCover: false);
@@ -356,6 +398,8 @@ class EpubEncoder implements BookEncoder {
           buffer.write('<s>${_inlinesToXhtml(st.children, ctx)}</s>');
         case BookCodeSpan cs:
           buffer.write('<code>${_escapeHtml(cs.code)}</code>');
+        case BookNamedStyle style:
+          buffer.write('<span class="style-${_escapeHtml(style.name)}">${_inlinesToXhtml(style.inlines, ctx)}</span>');
         case BookLink l:
           buffer.write(
             '<a href="${l.href}">${_inlinesToXhtml(l.children, ctx)}</a>',
@@ -364,8 +408,10 @@ class EpubEncoder implements BookEncoder {
           buffer.write('<a id="${a.id}"></a>');
         case BookImageInline img:
           final cleanId = ctx.getId(img.ref.id, isCover: false);
+          final idAttr = img.id != null ? ' id="${_escapeHtml(img.id!)}"' : '';
+          final titleAttr = img.title != null ? ' title="${_escapeHtml(img.title!)}"' : '';
           buffer.write(
-            '<img src="resources/$cleanId" alt="${_escapeHtml(img.alt ?? '')}"/>',
+            '<img$idAttr src="resources/$cleanId" alt="${_escapeHtml(img.alt ?? '')}"$titleAttr/>',
           );
         case BookSuperscript sup:
           buffer.write('<sup>${_inlinesToXhtml(sup.children, ctx)}</sup>');

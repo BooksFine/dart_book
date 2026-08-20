@@ -88,10 +88,20 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             element.getAttribute('l:href') ??
             element.getAttribute('href') ??
             '';
+        final imgId = element.getAttribute('id');
+        final alt = element.getAttribute('alt');
+        final title = element.getAttribute('title');
         final id =
             registrar?.call(href, isInline: false) ??
             (href.startsWith('#') ? href.substring(1) : href);
-        return [BookImageBlock(ref: BookResourceRef(id))];
+        return [
+          BookImageBlock(
+            id: imgId,
+            ref: BookResourceRef(id),
+            alt: alt,
+            title: title,
+          ),
+        ];
       case 'cite':
         final textAuthor = element.findElements('text-author').firstOrNull;
         final citation = textAuthor != null ? _parseFb2Inlines(textAuthor) : const <BookInline>[];
@@ -116,11 +126,15 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
           for (final cell in tr.children.whereType<XmlElement>().where((e) => e.localName == 'td' || e.localName == 'th')) {
             final colSpan = int.tryParse(cell.getAttribute('colspan') ?? '') ?? 1;
             final rowSpan = int.tryParse(cell.getAttribute('rowspan') ?? '') ?? 1;
+            final align = cell.getAttribute('align');
+            final vAlign = cell.getAttribute('valign');
             cells.add(
               BookTableCell(
                 blocks: [BookParagraph(inlines: _parseFb2Inlines(cell))],
                 colSpan: colSpan > 1 ? colSpan : null,
                 rowSpan: rowSpan > 1 ? rowSpan : null,
+                align: align,
+                vAlign: vAlign,
               ),
             );
           }
@@ -173,6 +187,14 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             inlines.add(BookStrike(children: _parseFb2Inlines(child)));
           case 'code':
             inlines.add(BookCodeSpan(child.innerText));
+          case 'style':
+            final styleName = child.getAttribute('name') ?? '';
+            final innerInlines = _parseFb2Inlines(child);
+            if (styleName.isNotEmpty) {
+              inlines.add(BookNamedStyle(name: styleName, inlines: innerInlines));
+            } else {
+              inlines.addAll(innerInlines);
+            }
           case 'a':
             final href =
                 child.getAttribute('l:href') ??
@@ -195,10 +217,20 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
                 child.getAttribute('l:href') ??
                 child.getAttribute('href') ??
                 '';
+            final imgId = child.getAttribute('id');
+            final alt = child.getAttribute('alt');
+            final title = child.getAttribute('title');
             final id =
                 registrar?.call(href, isInline: true) ??
                 (href.startsWith('#') ? href.substring(1) : href);
-            inlines.add(BookImageInline(ref: BookResourceRef(id)));
+            inlines.add(
+              BookImageInline(
+                id: imgId,
+                ref: BookResourceRef(id),
+                alt: alt,
+                title: title,
+              ),
+            );
           default:
             inlines.addAll(_parseFb2Inlines(child));
         }
