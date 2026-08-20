@@ -34,7 +34,7 @@ class EpubNavDocument {
     this.landmarks = const [],
   });
 
-  static EpubNavDocument parseFromString(String xhtmlContent) {
+  static EpubNavDocument parseFromString(String xhtmlContent, {int maxDepth = 32}) {
     final document = html.parse(xhtmlContent);
     
     final tocEntries = <EpubNavEntry>[];
@@ -45,7 +45,8 @@ class EpubNavDocument {
       if (epubType.contains('toc')) {
         final ol = nav.querySelector('ol');
         if (ol != null) {
-          tocEntries.addAll(_parseOl(ol));
+          final visited = <dom.Element>{};
+          tocEntries.addAll(_parseOl(ol, visited, 0, maxDepth));
         }
       } else if (epubType.contains('landmarks')) {
         final ol = nav.querySelector('ol');
@@ -65,7 +66,10 @@ class EpubNavDocument {
     return EpubNavDocument(toc: tocEntries, landmarks: landmarkEntries);
   }
 
-  static List<EpubNavEntry> _parseOl(dom.Element ol) {
+  static List<EpubNavEntry> _parseOl(dom.Element ol, Set<dom.Element> visited, int depth, int maxDepth) {
+    if (depth >= maxDepth || visited.contains(ol)) return const [];
+    visited.add(ol);
+
     final entries = <EpubNavEntry>[];
     for (final li in ol.children.where((c) => c.localName == 'li')) {
       final a = li.children.firstWhere(
@@ -79,7 +83,7 @@ class EpubNavDocument {
         (c) => c.localName == 'ol',
         orElse: () => dom.Element.tag('ol'),
       );
-      final children = nestedOl.localName == 'ol' ? _parseOl(nestedOl) : const <EpubNavEntry>[];
+      final children = nestedOl.localName == 'ol' ? _parseOl(nestedOl, visited, depth + 1, maxDepth) : const <EpubNavEntry>[];
 
       if (title.isNotEmpty || href.isNotEmpty) {
         entries.add(EpubNavEntry(title: title, href: href, children: children));

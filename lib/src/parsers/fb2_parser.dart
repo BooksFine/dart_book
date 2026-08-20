@@ -59,7 +59,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       case 'section':
         final titleElement = element.findElements('title').firstOrNull;
         final title = titleElement != null
-            ? _parseFb2Inlines(titleElement)
+            ? _parseFb2Title(titleElement)
             : <BookInline>[];
 
         final innerBlocks = parse(
@@ -78,7 +78,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       case 'p':
         return [BookParagraph(inlines: _parseFb2Inlines(element))];
       case 'title':
-        return [BookHeading(level: 1, text: _parseFb2Inlines(element))];
+        return [BookHeading(level: 1, text: _parseFb2Title(element))];
       case 'subtitle':
         return [BookHeading(level: 2, text: _parseFb2Inlines(element))];
       case 'empty-line':
@@ -128,9 +128,13 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             final rowSpan = int.tryParse(cell.getAttribute('rowspan') ?? '') ?? 1;
             final align = cell.getAttribute('align');
             final vAlign = cell.getAttribute('valign');
+            final pElements = cell.findElements('p').toList();
+            final cellBlocks = pElements.isNotEmpty
+                ? pElements.map((p) => BookParagraph(inlines: _parseFb2Inlines(p))).toList()
+                : [BookParagraph(inlines: _parseFb2Inlines(cell))];
             cells.add(
               BookTableCell(
-                blocks: [BookParagraph(inlines: _parseFb2Inlines(cell))],
+                blocks: cellBlocks,
                 colSpan: colSpan > 1 ? colSpan : null,
                 rowSpan: rowSpan > 1 ? rowSpan : null,
                 align: align,
@@ -237,5 +241,20 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       }
     }
     return inlines;
+  }
+
+  List<BookInline> _parseFb2Title(XmlElement titleElement) {
+    final paragraphs = titleElement.findElements('p').toList();
+    if (paragraphs.isNotEmpty) {
+      final inlines = <BookInline>[];
+      for (var i = 0; i < paragraphs.length; i++) {
+        if (i > 0) inlines.add(const BookLineBreak());
+        inlines.addAll(_parseFb2Inlines(paragraphs[i]));
+      }
+      return inlines;
+    }
+    return _parseFb2Inlines(titleElement)
+        .where((i) => i is! BookText || i.text.trim().isNotEmpty)
+        .toList();
   }
 }

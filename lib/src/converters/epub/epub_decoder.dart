@@ -75,7 +75,13 @@ class EpubDecoder implements BookDecoder {
     }
 
     final coverRef = coverItemId.isNotEmpty
-        ? BookCover(ref: BookResourceRef('epub-res-$coverItemId'))
+        ? BookCover(
+            ref: BookResourceRef(
+              coverItemId.startsWith('epub-res-')
+                  ? coverItemId
+                  : 'epub-res-$coverItemId',
+            ),
+          )
         : null;
 
     final (metadata, opfId) = _parseMetadata(opfXml, options, cover: coverRef);
@@ -157,7 +163,9 @@ class EpubDecoder implements BookDecoder {
           final manifestItem = manifestByPath[absolutePath];
 
           if (manifestItem != null && manifestItem.id.isNotEmpty) {
-            return 'epub-res-${manifestItem.id}';
+            return manifestItem.id.startsWith('epub-res-')
+                ? manifestItem.id
+                : 'epub-res-${manifestItem.id}';
           }
 
           return src;
@@ -204,7 +212,9 @@ class EpubDecoder implements BookDecoder {
             }
           }
 
-          final resId = 'epub-res-${item.id}';
+          final resId = item.id.startsWith('epub-res-')
+              ? item.id
+              : 'epub-res-${item.id}';
           resourceIndex[resId] = BookResource(
             id: resId,
             mediaType: item.mediaType,
@@ -389,11 +399,15 @@ class EpubDecoder implements BookDecoder {
   }
 
   String _joinPath(String dir, String file) {
-    if (dir.isEmpty) return file;
-    final parts = dir.split('/')..addAll(file.split('/'));
+    final normalizedDir = dir.replaceAll(r'\', '/');
+    final normalizedFile = file.replaceAll(r'\', '/');
+    if (normalizedDir.isEmpty) {
+      return normalizedFile.startsWith('/') ? normalizedFile.substring(1) : normalizedFile;
+    }
+    final parts = normalizedDir.split('/')..addAll(normalizedFile.split('/'));
     final result = <String>[];
     for (final part in parts) {
-      if (part == '.') continue;
+      if (part == '.' || part.isEmpty) continue;
       if (part == '..') {
         if (result.isNotEmpty) result.removeLast();
       } else {
@@ -404,12 +418,13 @@ class EpubDecoder implements BookDecoder {
   }
 
   String _resolveRelativePath(String contextDir, String relativePath) {
-    if (relativePath.startsWith('/') ||
-        relativePath.contains('://') ||
-        relativePath.startsWith('data:')) {
-      return relativePath;
+    final normalized = relativePath.replaceAll(r'\', '/');
+    if (normalized.startsWith('/') ||
+        normalized.contains('://') ||
+        normalized.startsWith('data:')) {
+      return normalized;
     }
-    return _joinPath(contextDir, relativePath);
+    return _joinPath(contextDir, normalized);
   }
 }
 

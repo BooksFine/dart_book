@@ -28,9 +28,36 @@ class Fb2Decoder implements BookDecoder {
 
   @override
   Book decode(Uint8List bytes, {BookDecodingOptions? options}) {
-    final content = _decodeXmlBytes(bytes);
+    final rawContent = _decodeXmlBytes(bytes);
+    final String content;
+    final XmlDocument document;
 
-    final document = XmlDocument.parse(content);
+    if (options?.strictMode == true) {
+      content = rawContent;
+      if (RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]').hasMatch(content)) {
+        throw const BookParseException('Illegal XML 1.0 control character found in strict mode');
+      }
+      if (RegExp(r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)').hasMatch(content)) {
+        throw const BookParseException('Unescaped ampersand found in XML in strict mode');
+      }
+      if (RegExp(r'&(nbsp|mdash|ndash|laquo|raquo|hellip|copy|reg|trade|bull|euro);').hasMatch(content)) {
+        throw const BookParseException('Undeclared HTML entity found in strict XML');
+      }
+      try {
+        document = XmlDocument.parse(content);
+      } on XmlParserException catch (e) {
+        throw BookParseException(e.message, line: e.line);
+      }
+    } else {
+      content = _sanitizeXml(rawContent);
+      try {
+        document = XmlDocument.parse(content);
+      } catch (e) {
+        options?.logger?.call('Warning: error parsing XML: $e');
+        throw BookFormatException('Invalid XML structure in FB2: $e');
+      }
+    }
+
     final root = document.rootElement;
 
     // 1. Извлекаем метаданные
@@ -276,7 +303,7 @@ class Fb2Decoder implements BookDecoder {
           BookResource(
             id: resId,
             mediaType: contentType,
-            bytes: base64Decode(binary.innerText.trim()),
+            bytes: _safeBase64Decode(binary.innerText),
           ),
         );
       }
@@ -285,8 +312,10 @@ class Fb2Decoder implements BookDecoder {
     final blocks = <BookBlock>[];
     final footnotes = <BookFootnote>[];
     for (final body in root.findElements('body')) {
-      final isNotes = body.getAttribute('name') == 'notes';
+      final bodyName = body.getAttribute('name')?.toLowerCase();
+      final isNotes = bodyName == 'notes' || bodyName == 'comments';
       if (isNotes) {
+        final initialFootnoteCount = footnotes.length;
         for (final section in body.findElements('section')) {
           final sectionId = section.getAttribute('id') ?? '';
           final sectionBlocks = parser.parse(
@@ -296,13 +325,13 @@ class Fb2Decoder implements BookDecoder {
           );
           footnotes.add(BookFootnote(id: sectionId, blocks: sectionBlocks));
         }
-        if (footnotes.isEmpty && body.children.isNotEmpty) {
+        if (footnotes.length == initialFootnoteCount && body.children.isNotEmpty) {
           final bodyBlocks = parser.parse(
             body.children.where(
               (e) => e is! XmlElement || e.localName != 'title',
             ),
           );
-          footnotes.add(BookFootnote(id: 'notes', blocks: bodyBlocks));
+          footnotes.add(BookFootnote(id: bodyName ?? 'notes', blocks: bodyBlocks));
         }
       } else {
         final bodyBlocks = parser.parse(
@@ -323,6 +352,56 @@ class Fb2Decoder implements BookDecoder {
       content: BookContent(blocks: blocks, footnotes: footnotes),
       resources: resources,
     );
+  }
+}
+
+String _sanitizeXml(String xml) {
+  var clean = xml.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]'), '');
+
+  const entityMap = {
+    '&nbsp;': '&#160;',
+    '&mdash;': '&#8212;',
+    '&ndash;': '&#8211;',
+    '&laquo;': '&#171;',
+    '&raquo;': '&#187;',
+    '&hellip;': '&#8230;',
+    '&copy;': '&#169;',
+    '&reg;': '&#174;',
+    '&trade;': '&#8482;',
+    '&bull;': '&#8226;',
+    '&euro;': '&#8364;',
+    '&pound;': '&#163;',
+    '&yen;': '&#165;',
+    '&plusmn;': '&#177;',
+    '&sect;': '&#167;',
+    '&deg;': '&#176;',
+  };
+  entityMap.forEach((k, v) {
+    clean = clean.replaceAll(k, v);
+  });
+
+  clean = clean.replaceAllMapped(
+    RegExp(r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)'),
+    (match) => '&amp;',
+  );
+
+  return clean;
+}
+
+Uint8List _safeBase64Decode(String input) {
+  var clean = input.replaceAll(RegExp(r'[\s\t\r\n]'), '');
+  final rem = clean.length % 4;
+  if (rem == 2) {
+    clean += '==';
+  } else if (rem == 3) {
+    clean += '=';
+  } else if (rem == 1) {
+    clean = clean.substring(0, clean.length - 1);
+  }
+  try {
+    return base64Decode(clean);
+  } catch (_) {
+    return Uint8List(0);
   }
 }
 

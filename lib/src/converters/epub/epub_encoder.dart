@@ -105,13 +105,17 @@ class EpubEncoder implements BookEncoder {
     for (final block in book.content.blocks) {
       if (block is BookSection) {
         flushLooseBlocks();
-        final id = 'chapter_$sectionIndex';
+        final id = block.id != null && block.id!.isNotEmpty ? block.id! : 'chapter_$sectionIndex';
         final href = 'chapter_$sectionIndex.xhtml';
         final title = block.title.isNotEmpty
             ? _inlinesToText(block.title)
             : 'Глава $sectionIndex';
 
-        final content = _blocksToXhtml([block], ctx);
+        final innerBlocks = [
+          ...block.blocks,
+          ...block.children,
+        ];
+        final content = _blocksToXhtml(innerBlocks, ctx);
         chapters.add(_ChapterData(id, href, title, content));
         sectionIndex++;
       } else {
@@ -345,9 +349,13 @@ class EpubEncoder implements BookEncoder {
           }
           buffer.write('</div>');
         case BookCodeBlock code:
-          buffer.write('<pre><code>${_escapeHtml(code.code)}</code></pre>');
+          final langAttr = code.language != null && code.language!.isNotEmpty
+              ? ' class="language-${_escapeHtml(code.language!)}"'
+              : '';
+          buffer.write('<pre><code$langAttr>${_escapeHtml(code.code)}</code></pre>');
         case BookImageBlock img:
-          final cleanId = ctx.getId(img.ref.id, isCover: false);
+          final isCover = ctx.book.metadata.cover?.ref.id == img.ref.id;
+          final cleanId = ctx.getId(img.ref.id, isCover: isCover);
           final idAttr = img.id != null ? ' id="${_escapeHtml(img.id!)}"' : '';
           final titleAttr = img.title != null ? ' title="${_escapeHtml(img.title!)}"' : '';
           buffer.write(
@@ -407,7 +415,8 @@ class EpubEncoder implements BookEncoder {
         case BookAnchor a:
           buffer.write('<a id="${a.id}"></a>');
         case BookImageInline img:
-          final cleanId = ctx.getId(img.ref.id, isCover: false);
+          final isCover = ctx.book.metadata.cover?.ref.id == img.ref.id;
+          final cleanId = ctx.getId(img.ref.id, isCover: isCover);
           final idAttr = img.id != null ? ' id="${_escapeHtml(img.id!)}"' : '';
           final titleAttr = img.title != null ? ' title="${_escapeHtml(img.title!)}"' : '';
           buffer.write(

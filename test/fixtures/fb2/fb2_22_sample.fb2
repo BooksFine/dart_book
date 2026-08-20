@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+  <description>
+    <title-info>
+      <genre>sf</genre>
+      <author>
+        <first-name>Станислав</first-name>
+        <last-name>Лем</last-name>
+      </author>
+      <book-title>FB2 2.2 Advanced Reference</book-title>
+      <annotation>
+        <p>Демонстрация расширенных возможностей FB2 2.2.</p>
+      </annotation>
+      <keywords>наука, кибернетика, будущее</keywords>
+      <lang>ru</lang>
+      <sequence name="Кибериада" number="7"/>
+    </title-info>
+    <document-info>
+      <id>fb2-22-spec-reference-doc-002</id>
+      <date value="2024-06-01">2024-06-01</date>
+    </document-info>
+    <custom-info info-type="sequence-url">https://cybernetics.example.org/series/cyberiada</custom-info>
+    <custom-info info-type="editor-notes">Verified for FB2 2.2 schema compliance.</custom-info>
+  </description>
+  <body>
+    <title>
+      <p>Книга 1: Сказания роботов</p>
+    </title>
+    <section>
+      <title>
+        <p>Глава 1. Киберотические эксперименты</p>
+      </title>
+      <p>Текст с именованным стилем <style name="highlight">критически важный термин</style> и еще <style name="term">конструкт</style>.</p>
+      <p>Смешанное форматирование: <strong>жирный и <style name="code-style">стилизованный код</style></strong> внутри абзаца.</p>
+    </section>
+  </body>
+  <body name="commentary">
+    <title>
+      <p>Комментарии и дополнения</p>
+    </title>
+    <section>
+      <title>
+        <p>Комментарий к главе 1</p>
+      </title>
+      <p>Дополнительный анализ киберотических конструктов и кибернетических моделей.</p>
+    </section>
+  </body>
+  <body name="notes">
+    <title>
+      <p>Сноски</p>
+    </title>
+    <section id="note_lem_1">
+      <title>
+        <p>1</p>
+      </title>
+      <p>Сноска к тексту Лема о природе разума.</p>
+    </section>
+  </body>
+</FictionBook>

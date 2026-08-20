@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+  <description>
+    <title-info>
+      <genre>science</genre>
+      <author>
+        <first-name>Alan</first-name>
+        <last-name>Turing</last-name>
+      </author>
+      <book-title>FB2 2.1 Specification Reference</book-title>
+      <lang>ru</lang>
+      <src-lang>en</src-lang>
+    </title-info>
+    <src-title-info>
+      <genre>science</genre>
+      <author>
+        <first-name>Alan</first-name>
+        <middle-name>Mathison</middle-name>
+        <last-name>Turing</last-name>
+        <nickname>AMT</nickname>
+      </author>
+      <book-title>Computing Machinery and Intelligence</book-title>
+      <lang>en</lang>
+    </src-title-info>
+    <document-info>
+      <id>fb2-21-spec-reference-doc-001</id>
+      <date value="2024-01-01">2024-01-01</date>
+    </document-info>
+  </description>
+  <body>
+    <title>
+      <p>FB2 2.1 Features Demonstration</p>
+    </title>
+    <subtitle>
+      <p>Comprehensive Element Reference</p>
+    </subtitle>
+    <section>
+      <title>
+        <p>1. Formatting and Formulas</p>
+      </title>
+      <p>Formula representation: water is H<sub>2</sub>O and relativity is E=mc<sup>2</sup>.</p>
+      <p>Editorial revisions: <strikethrough>deprecated algorithm</strikethrough> replaced with modern approach.</p>
+      <p>Source code snippet: <code>int factorial(int n) =&gt; n &lt;= 1 ? 1 : n * factorial(n - 1);</code> in Dart.</p>
+      <empty-line/>
+      <p>Inline icon <image l:href="#icon.png" id="inline-img-01" alt="Code Icon" title="Inline Programming Icon"/> illustrates syntax highlighting.</p>
+    </section>
+    <section>
+      <title>
+        <p>2. Complex Tables</p>
+      </title>
+      <table>
+        <tr>
+          <th colspan="2" align="center" valign="top"><p>Header spanning 2 columns</p></th>
+          <th rowspan="2" align="right" valign="middle"><p>Side Header spanning 2 rows</p></th>
+        </tr>
+        <tr>
+          <td align="left" valign="bottom"><p>Data Cell 1.1</p></td>
+          <td align="justify"><p>Data Cell 1.2</p></td>
+        </tr>
+        <tr>
+          <td><p>Data Cell 2.1</p></td>
+          <td colspan="2"><p>Wide Bottom Cell</p></td>
+        </tr>
+      </table>
+      <cite>
+        <p>Science is what we understand well enough to explain to a computer.</p>
+        <text-author>Donald Knuth</text-author>
+      </cite>
+      <image l:href="#diagram.png" id="block-img-01" alt="Architecture Diagram" title="Figure 1. System Architecture"/>
+    </section>
+  </body>
+  <binary id="icon.png" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==</binary>
+  <binary id="diagram.png" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==</binary>
+</FictionBook>
