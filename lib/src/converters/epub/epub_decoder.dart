@@ -30,9 +30,9 @@ class EpubDecoder implements BookDecoder {
     final archive = ZipDecoder().decodeBytes(bytes);
 
     // 1. OCF & DRM check
-    final encryptedPaths = OcfContainer.parseEncryptionPaths(archive);
-    if (encryptedPaths.isNotEmpty) {
-      throw EpubEncryptedResourceException(encryptedPaths);
+    final encryptionInfo = OcfContainer.parseEncryptionInfo(archive);
+    if (encryptionInfo.drmEncryptedPaths.isNotEmpty) {
+      throw EpubEncryptedResourceException(encryptionInfo.drmEncryptedPaths);
     }
 
     final ocfContainer = OcfContainer.fromArchive(archive);
@@ -191,11 +191,24 @@ class EpubDecoder implements BookDecoder {
         final path = _joinPath(opfDir, item.href);
         final file = archive.findFile(path);
         if (file != null) {
+          var rawBytes = Uint8List.fromList(file.content);
+          if (isFont) {
+            final obfAlgo = encryptionInfo.obfuscatedFonts[path] ??
+                encryptionInfo.obfuscatedFonts[item.href];
+            if (obfAlgo != null) {
+              rawBytes = OcfContainer.deobfuscateFont(
+                rawBytes,
+                obfAlgo,
+                opfId ?? metadata.id,
+              );
+            }
+          }
+
           final resId = 'epub-res-${item.id}';
           resourceIndex[resId] = BookResource(
             id: resId,
             mediaType: item.mediaType,
-            bytes: Uint8List.fromList(file.content),
+            bytes: rawBytes,
             fileName: item.href.split('/').last,
           );
         }

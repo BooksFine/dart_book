@@ -128,6 +128,38 @@ class Fb2Encoder implements BookEncoder {
       );
     }
 
+    if (metadata.cover != null) {
+      final cleanId = ctx.getId(metadata.cover!.ref.id, isCover: true);
+      writer.openElement('coverpage', blockChildren: true);
+      writer.element('image', attributes: {'l:href': '#$cleanId'});
+      writer.closeElement('coverpage', blockChildren: true);
+    }
+
+    final translators = metadata.contributorsByRole(BookContributorRole.translator);
+    for (final translator in translators) {
+      writer.openElement('translator', blockChildren: true);
+      final name = translator.name;
+      if (name.first?.trim().isNotEmpty == true) {
+        writer.element('first-name', text: name.first!.trim());
+      }
+      if (name.middle?.trim().isNotEmpty == true) {
+        writer.element('middle-name', text: name.middle!.trim());
+      }
+      if (name.last?.trim().isNotEmpty == true) {
+        writer.element('last-name', text: name.last!.trim());
+      }
+      if (name.nickname?.trim().isNotEmpty == true) {
+        writer.element('nickname', text: name.nickname!.trim());
+      }
+      if (translator.homePage != null) {
+        writer.element('home-page', text: translator.homePage.toString());
+      }
+      if (translator.email != null && translator.email!.trim().isNotEmpty) {
+        writer.element('email', text: translator.email!.trim());
+      }
+      writer.closeElement('translator', blockChildren: true);
+    }
+
     if (metadata.series != null) {
       final series = metadata.series!;
       final attributes = <String, String>{'name': series.name};
@@ -135,13 +167,6 @@ class Fb2Encoder implements BookEncoder {
         attributes['number'] = series.number.toString();
       }
       writer.element('sequence', attributes: attributes);
-    }
-
-    if (metadata.cover != null) {
-      final cleanId = ctx.getId(metadata.cover!.ref.id, isCover: true);
-      writer.openElement('coverpage', blockChildren: true);
-      writer.element('image', attributes: {'l:href': '#$cleanId'});
-      writer.closeElement('coverpage', blockChildren: true);
     }
 
     writer.closeElement('title-info', blockChildren: true);
@@ -232,14 +257,15 @@ class Fb2Encoder implements BookEncoder {
           writer.closeElement('p');
 
         case BookQuote quote:
-          writer.openElement('cite', blockChildren: true);
+          final tagName = quote.attributes['fb2-type'] == 'epigraph' ? 'epigraph' : 'cite';
+          writer.openElement(tagName, blockChildren: true);
           _writeBlocks(writer, quote.blocks, ctx);
           if (quote.citation.isNotEmpty) {
             writer.openElement('text-author');
             _writeInlines(writer, quote.citation, ctx);
             writer.closeElement('text-author');
           }
-          writer.closeElement('cite', blockChildren: true);
+          writer.closeElement(tagName, blockChildren: true);
 
         case BookList list:
           var index = 1;
@@ -263,7 +289,14 @@ class Fb2Encoder implements BookEncoder {
           for (final row in table.rows) {
             writer.openElement('tr', blockChildren: true);
             for (final cell in row.cells) {
-              writer.openElement('td', blockChildren: true);
+              final attrs = <String, String>{};
+              if (cell.colSpan != null && cell.colSpan! > 1) {
+                attrs['colspan'] = cell.colSpan.toString();
+              }
+              if (cell.rowSpan != null && cell.rowSpan! > 1) {
+                attrs['rowspan'] = cell.rowSpan.toString();
+              }
+              writer.openElement('td', attributes: attrs, blockChildren: true);
               _writeBlocks(writer, cell.blocks, ctx);
               writer.closeElement('td', blockChildren: true);
             }

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:archive/archive.dart';
 import 'package:dart_book/dart_book.dart';
 import 'package:test/test.dart';
 
@@ -97,6 +98,129 @@ void main() {
       final exc = EpubInvalidPackageException('Corrupt OPF');
       expect(exc, isA<BookException>());
       expect(exc, isA<EpubException>());
+    });
+
+    test('Generates dual navigation nav.xhtml and toc.ncx in EPUB', () async {
+      final bytes = await EpubConverter.bookToEpub(sampleBook);
+      expect(bytes, isNotEmpty);
+
+      // Verify that toc.ncx is generated
+      final archive = ZipDecoder().decodeBytes(bytes);
+      expect(archive.findFile('OEBPS/toc.ncx'), isNotNull);
+      expect(archive.findFile('OEBPS/nav.xhtml'), isNotNull);
+      final opf = String.fromCharCodes(archive.findFile('OEBPS/content.opf')!.content);
+      expect(opf, contains('toc="ncx"'));
+      expect(opf, contains('href="toc.ncx"'));
+    });
+
+    test('Font deobfuscation works for IDPF and Adobe algorithms', () {
+      const uid = 'urn:uuid:12345678-1234-1234-1234-123456789abc';
+      final originalBytes = Uint8List.fromList(List.generate(2000, (i) => i % 256));
+
+      // Obfuscate with IDPF
+      final obfuscatedIdpf = OcfContainer.deobfuscateFont(
+        originalBytes,
+        'http://www.idpf.org/2008/embedding',
+        uid,
+      );
+      expect(obfuscatedIdpf, isNot(equals(originalBytes)));
+
+      // Deobfuscate with IDPF (XOR symmetry)
+      final restoredIdpf = OcfContainer.deobfuscateFont(
+        obfuscatedIdpf,
+        'http://www.idpf.org/2008/embedding',
+        uid,
+      );
+      expect(restoredIdpf, equals(originalBytes));
+
+      // Obfuscate and deobfuscate with Adobe
+      final obfuscatedAdobe = OcfContainer.deobfuscateFont(
+        originalBytes,
+        'http://ns.adobe.com/pdf/enc#RC',
+        uid,
+      );
+      final restoredAdobe = OcfContainer.deobfuscateFont(
+        obfuscatedAdobe,
+        'http://ns.adobe.com/pdf/enc#RC',
+        uid,
+      );
+      expect(restoredAdobe, equals(originalBytes));
+    });
+
+    test('Encodes and decodes FB2 footnotes, epigraphs, tables and translators', () async {
+      final richBook = Book(
+        metadata: BookMetadata(
+          id: 'rich-book-1',
+          title: 'Rich Book',
+          language: 'ru',
+          publishedAt: DateTime(2023, 5, 12),
+          contributors: [
+            BookContributor(
+              role: BookContributorRole.author,
+              name: const PersonName(first: 'Лев', last: 'Толстой', display: 'Лев Толстой'),
+              email: 'leo@tolstoy.ru',
+              homePage: Uri.parse('https://tolstoy.ru'),
+            ),
+            BookContributor(
+              role: BookContributorRole.translator,
+              name: const PersonName(first: 'John', last: 'Smith', display: 'John Smith'),
+            ),
+          ],
+        ),
+        content: const BookContent(
+          blocks: [
+            BookQuote(
+              blocks: [BookParagraph(inlines: [BookText('Эпиграф книги')])],
+              citation: [BookText('Народная мудрость')],
+              attributes: {'fb2-type': 'epigraph'},
+            ),
+            BookParagraph(inlines: [
+              BookText('Параграф со сноской'),
+              BookFootnoteRef(id: 'note_1', label: [BookText('1')]),
+            ]),
+            BookTable(
+              rows: [
+                BookTableRow(
+                  cells: [
+                    BookTableCell(
+                      blocks: [BookParagraph(inlines: [BookText('Header 1')])],
+                      colSpan: 2,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+          footnotes: [
+            BookFootnote(
+              id: 'note_1',
+              blocks: [BookParagraph(inlines: [BookText('Текст примечания 1')])],
+            ),
+          ],
+        ),
+        resources: const [],
+      );
+
+      final fb2Bytes = await Fb2Converter.bookToFb2(richBook);
+      final fb2Xml = String.fromCharCodes(fb2Bytes);
+      expect(fb2Xml, contains('<epigraph>'));
+      expect(fb2Xml, contains('<translator>'));
+      expect(fb2Xml, contains('<body name="notes">'));
+      expect(fb2Xml, contains('colspan="2"'));
+      expect(fb2Xml, contains('email>leo@tolstoy.ru<'));
+
+      final decoded = Fb2Converter.fb2ToBook(fb2Bytes);
+      expect(decoded.metadata.publishedAt, isNotNull);
+      expect(decoded.metadata.contributors.length, equals(2));
+      expect(decoded.metadata.contributorsByRole(BookContributorRole.translator).length, equals(1));
+      expect(decoded.content.footnotes.length, equals(1));
+      expect(decoded.content.footnotes.first.id, equals('note_1'));
+
+      final epigraph = decoded.content.blocks.firstWhere((b) => b is BookQuote) as BookQuote;
+      expect(epigraph.attributes['fb2-type'], equals('epigraph'));
+
+      final table = decoded.content.blocks.firstWhere((b) => b is BookTable) as BookTable;
+      expect(table.rows.first.cells.first.colSpan, equals(2));
     });
   });
 

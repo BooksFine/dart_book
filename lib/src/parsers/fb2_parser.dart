@@ -112,7 +112,15 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         for (final tr in element.findElements('tr')) {
           final cells = <BookTableCell>[];
           for (final cell in tr.children.whereType<XmlElement>().where((e) => e.localName == 'td' || e.localName == 'th')) {
-            cells.add(BookTableCell(blocks: [BookParagraph(inlines: _parseFb2Inlines(cell))]));
+            final colSpan = int.tryParse(cell.getAttribute('colspan') ?? '') ?? 1;
+            final rowSpan = int.tryParse(cell.getAttribute('rowspan') ?? '') ?? 1;
+            cells.add(
+              BookTableCell(
+                blocks: [BookParagraph(inlines: _parseFb2Inlines(cell))],
+                colSpan: colSpan > 1 ? colSpan : null,
+                rowSpan: rowSpan > 1 ? rowSpan : null,
+              ),
+            );
           }
           rows.add(BookTableRow(cells: cells));
         }
@@ -123,7 +131,13 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         final innerBlocks = parse(
           element.children.where((e) => e is! XmlElement || e.localName != 'text-author'),
         );
-        return [BookQuote(blocks: innerBlocks, citation: citation)];
+        return [
+          BookQuote(
+            blocks: innerBlocks,
+            citation: citation,
+            attributes: const {'fb2-type': 'epigraph'},
+          ),
+        ];
       case 'code' || 'pre':
         return [BookCodeBlock(code: element.innerText)];
       case 'body':

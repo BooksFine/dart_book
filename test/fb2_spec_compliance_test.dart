@@ -72,7 +72,9 @@ void main() {
       final decoder = Fb2Decoder();
       final book = decoder.decode(Uint8List.fromList(utf8.encode(fb2Xml)));
 
-      expect(book.content.blocks.length, equals(3)); // epigraph, section, notes section
+      expect(book.content.blocks.length, equals(2)); // epigraph, section
+      expect(book.content.footnotes.length, equals(1)); // footnotes properly separated
+      expect(book.content.footnotes.first.id, equals('n1'));
       expect(book.content.blocks[0], isA<BookQuote>());
 
       final quote = book.content.blocks[0] as BookQuote;
@@ -92,8 +94,8 @@ void main() {
       expect(fnRef.id, equals('n1'));
 
       // Проверяем наличие тела сносок
-      final notesSection = book.content.blocks[2] as BookSection;
-      expect(notesSection.id, equals('notes'));
+      expect(book.content.footnotes.isNotEmpty, isTrue);
+      expect(book.content.footnotes.first.id, equals('n1'));
     });
 
     test('Fb2Decoder decodes fb2.zip archives including Windows-1251 encoding', () {

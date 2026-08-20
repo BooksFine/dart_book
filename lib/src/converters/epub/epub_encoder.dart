@@ -71,9 +71,12 @@ class EpubEncoder implements BookEncoder {
     final opfXml = _generateOpf(book, manifestItems, spineItems, options: options);
     _addStringFile(archive, 'OEBPS/content.opf', opfXml);
 
-    // 6. navigation (nav.xhtml)
+    // 6. navigation (nav.xhtml and toc.ncx for dual EPUB 2/3 compatibility)
     final navXhtml = _generateNav(book, chapters);
     _addStringFile(archive, 'OEBPS/nav.xhtml', navXhtml);
+
+    final ncxXml = _generateNcx(book, chapters, options: options);
+    _addStringFile(archive, 'OEBPS/toc.ncx', ncxXml);
 
     final bytes = ZipEncoder().encode(archive);
     return Uint8List.fromList(bytes);
@@ -168,10 +171,13 @@ class EpubEncoder implements BookEncoder {
       buffer.writeln('    $item');
     }
     buffer.writeln(
+      '    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>',
+    );
+    buffer.writeln(
       '    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
     );
     buffer.writeln('  </manifest>');
-    buffer.writeln('  <spine>');
+    buffer.writeln('  <spine toc="ncx">');
     for (final item in spine) {
       buffer.writeln('    $item');
     }
@@ -200,6 +206,36 @@ class EpubEncoder implements BookEncoder {
     buffer.writeln('  </nav>');
     buffer.writeln('</body>');
     buffer.writeln('</html>');
+    return buffer.toString();
+  }
+
+  String _generateNcx(Book book, List<_ChapterData> chapters, {BookEncodingOptions? options}) {
+    final docId = options?.documentId ?? book.metadata.id;
+    final buffer = StringBuffer();
+    buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+    buffer.writeln('<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">');
+    buffer.writeln('  <head>');
+    buffer.writeln('    <meta name="dtb:uid" content="${_escapeHtml(docId)}"/>');
+    buffer.writeln('    <meta name="dtb:depth" content="1"/>');
+    buffer.writeln('    <meta name="dtb:totalPageCount" content="0"/>');
+    buffer.writeln('    <meta name="dtb:maxPageNumber" content="0"/>');
+    buffer.writeln('  </head>');
+    buffer.writeln('  <docTitle>');
+    buffer.writeln('    <text>${_escapeHtml(book.metadata.title)}</text>');
+    buffer.writeln('  </docTitle>');
+    buffer.writeln('  <navMap>');
+    var playOrder = 1;
+    for (final chapter in chapters) {
+      buffer.writeln('    <navPoint id="navpoint-$playOrder" playOrder="$playOrder">');
+      buffer.writeln('      <navLabel>');
+      buffer.writeln('        <text>${_escapeHtml(chapter.title)}</text>');
+      buffer.writeln('      </navLabel>');
+      buffer.writeln('      <content src="${chapter.href}"/>');
+      buffer.writeln('    </navPoint>');
+      playOrder++;
+    }
+    buffer.writeln('  </navMap>');
+    buffer.writeln('</ncx>');
     return buffer.toString();
   }
 

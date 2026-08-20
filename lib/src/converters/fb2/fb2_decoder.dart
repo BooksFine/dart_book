@@ -108,30 +108,71 @@ class Fb2Decoder implements BookDecoder {
         ? keywordsText.split(RegExp(r'[,;]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
         : const <String>[];
 
+    final contributors = <BookContributor>[];
+    if (titleInfo != null) {
+      for (final e in titleInfo.findElements('author')) {
+        final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final homePageStr = e.findElements('home-page').firstOrNull?.innerText.trim();
+        final emailStr = e.findElements('email').firstOrNull?.innerText.trim();
+        contributors.add(
+          BookContributor(
+            role: BookContributorRole.author,
+            name: PersonName(
+              first: e.findElements('first-name').firstOrNull?.innerText,
+              middle: e.findElements('middle-name').firstOrNull?.innerText,
+              last: e.findElements('last-name').firstOrNull?.innerText,
+              nickname: e.findElements('nickname').firstOrNull?.innerText,
+              display: rawDisplay.isNotEmpty ? rawDisplay : null,
+            ),
+            homePage: homePageStr != null && homePageStr.isNotEmpty ? Uri.tryParse(homePageStr) : null,
+            email: emailStr != null && emailStr.isNotEmpty ? emailStr : null,
+          ),
+        );
+      }
+      for (final e in titleInfo.findElements('translator')) {
+        final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final homePageStr = e.findElements('home-page').firstOrNull?.innerText.trim();
+        final emailStr = e.findElements('email').firstOrNull?.innerText.trim();
+        contributors.add(
+          BookContributor(
+            role: BookContributorRole.translator,
+            name: PersonName(
+              first: e.findElements('first-name').firstOrNull?.innerText,
+              middle: e.findElements('middle-name').firstOrNull?.innerText,
+              last: e.findElements('last-name').firstOrNull?.innerText,
+              nickname: e.findElements('nickname').firstOrNull?.innerText,
+              display: rawDisplay.isNotEmpty ? rawDisplay : null,
+            ),
+            homePage: homePageStr != null && homePageStr.isNotEmpty ? Uri.tryParse(homePageStr) : null,
+            email: emailStr != null && emailStr.isNotEmpty ? emailStr : null,
+          ),
+        );
+      }
+    }
+
+    final dateElem = titleInfo?.findElements('date').firstOrNull ??
+        docInfo?.findElements('date').firstOrNull;
+    final dateValue = dateElem?.getAttribute('value');
+    final dateText = dateElem?.innerText.trim();
+    DateTime? parsedDate;
+    if (dateValue != null && dateValue.isNotEmpty) {
+      parsedDate = DateTime.tryParse(dateValue);
+    }
+    if (parsedDate == null && dateText != null && dateText.isNotEmpty) {
+      parsedDate = DateTime.tryParse(dateText);
+    }
+
     final metadata = BookMetadata(
       id: docId ?? title.hashCode.toString(),
       title: title,
       language: titleInfo?.findElements('lang').firstOrNull?.innerText ?? 'en',
-      contributors: titleInfo != null
-          ? titleInfo.findElements('author').map((e) {
-              final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
-              return BookContributor(
-                role: BookContributorRole.author,
-                name: PersonName(
-                  first: e.findElements('first-name').firstOrNull?.innerText,
-                  middle: e.findElements('middle-name').firstOrNull?.innerText,
-                  last: e.findElements('last-name').firstOrNull?.innerText,
-                  nickname: e.findElements('nickname').firstOrNull?.innerText,
-                  display: rawDisplay.isNotEmpty ? rawDisplay : null,
-                ),
-              );
-            }).toList()
-          : const [],
+      contributors: contributors,
       genres: genres,
       annotation: annotation,
       cover: cover,
       series: series,
       keywords: keywords,
+      publishedAt: parsedDate,
     );
 
     // 2. Извлекаем ресурсы (binary элементы)
@@ -151,18 +192,21 @@ class Fb2Decoder implements BookDecoder {
     }
 
     final blocks = <BookBlock>[];
+    final footnotes = <BookFootnote>[];
     for (final body in root.findElements('body')) {
       final isNotes = body.getAttribute('name') == 'notes';
-      final bodyBlocks = parser.parse(body.children);
       if (isNotes) {
-        blocks.add(
-          BookSection(
-            id: 'notes',
-            title: const [BookText('Примечания')],
-            blocks: bodyBlocks,
-          ),
-        );
+        for (final section in body.findElements('section')) {
+          final sectionId = section.getAttribute('id') ?? '';
+          final sectionBlocks = parser.parse(section.children);
+          footnotes.add(BookFootnote(id: sectionId, blocks: sectionBlocks));
+        }
+        if (footnotes.isEmpty && body.children.isNotEmpty) {
+          final bodyBlocks = parser.parse(body.children);
+          footnotes.add(BookFootnote(id: 'notes', blocks: bodyBlocks));
+        }
       } else {
+        final bodyBlocks = parser.parse(body.children);
         blocks.addAll(bodyBlocks);
       }
     }
@@ -173,7 +217,7 @@ class Fb2Decoder implements BookDecoder {
         id: finalId,
         language: options?.lang ?? metadata.language,
       ),
-      content: BookContent(blocks: blocks),
+      content: BookContent(blocks: blocks, footnotes: footnotes),
       resources: resources,
     );
   }

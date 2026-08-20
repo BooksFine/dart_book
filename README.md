@@ -25,6 +25,7 @@ void main() async {
   print('Язык: ${book.metadata.language}');
   print('Авторы: ${book.metadata.contributors.map((c) => c.name.toDisplayString()).join(', ')}');
   print('Количество блоков: ${book.content.blocks.length}');
+  print('Сносок: ${book.content.footnotes.length}');
   print('Встроенных ресурсов: ${book.resources.length}');
 }
 ```
@@ -38,7 +39,7 @@ final fb2Bytes = await Fb2Converter.bookToFb2(book);
 // FB2 -> FB2.zip
 final fb2ZipBytes = await Fb2Converter.bookToFb2Zip(book);
 
-// FB2 -> EPUB
+// FB2 -> EPUB (с генерацией EPUB 3 nav.xhtml + EPUB 2 toc.ncx)
 final epubBytes = await EpubConverter.bookToEpub(book);
 ```
 
@@ -103,17 +104,17 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 | Функция спецификации EPUB 2.0.1 | Статус | Детали реализации в dart_book |
 | --- | :---: | --- |
 | OCF-контейнер (ZIP, `mimetype`, `META-INF/container.xml`) | ✅ | `mimetype` несжатый 1-й файл; автодетект формата по ZIP-сигнатуре |
-| OPF-пакет: метаданные (`dc:title`, `dc:identifier`, `dc:language`, `dc:creator`) | ⚠️ | Чтение базовых DC; энкодер генерирует пакет 3.0 и сохраняет только title/id/lang/author |
+| OPF-пакет: метаданные (`dc:title`, `dc:identifier`, `dc:language`, `dc:creator`) | ⚠️ | Чтение базовых DC; энкодер генерирует пакет 3.0 и сохраняет title/id/lang/author/date |
 | OPF-пакет: `manifest` и `spine` | ⚠️ | Базовая структура; атрибут `fallback` и `linear="no"` игнорируются |
 | Обложка EPUB 2 (`<meta name="cover">`) | ✅ | Извлекается декодером в `metadata.cover`; энкодер проставляет `properties="cover-image"` |
 | Элемент `<guide>` | ❌ | Игнорируется декодером, не генерируется энкодером |
-| Навигация NCX (`toc.ncx`) | ⚠️ | Декодер читает заголовки глав; энкодер генерирует только EPUB 3 `nav.xhtml` |
+| Навигация NCX (`toc.ncx`) | ✅ | Полная поддержка: декодер читает NCX, энкодер генерирует `toc.ncx` (dual navigation) |
 | XHTML 1.1 контент | ✅ | Полная поддержка тегов текста, заголовков, списков, цитат, стихов и таблиц |
 | DTBook контент (`application/x-dtbook+xml`) | ❌ | Не поддерживается |
 | CSS-стили | ⚠️ | Сохраняются как ресурс `BookResource`, селекторы к AST не применяются |
-| Встроенные шрифты (TTF/OTF) | ⚠️ | Чистые шрифты сохраняются; обфусцированные шрифты вызывают ошибку DRM |
+| Встроенные шрифты (TTF/OTF) | ✅ | Извлечение и сохранение шрифтов, включая деобфускацию IDPF / Adobe |
 | Изображения (GIF/JPEG/PNG/SVG) | ✅ | Полная поддержка блочных/инлайн картинок и векторного SVG |
-| Детекция DRM (`META-INF/encryption.xml`) | ✅ | Обнаружение с типизированным `EpubEncryptedResourceException` (наследник `BookException`) |
+| Детекция DRM (`META-INF/encryption.xml`) | ✅ | Автоматическая деобфускация шрифтов; ошибка выбрасывается только на реальный DRM |
 
 ---
 
@@ -121,7 +122,7 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 
 | Функция спецификации EPUB 3.0–3.2 | Статус | Детали реализации в dart_book |
 | --- | :---: | --- |
-| NAV XHTML вместо NCX | ✅ | Поиск по `properties="nav"` (с фолбеком на имя), разбор `toc` и `landmarks`. Энкодер пишет `nav.xhtml` |
+| NAV XHTML + NCX (Dual Navigation) | ✅ | Поиск по `properties="nav"`, разбор `toc` и `landmarks`. Энкодер пишет `nav.xhtml` и `toc.ncx` |
 | `epub:type` структурная семантика | ✅ | Сноски (`epub:type="noteref"`, `role="doc-noteref"`), типы NAV (`toc`, `landmarks`) |
 | HTML5 XHTML-контент | ✅ | Семантические теги HTML5 (`section`, `article`, `figure`, `code`, `table` и др.) |
 | MathML (`<math>`) | ✅ | Сохраняется в `BookMathBlock` с исходным MathML XML |
@@ -130,8 +131,8 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 | Обложка (`properties="cover-image"`) | ✅ | Полная поддержка: извлечение в `BookCover` декодером и запись энкодером |
 | Media Overlays (SMIL 3.0) | ❌ | Парсер `EpubSmilDocument` реализован, но не подключен к декодеру/энкодеру |
 | Fixed layout (`rendition:layout`/`spread`/`viewport`) | ❌ | Rendition-метаданные не парсятся и не сохраняются |
-| Шрифты WOFF / WOFF2 | ⚠️ | WOFF и WOFF2 извлекаются декодером и сохраняются энкодером |
-| Обфускация шрифтов (IDPF / Adobe) | ❌ | Алгоритмы деобфускации отсутствуют (вызывает исключение DRM) |
+| Шрифты WOFF / WOFF2 | ✅ | WOFF и WOFF2 извлекаются декодером и сохраняются энкодером |
+| Обфускация шрифтов (IDPF / Adobe) | ✅ | Автоматическая деобфускация шрифтов IDPF (SHA-1) и Adobe (UUID XOR) |
 | Скриптинг (`<script>`, JS) | ❌ | JS не исполняется; теги переводятся в `BookRawHtmlBlock` |
 | Метаданные OPF (`properties`, `refines`, `link`) | ⚠️ | Декодер читает базовые `dc:*`; энкодер пишет обязательный `dcterms:modified` |
 | Коллекции и серии (`<collection>`) | ❌ | Серии EPUB 3 не читаются и не пишутся |
@@ -177,21 +178,22 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 | XML Namespaces (`fictionbook/2.0`, `xlink`) | ⚠️ | Энкодер генерирует `xmlns:l`, парсер проверяет `l:href` и `href` |
 | `<title-info>`: `book-title`, `lang`, `annotation`, `keywords` | ✅ | Полная поддержка чтения, сериализации и сохранения в AST |
 | `<title-info>`: `genre` | ✅ | Извлекаются все жанры в `BookGenre(code, name)` |
-| `<title-info>`: `author` | ⚠️ | ФИО и псевдоним ✅; `home-page` и `email` пишутся, но не декодируются |
-| `<title-info>`: `date` | ⚠️ | Декодер не считывает дату; энкодер пишет из `updatedAt`/`publishedAt` |
+| `<title-info>`: `author` | ✅ | ФИО, псевдоним, `home-page` и `email` читаются декодером и пишутся энкодером |
+| `<title-info>`: `date` | ✅ | Чтение и запись дат в `publishedAt` / `updatedAt` |
 | `<title-info>`: `coverpage` | ✅ | Извлекается `<image l:href="#id"/>`, связывается с `BookCover` |
 | `<title-info>`: `sequence` | ⚠️ | Читается только 1-я серия книги; вложенные серии не поддерживаются |
-| `<title-info>`: `src-lang`, `translator` | ❌ | Не поддерживаются |
-| `<document-info>` | ⚠️ | Читается только `id`; энкодер пишет `id`, `version`, `date`, `program-used`, `src-url` |
+| `<title-info>`: `translator` | ✅ | Чтение и запись переводчиков в `BookContributor(role: translator)` |
+| `<title-info>`: `src-lang` | ❌ | Не поддерживается |
+| `<document-info>` | ⚠️ | Читается `id` и `date`; энкодер пишет `id`, `version`, `date`, `program-used`, `src-url` |
 | `<publish-info>` | ❌ | Полностью отсутствует в модели и конвертерах |
 | `<custom-info>` | ⚠️ | Поддерживается только `info-type="sequence-url"` |
-| `<body>` (основное и сноски) | ⚠️ | Основное тело и `<body name="notes">` ✅; прочие тела объединяются в `blocks` |
+| `<body>` (основное и сноски) | ✅ | Основное тело — в `content.blocks`, `<body name="notes">` — в `content.footnotes` |
 | `<section>`, `<title>`, `<subtitle>`, `<p>`, `<empty-line>` | ✅ | Иерархические разделы, подзаголовки, абзацы, пустые строки |
 | `<image>` (блочный) | ⚠️ | Ссылка `#id` поддерживается; атрибуты `alt`, `title`, `id` не сохраняются |
 | `<poem>`, `<stanza>`, `<v>` | ✅ | Структура стихотворений (строфы, строки) |
-| `<epigraph>` | ⚠️ | Декодируется в `BookQuote`; энкодер сериализует все `BookQuote` как `<cite>` |
+| `<epigraph>` | ✅ | Чтение и сериализация эпиграфов (`<epigraph>`) и цитат (`<cite>`) |
 | `<cite>`, `<text-author>` | ✅ | Цитаты и авторство цитаты |
-| `<table>` (`tr`, `th`, `td`) | ⚠️ | Простая таблица ✅; атрибуты ячеек (`colspan`, `rowspan`, `align`) игнорируются |
+| `<table>` (`tr`, `th`, `td`) | ✅ | Таблицы с поддержкой `colspan` и `rowspan` |
 | Инлайн: `strong`, `emphasis`, `a`, `image` | ✅ | Полужирный, курсив, ссылки/сноски, строчные картинки |
 | Инлайн: `<style name="...">` | ❌ | Имя стиля сбрасывается, извлекаются только дочерние инлайны |
 | `<binary id="..." content-type="...">` | ✅ | Base64 кодирование и декодирование встроенных ресурсов |
@@ -209,7 +211,7 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 | `<text-author>` как `styleType` | ⚠️ | Инлайн-стили в цитатах/эпиграфах ✅; в `<poem>` автор игнорируется |
 | `<output>` (инструкции дистрибуции) | ❌ | Не поддерживается |
 | Список жанров FB2 2.1 | ⚠️ | Прозрачный passthrough строковых кодов без словаря и валидации |
-| Таблицы: `colspan`, `rowspan` | ❌ | Поля есть в `BookTableCell`, но парсер и энкодер FB2 их не обрабатывают |
+| Таблицы: `colspan`, `rowspan` | ✅ | Полная поддержка объединения столбцов и строк в таблицах |
 | Таблицы: `align`, `valign` | ❌ | Атрибуты выравнивания ячеек не поддерживаются |
 | Атрибуты `id`, `title`, `alt` у `<image>` | ❌ | Не извлекаются парсером и не генерируются энкодером |
 
@@ -221,7 +223,7 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 | --- | :---: | --- |
 | `<stylesheet type="...">` | ❌ | Кастомные таблицы стилей игнорируются |
 | `<custom-info info-type="...">` | ⚠️ | Поддерживается только `info-type="sequence-url"` |
-| Множественные `<body>` | ⚠️ | `notes` декодируется в секцию `blocks`. При повторном сохранении уходит в main `body` |
+| Множественные `<body>` | ⚠️ | `notes` парсится в `content.footnotes`. Прочие именованные тела объединяются в `blocks` |
 | Список жанров FB2 2.2 | ⚠️ | Прозрачный passthrough строковых кодов |
 | Атрибут `<genre match="...">` | ❌ | Атрибут процента соответствия `match` игнорируется |
 | Атрибуты `xml:lang` на узлах | ❌ | Читается только глобальный `<lang>` книги |
@@ -232,7 +234,7 @@ final outputBytes = await DartBook.encodeIsolated(book, 'epub');
 ## 🌳 Единая модель данных (AST)
 
 - **`Book`**: Корневой объект книги (`metadata`, `content`, `resources`).
-- **`BookMetadata`**: Название, язык, авторы (`BookContributor`), жанры (`BookGenre`), серии (`BookSeries`), аннотация (`BookContent`), обложка (`BookCover`), даты обновления/публикации.
+- **`BookMetadata`**: Название, язык, авторы (`BookContributor`), переводчики, жанры (`BookGenre`), серии (`BookSeries`), аннотация (`BookContent`), обложка (`BookCover`), даты обновления/публикации.
 - **`BookBlock`**:
   - `BookSection` — раздел / глава (`title`, `blocks`, `children`).
   - `BookHeading` — заголовок (`level` от 1 до 6, `text`).
