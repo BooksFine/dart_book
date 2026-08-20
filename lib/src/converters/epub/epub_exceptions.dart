@@ -1,10 +1,8 @@
-/// Базовое исключение для ошибок работы с форматом EPUB.
-class EpubException implements Exception {
-  final String message;
-  const EpubException(this.message);
+import '../../models/exceptions.dart';
 
-  @override
-  String toString() => 'EpubException: $message';
+/// Базовое исключение для ошибок работы с форматом EPUB.
+class EpubException extends BookException {
+  const EpubException(super.message);
 }
 
 /// Исключение, выбрасываемое при обнаружении зашифрованных (DRM) ресурсов.

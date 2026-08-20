@@ -342,7 +342,9 @@ class Fb2Encoder implements BookEncoder {
           writer.closeElement('strikethrough', inline: true);
 
         case BookCodeSpan codeSpan:
+          writer.openElement('code', inline: true);
           writer.text(codeSpan.code);
+          writer.closeElement('code', inline: true);
 
         case BookLink link:
           writer.openElement('a', attributes: {'l:href': link.href.toString()}, inline: true);

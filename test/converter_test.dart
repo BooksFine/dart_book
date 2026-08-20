@@ -15,6 +15,7 @@ void main() {
         ),
       ],
       genres: [BookGenre(code: 'prose_classic', name: 'Классика')],
+      cover: BookCover(ref: BookResourceRef('cover.jpg')),
     ),
     content: const BookContent(
       blocks: [
@@ -22,7 +23,9 @@ void main() {
         BookParagraph(inlines: [
           BookText('Это '),
           BookStrong(children: [BookText('важный')]),
-          BookText(' текст.'),
+          BookText(' текст с '),
+          BookCodeSpan('var x = 42;'),
+          BookText('.'),
         ]),
         BookQuote(
           blocks: [BookParagraph(inlines: [BookText('Краткость — сестра таланта.')])],
@@ -43,6 +46,11 @@ void main() {
         mediaType: 'image/jpeg',
         bytes: Uint8List.fromList([1, 2, 3, 4, 5]),
       ),
+      BookResource(
+        id: 'audio1.mp3',
+        mediaType: 'audio/mpeg',
+        bytes: Uint8List.fromList([10, 20, 30]),
+      ),
     ],
   );
 
@@ -51,19 +59,24 @@ void main() {
       final bytes = await Fb2Converter.bookToFb2(sampleBook);
       expect(bytes, isNotEmpty);
 
+      final xmlString = String.fromCharCodes(bytes);
+      expect(xmlString, contains('<code>var x = 42;</code>'));
+
       final decoded = Fb2Converter.fb2ToBook(bytes);
       expect(decoded.metadata.title, equals('Test Book Title'));
       expect(decoded.metadata.language, equals('ru'));
       expect(decoded.metadata.contributors.length, equals(1));
       expect(decoded.metadata.contributors.first.name.display, equals('Антон Чехов'));
-      expect(decoded.resources.length, equals(1));
+      expect(decoded.resources.length, equals(2));
       expect(decoded.resources.first.id, equals('cover.jpg'));
       expect(decoded.resources.first.bytes, equals([1, 2, 3, 4, 5]));
+      expect(decoded.metadata.cover, isNotNull);
+      expect(decoded.metadata.cover!.ref.id, equals('cover.jpg'));
     });
   });
 
   group('EPUB Converter Tests', () {
-    test('Encodes and decodes EPUB maintaining metadata and content', () async {
+    test('Encodes and decodes EPUB maintaining metadata, cover, audio and content', () async {
       final bytes = await EpubConverter.bookToEpub(sampleBook);
       expect(bytes, isNotEmpty);
 
@@ -72,7 +85,18 @@ void main() {
       expect(decoded.metadata.title, equals('Test Book Title'));
       expect(decoded.metadata.language, equals('ru'));
       expect(decoded.metadata.contributors.length, equals(1));
-      expect(decoded.resources.length, equals(1));
+      expect(decoded.resources.length, equals(2));
+      expect(decoded.metadata.cover, isNotNull);
+
+      // Verify audio extraction in resources
+      final audioRes = decoded.resources.firstWhere((r) => r.mediaType == 'audio/mpeg');
+      expect(audioRes.bytes, equals([10, 20, 30]));
+    });
+
+    test('EpubException extends BookException', () {
+      final exc = EpubInvalidPackageException('Corrupt OPF');
+      expect(exc, isA<BookException>());
+      expect(exc, isA<EpubException>());
     });
   });
 

@@ -337,7 +337,7 @@ class EpubEncoder implements BookEncoder {
           buffer.write('<sub>${_inlinesToXhtml(sub.children, ctx)}</sub>');
         case BookFootnoteRef fn:
           buffer.write(
-            '<a href="#${fn.id}" class="footnote-ref">${fn.label.isNotEmpty ? _inlinesToXhtml(fn.label, ctx) : '[${fn.id}]'}</a>',
+            '<a href="#${fn.id}" class="footnote-ref" epub:type="noteref" role="doc-noteref">${fn.label.isNotEmpty ? _inlinesToXhtml(fn.label, ctx) : '[${fn.id}]'}</a>',
           );
         case BookRawHtmlInline rawHtml:
           buffer.write(rawHtml.html);
@@ -423,13 +423,22 @@ String _extensionForMedia(String mediaType, String src) {
   if (mt.contains('jpeg') || mt.contains('jpg')) return 'jpg';
   if (mt.contains('png')) return 'png';
   if (mt.contains('webp')) return 'webp';
+  if (mt.contains('avif')) return 'avif';
+  if (mt.contains('jxl')) return 'jxl';
   if (mt.contains('gif')) return 'gif';
   if (mt.contains('svg')) return 'svg';
+  if (mt.contains('woff2')) return 'woff2';
+  if (mt.contains('woff')) return 'woff';
+  if (mt.contains('ttf')) return 'ttf';
+  if (mt.contains('otf') || mt.contains('opentype')) return 'otf';
+  if (mt.contains('mp3') || mt.contains('mpeg')) return 'mp3';
+  if (mt.contains('mp4')) return 'mp4';
+  if (mt.contains('opus') || mt.contains('ogg')) return 'opus';
 
   final clean = src.split('?').first.split('#').first;
   if (clean.contains('.')) {
     final ext = clean.split('.').last.toLowerCase();
-    if (ext.length <= 4 && RegExp(r'^[a-z0-9]+$').hasMatch(ext)) {
+    if (ext.length <= 5 && RegExp(r'^[a-z0-9]+$').hasMatch(ext)) {
       return ext;
     }
   }

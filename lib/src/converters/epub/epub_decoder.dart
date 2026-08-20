@@ -46,20 +46,47 @@ class EpubDecoder implements BookDecoder {
         ? opfPath.substring(0, opfPath.lastIndexOf('/'))
         : '';
 
-    final (metadata, opfId) = _parseMetadata(opfXml, options);
-
     final manifest = <String, _EpubItem>{};
     for (final element in opfXml.findAllElements('item')) {
       final itemId = element.getAttribute('id')!;
       final href = element.getAttribute('href')!;
       final mediaType = element.getAttribute('media-type')!;
-      manifest[itemId] = _EpubItem(itemId, href, mediaType);
+      final properties = element.getAttribute('properties');
+      manifest[itemId] = _EpubItem(itemId, href, mediaType, properties: properties);
     }
+
+    // Extract cover image (EPUB 3 properties="cover-image" or EPUB 2 <meta name="cover" content="...">)
+    var coverItemId = manifest.values
+        .firstWhere(
+          (item) => item.properties?.split(RegExp(r'\s+')).contains('cover-image') == true,
+          orElse: () => _EpubItem('', '', ''),
+        )
+        .id;
+
+    if (coverItemId.isEmpty) {
+      final metaCoverElem = opfXml
+          .findAllElements('meta')
+          .where((e) => e.getAttribute('name')?.toLowerCase() == 'cover')
+          .firstOrNull;
+      final metaCover = metaCoverElem?.getAttribute('content');
+      if (metaCover != null && metaCover.isNotEmpty && manifest.containsKey(metaCover)) {
+        coverItemId = metaCover;
+      }
+    }
+
+    final coverRef = coverItemId.isNotEmpty
+        ? BookCover(ref: BookResourceRef('epub-res-$coverItemId'))
+        : null;
+
+    final (metadata, opfId) = _parseMetadata(opfXml, options, cover: coverRef);
 
     // 2. Parse TOC (nav.xhtml or toc.ncx)
     final navTitlesByHref = <String, String>{};
     final navItem = manifest.values.firstWhere(
-      (item) => item.mediaType == 'application/xhtml+xml' && item.href.contains('nav'),
+      (item) =>
+          item.mediaType == 'application/xhtml+xml' &&
+          (item.properties?.split(RegExp(r'\s+')).contains('nav') == true ||
+              item.href.toLowerCase().contains('nav')),
       orElse: () => _EpubItem('', '', ''),
     );
     if (navItem.href.isNotEmpty) {
@@ -150,15 +177,17 @@ class EpubDecoder implements BookDecoder {
       );
     }
 
-    // 3. Extract all image, font, and css resources
+    // 3. Extract all image, audio, video, font, and css resources
     for (final item in manifest.values) {
       final isImage = item.mediaType.startsWith('image/');
+      final isAudio = item.mediaType.startsWith('audio/');
+      final isVideo = item.mediaType.startsWith('video/');
       final isFont = item.mediaType.startsWith('font/') ||
           item.mediaType.contains('font') ||
           item.mediaType.contains('opentype');
       final isCss = item.mediaType == 'text/css';
 
-      if (isImage || isFont || isCss) {
+      if (isImage || isAudio || isVideo || isFont || isCss) {
         final path = _joinPath(opfDir, item.href);
         final file = archive.findFile(path);
         if (file != null) {
@@ -184,7 +213,11 @@ class EpubDecoder implements BookDecoder {
     );
   }
 
-  (BookMetadata, String?) _parseMetadata(XmlDocument opfXml, BookDecodingOptions? options) {
+  (BookMetadata, String?) _parseMetadata(
+    XmlDocument opfXml,
+    BookDecodingOptions? options, {
+    BookCover? cover,
+  }) {
     final metadataElement = opfXml.findAllElements('metadata').first;
 
     final id =
@@ -242,6 +275,7 @@ class EpubDecoder implements BookDecoder {
         contributors: contributors,
         genres: subjects,
         annotation: annotation,
+        cover: cover,
       ),
       id,
     );
@@ -276,6 +310,7 @@ class _EpubItem {
   final String id;
   final String href;
   final String mediaType;
+  final String? properties;
 
-  _EpubItem(this.id, this.href, this.mediaType);
+  _EpubItem(this.id, this.href, this.mediaType, {this.properties});
 }

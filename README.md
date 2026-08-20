@@ -2,7 +2,87 @@
 
 Dart-библиотека для чтения, создания и конвертации электронных книг в форматах **EPUB** (EPUB 2 / 3) и **FB2** (FB2 2.0–2.2, FB2.zip).
 
-В основе библиотеки лежит единая модель данных (`Book`), которая представляет книгу в виде дерева блоков и инлайновых элементов, независимо от исходного формата.
+В основе библиотеки лежит единая модель данных (`Book`), которая представляет книгу в виде дерева блоков и инлайновых элементов (AST), независимо от исходного формата.
+
+---
+
+## Быстрый старт
+
+### 1. Автоматическая загрузка книги (EPUB или FB2)
+
+```dart
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:dart_book/dart_book.dart';
+
+void main() async {
+  final bytes = await File('book.epub').readAsBytes();
+
+  // Автоматическое определение формата по magic bytes / имени файла
+  final book = await DartBook.load(bytes, filename: 'book.epub');
+
+  print('Название: ${book.metadata.title}');
+  print('Язык: ${book.metadata.language}');
+  print('Авторы: ${book.metadata.contributors.map((c) => c.name.toDisplayString()).join(', ')}');
+  print('Количество блоков: ${book.content.blocks.length}');
+  print('Встроенных ресурсов: ${book.resources.length}');
+}
+```
+
+### 2. Конвертация EPUB ↔ FB2 / FB2.zip
+
+```dart
+// EPUB -> FB2
+final fb2Bytes = await Fb2Converter.bookToFb2(book);
+
+// FB2 -> FB2.zip
+final fb2ZipBytes = await Fb2Converter.bookToFb2Zip(book);
+
+// FB2 -> EPUB
+final epubBytes = await EpubConverter.bookToEpub(book);
+```
+
+### 3. Сборка книги по главам (для скрейперов и качалок)
+
+```dart
+final builder = BookBuilder(
+  title: 'Моя Книга',
+  language: 'ru',
+  contributors: const [
+    BookContributor(
+      role: BookContributorRole.author,
+      name: PersonName(first: 'Иван', last: 'Иванов', display: 'Иван Иванов'),
+    ),
+  ],
+  namingPolicy: BookResourceNamingPolicy.sequential, // img_001.jpg, img_002.png...
+  resourceResolver: (request, {onByteProgress}) async {
+    // Кастомный сетевой загрузчик картинок (с поддержкой авторизации, заголовков и прокси)
+    final downloadedBytes = await downloadImage(request.source!);
+    return BookResource(
+      id: request.id,
+      mediaType: 'image/jpeg',
+      bytes: downloadedBytes,
+    );
+  },
+);
+
+// Добавление глав из сырого HTML
+await builder.addChapterHtml('<h1>Глава 1</h1><p>Текст с картинкой <img src="https://site.com/pic.jpg"/></p>');
+await builder.addChapterHtml('<h1>Глава 2</h1><p>Вторая глава...</p>');
+
+final book = await builder.build();
+final epubFile = await EpubConverter.bookToEpub(book);
+```
+
+### 4. Фоновая работа в изолятах (120/144 Hz UI)
+
+```dart
+// Парсинг тяжелой книги в отдельном изоляте (0 мс блокировки UI-потока)
+final book = await DartBook.loadIsolated(bytes, filename: 'large_book.epub');
+
+// Кодирование тяжелого архива в изоляте
+final outputBytes = await DartBook.encodeIsolated(book, 'epub');
+```
 
 ---
 
@@ -10,211 +90,195 @@ Dart-библиотека для чтения, создания и конвер�
 
 ### 📖 Поддержка форматов по версиям спецификаций
 
-Легенда статусов: ✅ — полная поддержка; ⚠️ — частичная (с оговорками); ❌ — не поддерживается; — — неприменимо.
+Легенда статусов:
+- ✅ — **полная поддержка** (декодирование, сериализация, сохранение в AST);
+- ⚠️ — **частичная поддержка** (с техническими оговорками или ограничениями);
+- ❌ — **не поддерживается** (игнорируется, отбрасывается или не реализовано);
+- — — **неприменимо**.
+
+---
 
 #### EPUB 2.0.1 (базовый набор)
 
-| Функция спецификации | Статус |
-| --- | --- |
-| OCF-контейнер (ZIP, `mimetype`, `META-INF/`) | ✅ |
-| OPF-пакет: метаданные (DC), `manifest`, `spine` | ✅ |
-| Элемент `<guide>` | ❌ |
-| Навигация NCX (`toc.ncx`) | ✅ |
-| XHTML 1.1 контент | ✅ |
-| CSS-стили | ⚠️ хранятся как ресурс, не применяются |
-| Встроенные шрифты (TTF/OTF) | ✅ |
-| Изображения (GIF/JPEG/PNG/SVG) | ✅ |
-| Детекция DRM (`META-INF/encryption.xml`) | ✅ |
+| Функция спецификации EPUB 2.0.1 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| OCF-контейнер (ZIP, `mimetype`, `META-INF/container.xml`) | ✅ | `mimetype` несжатый 1-й файл; автодетект формата по ZIP-сигнатуре |
+| OPF-пакет: метаданные (`dc:title`, `dc:identifier`, `dc:language`, `dc:creator`) | ⚠️ | Чтение базовых DC; энкодер генерирует пакет 3.0 и сохраняет только title/id/lang/author |
+| OPF-пакет: `manifest` и `spine` | ⚠️ | Базовая структура; атрибут `fallback` и `linear="no"` игнорируются |
+| Обложка EPUB 2 (`<meta name="cover">`) | ✅ | Извлекается декодером в `metadata.cover`; энкодер проставляет `properties="cover-image"` |
+| Элемент `<guide>` | ❌ | Игнорируется декодером, не генерируется энкодером |
+| Навигация NCX (`toc.ncx`) | ⚠️ | Декодер читает заголовки глав; энкодер генерирует только EPUB 3 `nav.xhtml` |
+| XHTML 1.1 контент | ✅ | Полная поддержка тегов текста, заголовков, списков, цитат, стихов и таблиц |
+| DTBook контент (`application/x-dtbook+xml`) | ❌ | Не поддерживается |
+| CSS-стили | ⚠️ | Сохраняются как ресурс `BookResource`, селекторы к AST не применяются |
+| Встроенные шрифты (TTF/OTF) | ⚠️ | Чистые шрифты сохраняются; обфусцированные шрифты вызывают ошибку DRM |
+| Изображения (GIF/JPEG/PNG/SVG) | ✅ | Полная поддержка блочных/инлайн картинок и векторного SVG |
+| Детекция DRM (`META-INF/encryption.xml`) | ✅ | Обнаружение с типизированным `EpubEncryptedResourceException` (наследник `BookException`) |
+
+---
 
 #### EPUB 3.0–3.2 (новшества относительно 2.0.1)
 
-| Функция спецификации | Статус |
-| --- | --- |
-| NAV XHTML вместо NCX | ✅ |
-| `epub:type` структурная семантика | ⚠️ частично: `noteref`, типы NAV |
-| HTML5 XHTML-контент | ✅ |
-| MathML | ✅ |
-| SVG-контент | ✅ |
-| Медиа `<audio>`/`<video>` | ⚠️ блоки парсятся, ресурсы из манифеста не извлекаются |
-| Media Overlays (SMIL) | ❌ парсер есть, к декодеру/энкодеру не подключён |
-| Скриптинг (JavaScript) | ❌ |
-| Fixed layout (`rendition:layout`/`spread`/`viewport`) | ❌ |
-| Обфускация шрифтов | ❌ |
-| Метаданные с `properties`/`refines` | ⚠️ только базовые `dc:*` |
-| Новые core media types (WOFF, OPUS и др.) | ⚠️ WOFF извлекается, валидация типов не выполняется |
+| Функция спецификации EPUB 3.0–3.2 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| NAV XHTML вместо NCX | ✅ | Поиск по `properties="nav"` (с фолбеком на имя), разбор `toc` и `landmarks`. Энкодер пишет `nav.xhtml` |
+| `epub:type` структурная семантика | ✅ | Сноски (`epub:type="noteref"`, `role="doc-noteref"`), типы NAV (`toc`, `landmarks`) |
+| HTML5 XHTML-контент | ✅ | Семантические теги HTML5 (`section`, `article`, `figure`, `code`, `table` и др.) |
+| MathML (`<math>`) | ✅ | Сохраняется в `BookMathBlock` с исходным MathML XML |
+| SVG-контент (`<svg>`) | ✅ | Сохраняется в `BookSvgBlock`, внешние `.svg` извлекаются в ресурсы |
+| Медиа `<audio>`/`<video>`/`<source>` | ✅ | Блоки и бинарные медиафайлы извлекаются декодером из манифеста и сохраняются энкодером |
+| Обложка (`properties="cover-image"`) | ✅ | Полная поддержка: извлечение в `BookCover` декодером и запись энкодером |
+| Media Overlays (SMIL 3.0) | ❌ | Парсер `EpubSmilDocument` реализован, но не подключен к декодеру/энкодеру |
+| Fixed layout (`rendition:layout`/`spread`/`viewport`) | ❌ | Rendition-метаданные не парсятся и не сохраняются |
+| Шрифты WOFF / WOFF2 | ⚠️ | WOFF и WOFF2 извлекаются декодером и сохраняются энкодером |
+| Обфускация шрифтов (IDPF / Adobe) | ❌ | Алгоритмы деобфускации отсутствуют (вызывает исключение DRM) |
+| Скриптинг (`<script>`, JS) | ❌ | JS не исполняется; теги переводятся в `BookRawHtmlBlock` |
+| Метаданные OPF (`properties`, `refines`, `link`) | ⚠️ | Декодер читает базовые `dc:*`; энкодер пишет обязательный `dcterms:modified` |
+| Коллекции и серии (`<collection>`) | ❌ | Серии EPUB 3 не читаются и не пишутся |
+| Core Media Types EPUB 3 | ✅ | Растровые изображения, SVG, шрифты (WOFF/WOFF2/TTF/OTF), аудио/видео (MP3, MP4, WebP) |
 
-#### EPUB 3.3 (новшества относительно 3.2)
+---
 
-| Функция спецификации | Статус |
-| --- | --- |
-| Статус W3C Recommendation (первая REC-версия EPUB 3) | ✅ контейнер соответствует |
-| `epub:type` на SVG | ⚠️ SVG хранится как сырой блок без анализа |
-| Требования доступности (EPUB Accessibility) | ❌ |
-| Рекомендации security/privacy | — неприменимо для парсера/энкодера |
-| TTS-расширения (WG Note) | ❌ |
+#### EPUB 3.3 (W3C Recommendation)
 
-#### EPUB 3.4 (новшества относительно 3.3)
+| Функция спецификации EPUB 3.3 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| Статус W3C Recommendation (OCF и OPF) | ✅ | Несжатый `mimetype`, `container.xml`, `version="3.0"`, `dcterms:modified` |
+| Новые Core Media Types (WebP) | ✅ | Полная поддержка `image/webp` при чтении и записи |
+| Core Media Types (Аудио: MP3, AAC, OPUS) | ✅ | Блоки `<audio>` и бинарные аудиоресурсы извлекаются и упаковываются |
+| `epub:type` на элементах SVG | ⚠️ | SVG сохраняется транзитом в `BookSvgBlock` без семантического анализа |
+| Multiple Renditions 1.1 | ⚠️ | `OcfContainer` читает список `<rootfile>`, но открывает только первый |
+| EPUB Accessibility 1.1 (a11y метаданные) | ❌ | Метаданные доступности Schema.org и сертификация отсутствуют в модели |
+| EPUB-CFI 1.1 (Канонические фрагменты) | ❌ | Синтаксис `epubcfi(...)` не реализован |
+| TTS-расширения (SSML, PLS, CSS Speech) | ❌ | Атрибуты `ssml:ph` и PLS-словари не извлекаются |
+| Рекомендации по Security & Privacy | — | Неприменимо (пассивный headless-парсер без исполнения кода) |
 
-| Функция спецификации | Статус |
-| --- | --- |
-| Roll layout (вебтуны) | ❌ |
-| EPUB Annotations 1.0 | ❌ |
-| `pageBreakSource` property | ❌ |
-| ITS (i18n) атрибуты в XHTML | ⚠️ проходят транзитом в сырых блоках |
-| Новые core media types: AVIF, JPEG XL, OPUS в MP4 | ⚠️ хранятся как бинарные ресурсы |
-| Удалены: `flow`/`orientation`/`spread` fixed-layout | — никогда не поддерживались |
+---
+
+#### EPUB 3.4 (W3C Working Group Draft / CR)
+
+| Функция спецификации EPUB 3.4 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| Roll layout (вебтуны / вертикальный скролл) | ❌ | Метаданные `rendition:layout="roll"` не поддерживаются |
+| EPUB Annotations 1.0 (JSON-LD) | ❌ | Модель аннотаций W3C Web Annotation отсутствует |
+| Свойство `pageBreakSource` (замена `source-of`) | ❌ | Не парсится и не генерируется |
+| ITS 2.0 (i18n) атрибуты (`translate`, `dir`) | ⚠️ | Проходят транзитом только в raw-узлах `BookRawHtmlBlock` |
+| Новые Core Media Types (AVIF, JPEG XL) | ✅ | Извлекаются в `BookResource`; поддержан маппинг расширений `.avif` и `.jxl` |
+| OPUS в MP4 (`audio/mp4; codecs=opus`) | ✅ | Бинарные аудио-файлы извлекаются и сериализуются |
+| Удаление устаревших свойств (`flow`/`orientation`) | — / ✅ | Энкодер не производит устаревшие rendition-свойства |
+| EPUB Accessibility 1.2 обновления | ❌ | Новые метаданные доступности не поддерживаются |
+
+---
 
 #### FB2 2.0 (базовый набор)
 
-| Функция спецификации | Статус |
-| --- | --- |
-| `description` / `title-info` | ✅ |
-| `document-info` (id, version, date, src-url…) | ⚠️ при чтении извлекается только id; полный блок пишет энкодер |
-| `publish-info` | ❌ |
-| `genre` | ✅ |
-| `author` (first/middle/last/nickname, home-page, email) | ✅ |
-| `book-title`, `lang` | ✅ |
-| `annotation` | ✅ |
-| `keywords` | ✅ |
-| `sequence` | ✅ |
-| `coverpage` | ✅ |
-| `custom-info` | ⚠️ только `sequence-url` |
-| `body` / `section` / `title` / `subtitle` / `p` / `empty-line` | ✅ |
-| `image` (блочная и инлайн) | ✅ |
-| `binary` (base64) | ✅ |
-| `poem` / `stanza` / `v` | ✅ |
-| `epigraph` | ✅ |
-| `cite` | ✅ |
-| `table` (простая) | ✅ |
-| `text-author` | ⚠️ только как атрибуция цитаты |
-| Инлайн: `strong`, `emphasis`, `a`, `style` | ⚠️ strong/emphasis/a ✅, `style` ❌ |
-| Кодировки UTF-8 / Windows-1251 | ✅ |
-| FB2.zip | ✅ |
+| Функция спецификации FB2 2.0 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| XML Namespaces (`fictionbook/2.0`, `xlink`) | ⚠️ | Энкодер генерирует `xmlns:l`, парсер проверяет `l:href` и `href` |
+| `<title-info>`: `book-title`, `lang`, `annotation`, `keywords` | ✅ | Полная поддержка чтения, сериализации и сохранения в AST |
+| `<title-info>`: `genre` | ✅ | Извлекаются все жанры в `BookGenre(code, name)` |
+| `<title-info>`: `author` | ⚠️ | ФИО и псевдоним ✅; `home-page` и `email` пишутся, но не декодируются |
+| `<title-info>`: `date` | ⚠️ | Декодер не считывает дату; энкодер пишет из `updatedAt`/`publishedAt` |
+| `<title-info>`: `coverpage` | ✅ | Извлекается `<image l:href="#id"/>`, связывается с `BookCover` |
+| `<title-info>`: `sequence` | ⚠️ | Читается только 1-я серия книги; вложенные серии не поддерживаются |
+| `<title-info>`: `src-lang`, `translator` | ❌ | Не поддерживаются |
+| `<document-info>` | ⚠️ | Читается только `id`; энкодер пишет `id`, `version`, `date`, `program-used`, `src-url` |
+| `<publish-info>` | ❌ | Полностью отсутствует в модели и конвертерах |
+| `<custom-info>` | ⚠️ | Поддерживается только `info-type="sequence-url"` |
+| `<body>` (основное и сноски) | ⚠️ | Основное тело и `<body name="notes">` ✅; прочие тела объединяются в `blocks` |
+| `<section>`, `<title>`, `<subtitle>`, `<p>`, `<empty-line>` | ✅ | Иерархические разделы, подзаголовки, абзацы, пустые строки |
+| `<image>` (блочный) | ⚠️ | Ссылка `#id` поддерживается; атрибуты `alt`, `title`, `id` не сохраняются |
+| `<poem>`, `<stanza>`, `<v>` | ✅ | Структура стихотворений (строфы, строки) |
+| `<epigraph>` | ⚠️ | Декодируется в `BookQuote`; энкодер сериализует все `BookQuote` как `<cite>` |
+| `<cite>`, `<text-author>` | ✅ | Цитаты и авторство цитаты |
+| `<table>` (`tr`, `th`, `td`) | ⚠️ | Простая таблица ✅; атрибуты ячеек (`colspan`, `rowspan`, `align`) игнорируются |
+| Инлайн: `strong`, `emphasis`, `a`, `image` | ✅ | Полужирный, курсив, ссылки/сноски, строчные картинки |
+| Инлайн: `<style name="...">` | ❌ | Имя стиля сбрасывается, извлекаются только дочерние инлайны |
+| `<binary id="..." content-type="...">` | ✅ | Base64 кодирование и декодирование встроенных ресурсов |
+| Кодировки (UTF-8, Windows-1251) | ⚠️ | UTF-8 ✅; Win-1251 русская кириллица ✅ (спецсимволы/тире опущены) |
+| Контейнер FB2.ZIP | ✅ | Чтение и запись `.fb2.zip` архивов |
+
+---
 
 #### FB2 2.1 (новшества относительно 2.0)
 
-| Функция спецификации | Статус |
-| --- | --- |
-| `src-title-info` (переводные книги) | ❌ |
-| Инлайн `sub` / `sup` / `code` / `strikethrough` | ✅ |
-| `text-author` как форматируемый тип (styleType) | ⚠️ парсится как инлайн-цитата |
-| `output` (инструкции платной конвертации) | ❌ |
-| Новый список жанров | ✅ |
-| Таблицы с `colspan`/`rowspan`/`align`/`valign` | ❌ |
-| Атрибуты `id`/`title` у `image` | ❌ не сохраняются |
+| Функция спецификации FB2 2.1 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| `<src-title-info>` (переводные книги) | ❌ | Метаданные оригинального произведения не поддерживаются |
+| Инлайн `sub`, `sup`, `code`, `strikethrough` | ✅ | Полная поддержка декодирования и сериализации (`<code>`, `<sub>`, `<sup>`, `<strikethrough>`) |
+| `<text-author>` как `styleType` | ⚠️ | Инлайн-стили в цитатах/эпиграфах ✅; в `<poem>` автор игнорируется |
+| `<output>` (инструкции дистрибуции) | ❌ | Не поддерживается |
+| Список жанров FB2 2.1 | ⚠️ | Прозрачный passthrough строковых кодов без словаря и валидации |
+| Таблицы: `colspan`, `rowspan` | ❌ | Поля есть в `BookTableCell`, но парсер и энкодер FB2 их не обрабатывают |
+| Таблицы: `align`, `valign` | ❌ | Атрибуты выравнивания ячеек не поддерживаются |
+| Атрибуты `id`, `title`, `alt` у `<image>` | ❌ | Не извлекаются парсером и не генерируются энкодером |
+
+---
 
 #### FB2 2.2 (новшества относительно 2.1)
 
-| Функция спецификации | Статус |
-| --- | --- |
-| `stylesheet` | ❌ |
-| `custom-info` с `info-type` | ⚠️ только `sequence-url` |
-| Несколько `<body>` (кроме main/notes) | ⚠️ `notes` распознаётся, прочие — как обычные секции |
-| Расширения жанров | ❌ |
-
-#### Конвертация
-
-Чтение любого поддерживаемого формата в объект `Book` и сохранение в любой целевой формат (EPUB ↔ FB2 / FB2.zip). Энкодер EPUB генерирует пакет `version="3.0"` (совместим с 3.0–3.4, версия в пакете не меняется по спецификации).
-
-### 🌳 Единая модель данных (AST)
-- **Формато-независимое представление**: книга представляется структурой `Book` (`metadata`, `content`, `resources`).
-- **Метаданные (`BookMetadata`)**: название, язык, авторы с ролями (`BookContributor`), жанры, серии, аннотация, обложка, даты.
-- **Типизированные блоки (`BookBlock`)**: секции/главы, параграфы, заголовки (h1–h6), списки, таблицы, стихи, цитаты, код, медиа.
-- **Строчные элементы (`BookInline`)**: текст, акценты (strong, em, strike), ссылки, якоря, встроенный код, формулы, надстрочные/подстрочные знаки, сноски.
-- **Ресурсы (`BookResource`)**: хранение бинарных данных (изображения, шрифты, аудио) с MIME-типами и исходными путями.
-
-### 🛠 Инструменты создания и скрейпинга
-- **Поглавная сборка (`BookBuilder`)**: добавление глав из фрагментов HTML с автоматическим извлечением ссылок на медиа.
-- **Сетевой пайплайн (`BookResourceResolver`)**: кастомная загрузка картинок с поддержкой любых HTTP-заголовков, cookie и авторизации.
-- **Политики именования (`BookResourceNamingPolicy`)**: стандартизация имен файлов (сохранение оригинальных имен, порядковая нумерация `img_001.jpg`, хэширование ссылок или кастомная функция).
-- **Парсер разметки (`HtmlParser`)**: преобразование HTML5-разметки в блоки `BookBlock`.
-
-### ⚡ Производительность и надежность
-- **Фоновый парсинг (`DartBook.loadIsolated`)**: выполнение декодирования в отдельном потоке (`Isolate.run`), исключающее фризы UI.
-- **Гибкая валидация (`strictMode`)**:
-  - `strictMode: true` — выброс типизированных исключений (`BookParseException`, `BookMalformedMetadataException`) при ошибках структуры.
-  - `strictMode: false` — мягкий пропуск некритичных ошибок с отправкой сообщений в переданный `logger`.
-- **Расширяемость (`BookRegistry`)**: возможность регистрировать собственные декодеры и энкодеры для добавления новых форматов.
+| Функция спецификации FB2 2.2 | Статус | Детали реализации в dart_book |
+| --- | :---: | --- |
+| `<stylesheet type="...">` | ❌ | Кастомные таблицы стилей игнорируются |
+| `<custom-info info-type="...">` | ⚠️ | Поддерживается только `info-type="sequence-url"` |
+| Множественные `<body>` | ⚠️ | `notes` декодируется в секцию `blocks`. При повторном сохранении уходит в main `body` |
+| Список жанров FB2 2.2 | ⚠️ | Прозрачный passthrough строковых кодов |
+| Атрибут `<genre match="...">` | ❌ | Атрибут процента соответствия `match` игнорируется |
+| Атрибуты `xml:lang` на узлах | ❌ | Читается только глобальный `<lang>` книги |
+| Кастомные инлайн-стили `<style name="...">` | ❌ | Имя стиля отбрасывается, тег `<style>` не генерируется |
 
 ---
 
-## Основной API
+## 🌳 Единая модель данных (AST)
+
+- **`Book`**: Корневой объект книги (`metadata`, `content`, `resources`).
+- **`BookMetadata`**: Название, язык, авторы (`BookContributor`), жанры (`BookGenre`), серии (`BookSeries`), аннотация (`BookContent`), обложка (`BookCover`), даты обновления/публикации.
+- **`BookBlock`**:
+  - `BookSection` — раздел / глава (`title`, `blocks`, `children`).
+  - `BookHeading` — заголовок (`level` от 1 до 6, `text`).
+  - `BookParagraph` — абзац (`inlines`).
+  - `BookQuote` — цитата / эпиграф (`blocks`, `citation`).
+  - `BookList` — список (`ordered`, `items`).
+  - `BookTable` — таблица (`rows` -> `cells` с поддержкой `colSpan` и `rowSpan`).
+  - `BookPoem` — стихотворение (`stanzas` -> `lines`).
+  - `BookCodeBlock` — блок кода (`code`, `language`).
+  - `BookImageBlock` — блочная иллюстрация (`ref`, `alt`, `title`).
+  - `BookAudioBlock` / `BookVideoBlock` — медиа (`ref`, `controls`).
+  - `BookMathBlock` — блок MathML (`mathml`).
+  - `BookSvgBlock` — векторный SVG блок (`svg`).
+  - `BookHorizontalRule` / `BookEmptyLine` — разделители.
+  - `BookRawHtmlBlock` / `BookRawXmlBlock` — сырые блоки для сохранения нераспознанной разметки.
+- **`BookInline`**:
+  - `BookText` — текст.
+  - `BookEmphasis` / `BookStrong` / `BookStrike` — курсив, полужирный, зачёркнутый.
+  - `BookCodeSpan` — строчный код.
+  - `BookLink` — ссылка (`href`, `children`).
+  - `BookAnchor` — якорь внутри книги (`id`).
+  - `BookImageInline` — строчная картинка (`ref`, `alt`).
+  - `BookFootnoteRef` — ссылка на сноску (`id`, `label`).
+  - `BookSuperscript` / `BookSubscript` — верхний / нижний индекс.
+  - `BookLineBreak` — перенос строки (`<br/>`).
+- **`BookResource`**: Бинарные данные (изображения, шрифты, стили, аудио) с MIME-типами и идентификаторами.
+
+---
+
+## 🛠 Основной API
 
 ### `DartBook`
-Главная точка входа для загрузки книг.
-- `load(bytes, {filename, options, resourceResolver})` — разбор книги в текущем изоляте с автоопределением формата.
-- `loadIsolated(bytes, {filename, options, resourceResolver})` — разбор книги в отдельном изоляте (`Isolate.run`).
+Главная точка входа для загрузки и кодирования:
+- `DartBook.load(bytes, {filename, options, resourceResolver})` — асинхронный разбор книги с автоопределением формата.
+- `DartBook.loadIsolated(bytes, {filename, options, resourceResolver})` — разбор книги в отдельном изоляте (`Isolate.run`).
+- `DartBook.encodeIsolated(book, extension, {options})` — кодирование книги в изоляте.
 
 ### Конвертеры
-- `EpubConverter` / `EpubDecoder` / `EpubEncoder` — работа с форматом EPUB.
+- `EpubConverter` (`EpubDecoder` / `EpubEncoder`):
   - `EpubConverter.bookToEpub(book)`
-  - `EpubConverter.epubToBook(bytes)`
-- `Fb2Converter` / `Fb2Decoder` / `Fb2Encoder` — работа с форматом FB2.
-  - `Fb2Converter.bookToFb2(book, {isZip = false})`
-  - `Fb2Converter.bookToFb2Zip(book)`
-  - `Fb2Converter.fb2ToBook(bytes)`
-- `BookRegistry` — реестр декодеров и энкодеров. Позволяет регистрировать обработчики для новых форматов (`registerDecoder`, `registerEncoder`).
-
----
-
-## Модель данных
-
-### Структура `Book`
-- **`metadata` (`BookMetadata`)**:
-  - `title` — название книги.
-  - `language` — код языка (`'ru'`, `'en'`).
-  - `contributors` — список участников (`BookContributor`: автор, переводчик, редактор и др.).
-  - `genres` — список жанров (`BookGenre`).
-  - `keywords` — список тегов / ключевых слов.
-  - `series` — серия книг (`BookSeries`: название, номер, ссылка).
-  - `annotation` — аннотация (`BookContent`).
-  - `cover` — обложка (`BookCover`).
-  - `source` — исходный URI.
-- **`content` (`BookContent`)**:
-  - `blocks` — список блочных элементов (`List<BookBlock>`).
-  - `footnotes` — список сносок (`List<BookFootnote>`).
-- **`resources` (`List<BookResource>`)**:
-  - Медиафайлы (изображения, шрифты, стили, аудио).
-
-### Блочные элементы (`BookBlock`)
-- `BookSection` — раздел / глава (`title`, `blocks`, `children`).
-- `BookHeading` — заголовок (`level` от 1 до 6, `text`).
-- `BookParagraph` — абзац (`inlines`).
-- `BookQuote` — цитата / эпиграф (`blocks`, `citation`).
-- `BookList` — список (`ordered`, `items`).
-- `BookTable` — таблица (`rows` -> `cells` с поддержкой `colSpan` и `rowSpan`).
-- `BookPoem` — стихотворение (`stanzas` -> `lines`).
-- `BookImageBlock` — изображение (`ref`, `alt`, `title`).
-- `BookAudioBlock` / `BookVideoBlock` — медиа (`ref`, `controls`).
-- `BookMathBlock` — блок MathML формулы (`mathml`).
-- `BookSvgBlock` — векторный блок SVG (`svg`).
-- `BookCodeBlock` — блок исходного кода (`code`, `language`).
-- `BookHorizontalRule` — горизонтальная линия (`<hr/>`).
-- `BookEmptyLine` — пустая строка.
-
-### Строчные элементы (`BookInline`)
-- `BookText` — текст (`text`).
-- `BookLineBreak` — перенос строки (`<br/>`).
-- `BookEmphasis` — курсив (`children`).
-- `BookStrong` — полужирный текст (`children`).
-- `BookStrike` — зачёркнутый текст (`children`).
-- `BookCodeSpan` — встроенный код (`code`).
-- `BookLink` — ссылка (`href`, `children`).
-- `BookAnchor` — якорь внутри книги (`id`).
-- `BookImageInline` — строчная картинка (`ref`, `alt`).
-- `BookFootnoteRef` — ссылка на сноску (`id`, `label`).
-- `BookSuperscript` / `BookSubscript` — верхний / нижний индекс.
-
----
-
-## Политики именования ресурсов (`BookResourceNamingPolicy`)
-
-Используются при сборке книги или сохранении ресурсов:
-
-- `BookResourceNamingPolicy.preserve` — оставляет исходное имя файла из URL (`chapter1_pic.png`).
-- `BookResourceNamingPolicy.sequential` — генерирует порядковые имена (`img_001.png`, `img_002.jpg`).
-- `BookResourceNamingPolicy.hash` — генерирует имя по хэшу адреса (`img_a3f89b1c.png`).
-- `BookResourceNamingPolicy.custom(...)` — пользовательская функция генерации имени.
+  - `EpubConverter.epubToBook(bytes, {options})`
+- `Fb2Converter` (`Fb2Decoder` / `Fb2Encoder`):
+  - `Fb2Converter.bookToFb2(book, {isZip = false, resourceResolver})`
+  - `Fb2Converter.bookToFb2Zip(book, {resourceResolver})`
+  - `Fb2Converter.fb2ToBook(bytes, {options})`
+- `BookRegistry` — реестр декодеров и энкодеров (`findDecoder`, `findEncoder`, `registerDecoder`, `registerEncoder`).
 
 ---
 
@@ -223,8 +287,8 @@ Dart-библиотека для чтения, создания и конвер�
 ### `BookDecodingOptions`
 ```dart
 const options = BookDecodingOptions(
-  strictMode: true,            // Выбрасывать ошибки при некорректной разметке
-  logger: (warn) => print(warn), // Callback для логов/предупреждений
+  strictMode: true,              // Выбрасывать ошибки при нераспознанных элементах
+  logger: (warn) => print(warn), // Callback для логов и предупреждений
 );
 ```
 
@@ -233,25 +297,34 @@ const options = BookDecodingOptions(
 const options = BookEncodingOptions(
   documentId: 'DOC-12345',                           // ID документа
   programUsed: 'My App 1.0',                         // Название программы-генератора
-  entryFilename: 'book.fb2',                         // Имя файла внутри zip для FB2.zip
+  entryFilename: 'book.fb2',                         // Имя файла внутри архива для FB2.zip
   namingPolicy: BookResourceNamingPolicy.sequential, // Политика именования ресурсов
-  pretty: true,                                      // Форматировать ли XML с отступами
+  pretty: true,                                      // Форматировать XML с отступами
+  compressZip: true,                                 // Сжимать ли ZIP-архив
 );
 ```
 
-### Исключения
-Все исключения наследуются от `BookException`:
-- `BookFormatException` — ошибка формата или повреждённый архив.
-- `BookParseException` — ошибка разбора разметки (содержит поля `tag` и `line`).
-- `BookMalformedMetadataException` — отсутствуют обязательные метаданные.
-- `EpubEncryptedResourceException` — обнаружены зашифрованные DRM-ресурсы в EPUB.
-- `EpubInvalidPackageException` — нарушение структуры OCF/OPF пакета.
+### Иерархия исключений
+- `BookException` — базовое исключение библиотеки.
+  - `BookFormatException` — поврежденный файл или неверная сигнатура.
+  - `BookParseException` — ошибка синтаксического анализа разметки (содержит `tag` и `line`).
+  - `BookMalformedMetadataException` — отсутствуют обязательные метаданные в strict-режиме.
+  - `EpubException` — базовое исключение формата EPUB (наследует `BookException`).
+    - `EpubEncryptedResourceException` — обнаружены зашифрованные ресурсы / DRM.
+    - `EpubInvalidPackageException` — нарушение структуры OCF/OPF пакета.
 
 ---
 
-## Запуск примера
+## Запуск тестов и примеров
 
 ```bash
+# Анализ кодовой базы
+dart analyze
+
+# Запуск тестов
+dart test
+
+# Запуск примера
 dart run example/dart_book_example.dart
 ```
 
