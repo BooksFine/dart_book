@@ -91,6 +91,8 @@ class Fb2Encoder implements BookEncoder {
       }
       if (name.nickname?.trim().isNotEmpty == true) {
         writer.element('nickname', text: name.nickname!.trim());
+      } else if (name.first == null && name.last == null && name.display?.trim().isNotEmpty == true) {
+        writer.element('nickname', text: name.display!.trim());
       }
       if (author.homePage != null) {
         writer.element('home-page', text: author.homePage.toString());
@@ -102,7 +104,6 @@ class Fb2Encoder implements BookEncoder {
     }
 
     writer.element('book-title', text: metadata.title);
-    writer.element('lang', text: metadata.language);
 
     if (metadata.annotation != null) {
       writer.openElement('annotation', blockChildren: true);
@@ -135,6 +136,8 @@ class Fb2Encoder implements BookEncoder {
       writer.closeElement('coverpage', blockChildren: true);
     }
 
+    writer.element('lang', text: metadata.language);
+
     final translators = metadata.contributorsByRole(BookContributorRole.translator);
     for (final translator in translators) {
       writer.openElement('translator', blockChildren: true);
@@ -150,6 +153,8 @@ class Fb2Encoder implements BookEncoder {
       }
       if (name.nickname?.trim().isNotEmpty == true) {
         writer.element('nickname', text: name.nickname!.trim());
+      } else if (name.first == null && name.last == null && name.display?.trim().isNotEmpty == true) {
+        writer.element('nickname', text: name.display!.trim());
       }
       if (translator.homePage != null) {
         writer.element('home-page', text: translator.homePage.toString());

@@ -446,7 +446,17 @@ class _EpubContext {
     } else {
       final policy = options?.namingPolicy ?? BookResourceNamingPolicy.preserve;
       final generated = policy.generateName(src, isInline: false, index: ++_imageCounter);
-      cleanId = generated.contains('.') ? generated : '$generated.$ext';
+      if (generated.contains('.')) {
+        final origHasExt = src.split('?').first.split('#').first.contains('.');
+        if (!origHasExt && res?.mediaType != null && res!.mediaType.isNotEmpty) {
+          final baseName = generated.substring(0, generated.lastIndexOf('.'));
+          cleanId = '$baseName.$ext';
+        } else {
+          cleanId = generated;
+        }
+      } else {
+        cleanId = '$generated.$ext';
+      }
     }
 
     _cache[src] = cleanId;

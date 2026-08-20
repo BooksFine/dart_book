@@ -111,18 +111,31 @@ class Fb2Decoder implements BookDecoder {
     final contributors = <BookContributor>[];
     if (titleInfo != null) {
       for (final e in titleInfo.findElements('author')) {
-        final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final firstName = e.findElements('first-name').firstOrNull?.innerText.trim();
+        final middleName = e.findElements('middle-name').firstOrNull?.innerText.trim();
+        final lastName = e.findElements('last-name').firstOrNull?.innerText.trim();
+        final nickname = e.findElements('nickname').firstOrNull?.innerText.trim();
         final homePageStr = e.findElements('home-page').firstOrNull?.innerText.trim();
         final emailStr = e.findElements('email').firstOrNull?.innerText.trim();
+
+        final nameParts = [
+          if (firstName != null && firstName.isNotEmpty) firstName,
+          if (middleName != null && middleName.isNotEmpty) middleName,
+          if (lastName != null && lastName.isNotEmpty) lastName,
+        ];
+        final display = nameParts.isNotEmpty
+            ? nameParts.join(' ')
+            : (nickname != null && nickname.isNotEmpty ? nickname : null);
+
         contributors.add(
           BookContributor(
             role: BookContributorRole.author,
             name: PersonName(
-              first: e.findElements('first-name').firstOrNull?.innerText,
-              middle: e.findElements('middle-name').firstOrNull?.innerText,
-              last: e.findElements('last-name').firstOrNull?.innerText,
-              nickname: e.findElements('nickname').firstOrNull?.innerText,
-              display: rawDisplay.isNotEmpty ? rawDisplay : null,
+              first: firstName?.isNotEmpty == true ? firstName : null,
+              middle: middleName?.isNotEmpty == true ? middleName : null,
+              last: lastName?.isNotEmpty == true ? lastName : null,
+              nickname: nickname?.isNotEmpty == true ? nickname : null,
+              display: display,
             ),
             homePage: homePageStr != null && homePageStr.isNotEmpty ? Uri.tryParse(homePageStr) : null,
             email: emailStr != null && emailStr.isNotEmpty ? emailStr : null,
@@ -130,18 +143,31 @@ class Fb2Decoder implements BookDecoder {
         );
       }
       for (final e in titleInfo.findElements('translator')) {
-        final rawDisplay = e.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final firstName = e.findElements('first-name').firstOrNull?.innerText.trim();
+        final middleName = e.findElements('middle-name').firstOrNull?.innerText.trim();
+        final lastName = e.findElements('last-name').firstOrNull?.innerText.trim();
+        final nickname = e.findElements('nickname').firstOrNull?.innerText.trim();
         final homePageStr = e.findElements('home-page').firstOrNull?.innerText.trim();
         final emailStr = e.findElements('email').firstOrNull?.innerText.trim();
+
+        final nameParts = [
+          if (firstName != null && firstName.isNotEmpty) firstName,
+          if (middleName != null && middleName.isNotEmpty) middleName,
+          if (lastName != null && lastName.isNotEmpty) lastName,
+        ];
+        final display = nameParts.isNotEmpty
+            ? nameParts.join(' ')
+            : (nickname != null && nickname.isNotEmpty ? nickname : null);
+
         contributors.add(
           BookContributor(
             role: BookContributorRole.translator,
             name: PersonName(
-              first: e.findElements('first-name').firstOrNull?.innerText,
-              middle: e.findElements('middle-name').firstOrNull?.innerText,
-              last: e.findElements('last-name').firstOrNull?.innerText,
-              nickname: e.findElements('nickname').firstOrNull?.innerText,
-              display: rawDisplay.isNotEmpty ? rawDisplay : null,
+              first: firstName?.isNotEmpty == true ? firstName : null,
+              middle: middleName?.isNotEmpty == true ? middleName : null,
+              last: lastName?.isNotEmpty == true ? lastName : null,
+              nickname: nickname?.isNotEmpty == true ? nickname : null,
+              display: display,
             ),
             homePage: homePageStr != null && homePageStr.isNotEmpty ? Uri.tryParse(homePageStr) : null,
             email: emailStr != null && emailStr.isNotEmpty ? emailStr : null,
@@ -198,15 +224,27 @@ class Fb2Decoder implements BookDecoder {
       if (isNotes) {
         for (final section in body.findElements('section')) {
           final sectionId = section.getAttribute('id') ?? '';
-          final sectionBlocks = parser.parse(section.children);
+          final sectionBlocks = parser.parse(
+            section.children.where(
+              (e) => e is! XmlElement || e.localName != 'title',
+            ),
+          );
           footnotes.add(BookFootnote(id: sectionId, blocks: sectionBlocks));
         }
         if (footnotes.isEmpty && body.children.isNotEmpty) {
-          final bodyBlocks = parser.parse(body.children);
+          final bodyBlocks = parser.parse(
+            body.children.where(
+              (e) => e is! XmlElement || e.localName != 'title',
+            ),
+          );
           footnotes.add(BookFootnote(id: 'notes', blocks: bodyBlocks));
         }
       } else {
-        final bodyBlocks = parser.parse(body.children);
+        final bodyBlocks = parser.parse(
+          body.children.where(
+            (e) => e is! XmlElement || e.localName != 'title',
+          ),
+        );
         blocks.addAll(bodyBlocks);
       }
     }

@@ -107,7 +107,7 @@ String _guessExtension(String src) {
   final clean = src.split('?').first.split('#').first;
   if (clean.contains('.')) {
     final ext = clean.split('.').last.toLowerCase();
-    if (ext.length <= 4 && RegExp(r'^[a-z0-9]+$').hasMatch(ext)) {
+    if (ext.length <= 5 && RegExp(r'^[a-z0-9]+$').hasMatch(ext)) {
       return ext;
     }
   }
@@ -120,5 +120,7 @@ String _getExtensionFromDataUri(String dataUri) {
   if (dataUri.contains('image/gif')) return 'gif';
   if (dataUri.contains('image/svg')) return 'svg';
   if (dataUri.contains('image/webp')) return 'webp';
+  if (dataUri.contains('image/avif')) return 'avif';
+  if (dataUri.contains('image/jxl')) return 'jxl';
   return 'png';
 }

@@ -77,6 +77,8 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         ];
       case 'p':
         return [BookParagraph(inlines: _parseFb2Inlines(element))];
+      case 'title':
+        return [BookHeading(level: 1, text: _parseFb2Inlines(element))];
       case 'subtitle':
         return [BookHeading(level: 2, text: _parseFb2Inlines(element))];
       case 'empty-line':
