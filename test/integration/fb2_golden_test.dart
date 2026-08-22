@@ -122,7 +122,8 @@ void main() {
         // 3. Golden Snapshot File Matching
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
-          'test/fixtures/goldens/fb2/litres_sample.golden.json',
+          'test/fixtures/golden/fb2/litres_sample.golden.json',
+
         );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
@@ -236,7 +237,8 @@ void main() {
         // 3. Golden Snapshot File Matching
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
-          'test/fixtures/goldens/fb2/fb2_21_sample.golden.json',
+          'test/fixtures/golden/fb2/fb2_21_sample.golden.json',
+
         );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
@@ -330,7 +332,8 @@ void main() {
         // 3. Golden Snapshot File Matching
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
-          'test/fixtures/goldens/fb2/fb2_22_sample.golden.json',
+          'test/fixtures/golden/fb2/fb2_22_sample.golden.json',
+
         );
 
         // 4. Lossless FB2 Re-encoding Roundtrip

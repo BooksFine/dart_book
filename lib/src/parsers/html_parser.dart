@@ -351,9 +351,10 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     final id = node.attributes['id'] ?? node.attributes['name'];
     final inlines = <BookInline>[];
 
-    if (id != null && id.isNotEmpty && tag != 'a') {
+    if (id != null && id.isNotEmpty && tag != 'a' && tag != 'img') {
       inlines.add(BookAnchor(id));
     }
+
 
     final parsedInlines = switch (tag) {
       'br' => const [BookLineBreak()],

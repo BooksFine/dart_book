@@ -4,18 +4,47 @@ import 'package:test/test.dart';
 /// Утилита глубокой проверки равенства деревьев BookBlock и BookInline.
 void assertBookContentEquals(BookContent actual, BookContent expected) {
   assertBlockListEquals(actual.blocks, expected.blocks);
+  assertFootnoteListEquals(actual.footnotes, expected.footnotes);
 }
 
-void assertBlockListEquals(List<BookBlock> actual, List<BookBlock> expected) {
+void assertFootnoteListEquals(
+  List<BookFootnote> actual,
+  List<BookFootnote> expected,
+) {
   expect(
     actual.length,
     equals(expected.length),
     reason:
-        'Количество блоков должно совпадать (${actual.length} vs ${expected.length})',
+        'Количество сносок должно совпадать (${actual.length} vs ${expected.length})',
+  );
+  for (var i = 0; i < actual.length; i++) {
+    expect(
+      actual[i].id,
+      equals(expected[i].id),
+      reason: 'footnotes[$i]: id сноски должен совпадать',
+    );
+    assertBlockListEquals(
+      actual[i].blocks,
+      expected[i].blocks,
+      path: 'footnotes[${actual[i].id}].blocks',
+    );
+  }
+}
+
+void assertBlockListEquals(
+  List<BookBlock> actual,
+  List<BookBlock> expected, {
+  String path = 'blocks',
+}) {
+  expect(
+    actual.length,
+    equals(expected.length),
+    reason:
+        '$path: количество блоков должно совпадать (${actual.length} vs ${expected.length})',
   );
 
   for (var i = 0; i < actual.length; i++) {
-    assertBlockEquals(actual[i], expected[i], path: 'blocks[$i]');
+    assertBlockEquals(actual[i], expected[i], path: '$path[$i]');
   }
 }
 
@@ -27,7 +56,7 @@ void assertBlockEquals(
   expect(
     actual.runtimeType,
     equals(expected.runtimeType),
-    reason: '$path: типы блоков должны совпадать',
+    reason: '$path: типы блоков должны совпадать ($actual vs $expected)',
   );
 
   // Гарантируем, что стандартный блок не сбросился в сырой HTML/XML
@@ -61,11 +90,11 @@ void assertBlockEquals(
     case (BookSection a, BookSection e):
       expect(a.id, equals(e.id), reason: '$path: id секции должен совпадать');
       assertInlineListEquals(a.title, e.title, path: '$path.title');
-      assertBlockListEquals(a.blocks, e.blocks);
-      assertBlockListEquals(a.children, e.children);
+      assertBlockListEquals(a.blocks, e.blocks, path: '$path.blocks');
+      assertBlockListEquals(a.children, e.children, path: '$path.children');
 
     case (BookQuote a, BookQuote e):
-      assertBlockListEquals(a.blocks, e.blocks);
+      assertBlockListEquals(a.blocks, e.blocks, path: '$path.blocks');
       assertInlineListEquals(a.citation, e.citation, path: '$path.citation');
 
     case (BookList a, BookList e):
@@ -80,7 +109,11 @@ void assertBlockEquals(
         reason: '$path: число элементов списка должно совпадать',
       );
       for (var i = 0; i < a.items.length; i++) {
-        assertBlockListEquals(a.items[i].blocks, e.items[i].blocks);
+        assertBlockListEquals(
+          a.items[i].blocks,
+          e.items[i].blocks,
+          path: '$path.items[$i].blocks',
+        );
       }
 
     case (BookTable a, BookTable e):
@@ -118,7 +151,11 @@ void assertBlockEquals(
             equals(ec.vAlign),
             reason: '$path.rows[$r].cells[$c].vAlign',
           );
-          assertBlockListEquals(ac.blocks, ec.blocks);
+          assertBlockListEquals(
+            ac.blocks,
+            ec.blocks,
+            path: '$path.rows[$r].cells[$c].blocks',
+          );
         }
       }
 
@@ -145,6 +182,11 @@ void assertBlockEquals(
 
     case (BookCodeBlock a, BookCodeBlock e):
       expect(a.code, equals(e.code), reason: '$path: код должен совпадать');
+      expect(
+        a.language,
+        equals(e.language),
+        reason: '$path: язык кода должен совпадать',
+      );
 
     case (BookImageBlock a, BookImageBlock e):
       expect(
@@ -174,12 +216,27 @@ void assertBlockEquals(
         equals(e.ref.id),
         reason: '$path: id аудиоресурса должен совпадать',
       );
+      expect(
+        a.controls,
+        equals(e.controls),
+        reason: '$path: controls аудио должен совпадать',
+      );
 
     case (BookVideoBlock a, BookVideoBlock e):
       expect(
         a.ref.id,
         equals(e.ref.id),
         reason: '$path: id видеоресурса должен совпадать',
+      );
+      expect(
+        a.posterRef?.id,
+        equals(e.posterRef?.id),
+        reason: '$path: posterRef видео должен совпадать',
+      );
+      expect(
+        a.controls,
+        equals(e.controls),
+        reason: '$path: controls видео должен совпадать',
       );
 
     case (BookMathBlock a, BookMathBlock e):
@@ -201,10 +258,10 @@ void assertBlockEquals(
       break;
 
     case (BookRawHtmlBlock a, BookRawHtmlBlock e):
-      expect(a.html, equals(e.html));
+      expect(a.html, equals(e.html), reason: '$path: raw html должен совпадать');
 
     case (BookRawXmlBlock a, BookRawXmlBlock e):
-      expect(a.xml, equals(e.xml));
+      expect(a.xml, equals(e.xml), reason: '$path: raw xml должен совпадать');
 
     default:
       fail('$path: несовместимые типы блоков $actual vs $expected');
@@ -234,7 +291,7 @@ void assertInlineEquals(
   expect(
     actual.runtimeType,
     equals(expected.runtimeType),
-    reason: '$path: типы инлайнов должны совпадать',
+    reason: '$path: типы инлайнов должны совпадать ($actual vs $expected)',
   );
 
   switch ((actual, expected)) {
@@ -256,6 +313,14 @@ void assertInlineEquals(
         equals(e.code),
         reason: '$path: код инлайна должен совпадать',
       );
+
+    case (BookNamedStyle a, BookNamedStyle e):
+      expect(
+        a.name,
+        equals(e.name),
+        reason: '$path: имя именованного стиля должно совпадать',
+      );
+      assertInlineListEquals(a.inlines, e.inlines, path: '$path.inlines');
 
     case (BookLink a, BookLink e):
       expect(
@@ -298,11 +363,26 @@ void assertInlineEquals(
 
     case (BookFootnoteRef a, BookFootnoteRef e):
       expect(a.id, equals(e.id), reason: '$path: id сноски должен совпадать');
+      assertInlineListEquals(a.label, e.label, path: '$path.label');
 
     case (BookLineBreak(), BookLineBreak()):
       break;
 
+    case (BookRawHtmlInline a, BookRawHtmlInline e):
+      expect(
+        a.html,
+        equals(e.html),
+        reason: '$path: raw html inline должен совпадать',
+      );
+
+    case (BookRawXmlInline a, BookRawXmlInline e):
+      expect(
+        a.xml,
+        equals(e.xml),
+        reason: '$path: raw xml inline должен совпадать',
+      );
+
     default:
-      break;
+      fail('$path: несовместимые типы инлайнов $actual vs $expected');
   }
 }

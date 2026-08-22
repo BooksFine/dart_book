@@ -1,3 +1,7 @@
+@Tags(['benchmark'])
+@Timeout(Duration(seconds: 30))
+library;
+
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dart_book/dart_book.dart';
@@ -5,6 +9,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('Stress & Performance Benchmark Tests', () {
+
     test('HtmlParser: Measures parser performance on 10,000 paragraphs', () {
       final buffer = StringBuffer();
       buffer.write('<div>');

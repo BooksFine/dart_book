@@ -128,7 +128,8 @@ void main() {
         // 3. Golden Snapshot File Matching
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
-          'test/fixtures/goldens/epub/calibre_sample.golden.json',
+          'test/fixtures/golden/epub/calibre_sample.golden.json',
+
         );
 
         // 4. Lossless EPUB Roundtrip & Fixed-Point Idempotence
