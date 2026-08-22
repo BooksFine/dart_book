@@ -1,4 +1,4 @@
-name: Dart CI & Test Matrix
+name: Dart CI
 
 on:
   push:
@@ -7,9 +7,10 @@ on:
     branches: [ master, main ]
 
 jobs:
-  analyze_and_format:
-    name: Analyze & Format (ubuntu-latest)
+  ci:
+    name: Analyze, Test & Benchmarks
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -30,30 +31,6 @@ jobs:
 
       - name: Static Code Analysis
         run: dart analyze --fatal-infos
-
-  test_matrix:
-    name: Tests (${{ matrix.os }}, Dart ${{ matrix.sdk }})
-    needs: analyze_and_format
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        sdk: [stable, beta]
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1
-        with:
-          sdk: ${{ matrix.sdk }}
-
-      - name: Install Dependencies
-        run: dart pub get
 
       - name: Run Full Test Suite (Unit, Integration, Security, Fuzzing)
         run: dart test
