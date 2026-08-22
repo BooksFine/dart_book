@@ -130,12 +130,7 @@ class BookPublishInfo with _$BookPublishInfo {
   /// Международный стандартный книжный номер (ISBN).
   final String? isbn;
 
-  const BookPublishInfo({
-    this.publisher,
-    this.city,
-    this.year,
-    this.isbn,
-  });
+  const BookPublishInfo({this.publisher, this.city, this.year, this.isbn});
 }
 
 /// Сведения об оригинале произведения (для переводных книг).

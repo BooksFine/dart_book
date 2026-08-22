@@ -54,10 +54,7 @@ class Fb2Converter implements BookConverter {
         resourceResolver: resourceResolver,
       );
     }
-    return await Fb2Encoder().encode(
-      book,
-      resourceResolver: resourceResolver,
-    );
+    return await Fb2Encoder().encode(book, resourceResolver: resourceResolver);
   }
 
   /// Удобный статический метод: кодирует [book] прямо в `fb2.zip` архив.

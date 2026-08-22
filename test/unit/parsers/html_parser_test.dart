@@ -44,8 +44,14 @@ void main() {
         final item1Blocks = rootList.items[0].blocks;
         expect(item1Blocks.length, equals(2));
         expect(item1Blocks[0], isA<BookParagraph>());
-        expect((item1Blocks[0] as BookParagraph).inlines.first, isA<BookText>());
-        expect(((item1Blocks[0] as BookParagraph).inlines.first as BookText).text, equals('Item 1'));
+        expect(
+          (item1Blocks[0] as BookParagraph).inlines.first,
+          isA<BookText>(),
+        );
+        expect(
+          ((item1Blocks[0] as BookParagraph).inlines.first as BookText).text,
+          equals('Item 1'),
+        );
 
         expect(item1Blocks[1], isA<BookList>());
         final nestedUl = item1Blocks[1] as BookList;
@@ -61,13 +67,19 @@ void main() {
         final deepOl = subitem2Blocks[1] as BookList;
         expect(deepOl.ordered, isTrue);
         expect(deepOl.items.length, equals(1));
-        final deepText = ((deepOl.items[0].blocks.first as BookParagraph).inlines.first as BookText).text;
+        final deepText =
+            ((deepOl.items[0].blocks.first as BookParagraph).inlines.first
+                    as BookText)
+                .text;
         expect(deepText, equals('Deep 1.2.1'));
 
         // Item 2
         final item2Blocks = rootList.items[1].blocks;
         expect(item2Blocks.length, equals(1));
-        expect(((item2Blocks[0] as BookParagraph).inlines.first as BookText).text, equals('Item 2'));
+        expect(
+          ((item2Blocks[0] as BookParagraph).inlines.first as BookText).text,
+          equals('Item 2'),
+        );
       });
 
       test('Parses list items containing blockquotes and citations', () {
@@ -98,11 +110,15 @@ void main() {
         expect(quote.blocks.length, equals(1));
         expect(quote.blocks.first, isA<BookParagraph>());
         expect(
-          ((quote.blocks.first as BookParagraph).inlines.first as BookText).text,
+          ((quote.blocks.first as BookParagraph).inlines.first as BookText)
+              .text,
           equals('Knowledge is power.'),
         );
         expect(quote.citation.length, equals(1));
-        expect((quote.citation.first as BookText).text, equals('Francis Bacon'));
+        expect(
+          (quote.citation.first as BookText).text,
+          equals('Francis Bacon'),
+        );
       });
 
       test('Parses lists containing code blocks and headings', () {
@@ -131,8 +147,10 @@ void main() {
     });
 
     group('2. Complex Tables', () {
-      test('Parses table with thead, tbody, tfoot, colspan, rowspan, align, and valign', () {
-        const html = '''
+      test(
+        'Parses table with thead, tbody, tfoot, colspan, rowspan, align, and valign',
+        () {
+          const html = '''
           <table>
             <thead>
               <tr>
@@ -159,47 +177,55 @@ void main() {
           </table>
         ''';
 
-        final blocks = parser.parseFromString(html);
-        expect(blocks.length, equals(1));
-        expect(blocks.first, isA<BookTable>());
+          final blocks = parser.parseFromString(html);
+          expect(blocks.length, equals(1));
+          expect(blocks.first, isA<BookTable>());
 
-        final table = blocks.first as BookTable;
-        expect(table.rows.length, equals(4)); // 2 thead + 1 tbody + 1 tfoot
+          final table = blocks.first as BookTable;
+          expect(table.rows.length, equals(4)); // 2 thead + 1 tbody + 1 tfoot
 
-        // Row 0
-        final row0 = table.rows[0];
-        expect(row0.cells.length, equals(2));
-        expect(row0.cells[0].colSpan, equals(2));
-        expect(row0.cells[0].rowSpan, equals(1));
-        expect(row0.cells[0].align, equals('center'));
-        expect(row0.cells[0].vAlign, equals('top'));
-        expect(((row0.cells[0].blocks.first as BookParagraph).inlines.first as BookText).text, equals('Header 1+2'));
+          // Row 0
+          final row0 = table.rows[0];
+          expect(row0.cells.length, equals(2));
+          expect(row0.cells[0].colSpan, equals(2));
+          expect(row0.cells[0].rowSpan, equals(1));
+          expect(row0.cells[0].align, equals('center'));
+          expect(row0.cells[0].vAlign, equals('top'));
+          expect(
+            ((row0.cells[0].blocks.first as BookParagraph).inlines.first
+                    as BookText)
+                .text,
+            equals('Header 1+2'),
+          );
 
-        expect(row0.cells[1].colSpan, isNull);
-        expect(row0.cells[1].rowSpan, equals(2));
-        expect(row0.cells[1].align, equals('right'));
-        expect(row0.cells[1].vAlign, equals('bottom'));
+          expect(row0.cells[1].colSpan, isNull);
+          expect(row0.cells[1].rowSpan, equals(2));
+          expect(row0.cells[1].align, equals('right'));
+          expect(row0.cells[1].vAlign, equals('bottom'));
 
-        // Row 1
-        final row1 = table.rows[1];
-        expect(row1.cells.length, equals(2));
+          // Row 1
+          final row1 = table.rows[1];
+          expect(row1.cells.length, equals(2));
 
-        // Row 2 (tbody)
-        final row2 = table.rows[2];
-        expect(row2.cells.length, equals(3));
-        expect(row2.cells[0].align, equals('left'));
-        expect(row2.cells[0].vAlign, equals('middle'));
-        expect(row2.cells[1].align, equals('justify'));
+          // Row 2 (tbody)
+          final row2 = table.rows[2];
+          expect(row2.cells.length, equals(3));
+          expect(row2.cells[0].align, equals('left'));
+          expect(row2.cells[0].vAlign, equals('middle'));
+          expect(row2.cells[1].align, equals('justify'));
 
-        // Row 3 (tfoot)
-        final row3 = table.rows[3];
-        expect(row3.cells.length, equals(1));
-        expect(row3.cells[0].colSpan, equals(3));
-        expect(row3.cells[0].align, equals('center'));
-      });
+          // Row 3 (tfoot)
+          final row3 = table.rows[3];
+          expect(row3.cells.length, equals(1));
+          expect(row3.cells[0].colSpan, equals(3));
+          expect(row3.cells[0].align, equals('center'));
+        },
+      );
 
-      test('Parses inline CSS styles for text-align and vertical-align in table cells', () {
-        const html = '''
+      test(
+        'Parses inline CSS styles for text-align and vertical-align in table cells',
+        () {
+          const html = '''
           <table>
             <tr>
               <td style="text-align: center; vertical-align: top;">Styled Cell 1</td>
@@ -208,19 +234,22 @@ void main() {
           </table>
         ''';
 
-        final blocks = parser.parseFromString(html);
-        final table = blocks.first as BookTable;
-        final row = table.rows.first;
+          final blocks = parser.parseFromString(html);
+          final table = blocks.first as BookTable;
+          final row = table.rows.first;
 
-        expect(row.cells[0].align, equals('center'));
-        expect(row.cells[0].vAlign, equals('top'));
+          expect(row.cells[0].align, equals('center'));
+          expect(row.cells[0].vAlign, equals('top'));
 
-        expect(row.cells[1].align, equals('right'));
-        expect(row.cells[1].vAlign, equals('baseline'));
-      });
+          expect(row.cells[1].align, equals('right'));
+          expect(row.cells[1].vAlign, equals('baseline'));
+        },
+      );
 
-      test('Parses multi-block content (paragraphs, lists) inside table cells', () {
-        const html = '''
+      test(
+        'Parses multi-block content (paragraphs, lists) inside table cells',
+        () {
+          const html = '''
           <table>
             <tr>
               <td>
@@ -233,46 +262,60 @@ void main() {
           </table>
         ''';
 
-        final blocks = parser.parseFromString(html);
-        final table = blocks.first as BookTable;
-        final cellBlocks = table.rows.first.cells.first.blocks;
+          final blocks = parser.parseFromString(html);
+          final table = blocks.first as BookTable;
+          final cellBlocks = table.rows.first.cells.first.blocks;
 
-        expect(cellBlocks.length, equals(2));
-        expect(cellBlocks[0], isA<BookParagraph>());
-        expect(cellBlocks[1], isA<BookList>());
-      });
+          expect(cellBlocks.length, equals(2));
+          expect(cellBlocks[0], isA<BookParagraph>());
+          expect(cellBlocks[1], isA<BookList>());
+        },
+      );
     });
 
     group('3. Code Blocks & Preformatted Text', () {
-      test('Preserves spaces, tabs, and newlines in code blocks with language extraction', () {
-        const rawCode = 'void main() {\n  final a = 10;\n\tprint("Hello   World");\n}';
-        const html = '<pre><code class="language-dart">$rawCode</code></pre>';
+      test(
+        'Preserves spaces, tabs, and newlines in code blocks with language extraction',
+        () {
+          const rawCode =
+              'void main() {\n  final a = 10;\n\tprint("Hello   World");\n}';
+          const html = '<pre><code class="language-dart">$rawCode</code></pre>';
 
-        final blocks = parser.parseFromString(html);
-        expect(blocks.length, equals(1));
-        expect(blocks.first, isA<BookCodeBlock>());
+          final blocks = parser.parseFromString(html);
+          expect(blocks.length, equals(1));
+          expect(blocks.first, isA<BookCodeBlock>());
 
-        final codeBlock = blocks.first as BookCodeBlock;
-        expect(codeBlock.language, equals('dart'));
-        expect(codeBlock.code, equals(rawCode));
-      });
+          final codeBlock = blocks.first as BookCodeBlock;
+          expect(codeBlock.language, equals('dart'));
+          expect(codeBlock.code, equals(rawCode));
+        },
+      );
 
-      test('Extracts language from data-language, lang, and class attributes', () {
-        const htmlDataLang = '<pre data-language="python">x = [1, 2, 3]</pre>';
-        final blocks1 = parser.parseFromString(htmlDataLang);
-        expect((blocks1.first as BookCodeBlock).language, equals('python'));
+      test(
+        'Extracts language from data-language, lang, and class attributes',
+        () {
+          const htmlDataLang =
+              '<pre data-language="python">x = [1, 2, 3]</pre>';
+          final blocks1 = parser.parseFromString(htmlDataLang);
+          expect((blocks1.first as BookCodeBlock).language, equals('python'));
 
-        const htmlLang = '<pre lang="rust">fn main() {}</pre>';
-        final blocks2 = parser.parseFromString(htmlLang);
-        expect((blocks2.first as BookCodeBlock).language, equals('rust'));
+          const htmlLang = '<pre lang="rust">fn main() {}</pre>';
+          final blocks2 = parser.parseFromString(htmlLang);
+          expect((blocks2.first as BookCodeBlock).language, equals('rust'));
 
-        const htmlClassCode = '<pre><code class="language-typescript extra-class">const a = 1;</code></pre>';
-        final blocks3 = parser.parseFromString(htmlClassCode);
-        expect((blocks3.first as BookCodeBlock).language, equals('typescript'));
-      });
+          const htmlClassCode =
+              '<pre><code class="language-typescript extra-class">const a = 1;</code></pre>';
+          final blocks3 = parser.parseFromString(htmlClassCode);
+          expect(
+            (blocks3.first as BookCodeBlock).language,
+            equals('typescript'),
+          );
+        },
+      );
 
       test('Decodes HTML entities inside preformatted code blocks', () {
-        const html = '<pre><code>if (a &lt; b &amp;&amp; b &gt; 0) { return &quot;ok&quot;; }</code></pre>';
+        const html =
+            '<pre><code>if (a &lt; b &amp;&amp; b &gt; 0) { return &quot;ok&quot;; }</code></pre>';
         final blocks = parser.parseFromString(html);
 
         final codeBlock = blocks.first as BookCodeBlock;
@@ -341,40 +384,53 @@ void main() {
     });
 
     group('5. Arbitrary Inline Nesting & Named Styles', () {
-      test('Parses deeply nested inlines: strong -> em -> strike -> code -> sup -> sub', () {
-        const html =
-            '<p><strong>Bold <em>Italic <s>Strike <code>Code <sup>Sup <sub>Sub</sub></sup></code></s></em></strong></p>';
+      test(
+        'Parses deeply nested inlines: strong -> em -> strike -> code -> sup -> sub',
+        () {
+          const html =
+              '<p><strong>Bold <em>Italic <s>Strike <code>Code <sup>Sup <sub>Sub</sub></sup></code></s></em></strong></p>';
 
-        final blocks = parser.parseFromString(html);
-        expect(blocks.length, equals(1));
-        final p = blocks.first as BookParagraph;
+          final blocks = parser.parseFromString(html);
+          expect(blocks.length, equals(1));
+          final p = blocks.first as BookParagraph;
 
-        expect(p.inlines.first, isA<BookStrong>());
-        final strong = p.inlines.first as BookStrong;
-        expect(strong.children.any((i) => i is BookEmphasis), isTrue);
+          expect(p.inlines.first, isA<BookStrong>());
+          final strong = p.inlines.first as BookStrong;
+          expect(strong.children.any((i) => i is BookEmphasis), isTrue);
 
-        final em = strong.children.firstWhere((i) => i is BookEmphasis) as BookEmphasis;
-        expect(em.children.any((i) => i is BookStrike), isTrue);
+          final em =
+              strong.children.firstWhere((i) => i is BookEmphasis)
+                  as BookEmphasis;
+          expect(em.children.any((i) => i is BookStrike), isTrue);
 
-        final strike = em.children.firstWhere((i) => i is BookStrike) as BookStrike;
-        expect(strike.children.any((i) => i is BookCodeSpan), isTrue);
+          final strike =
+              em.children.firstWhere((i) => i is BookStrike) as BookStrike;
+          expect(strike.children.any((i) => i is BookCodeSpan), isTrue);
 
-        final code = strike.children.firstWhere((i) => i is BookCodeSpan) as BookCodeSpan;
-        expect(code.code, contains('Code'));
-      });
+          final code =
+              strike.children.firstWhere((i) => i is BookCodeSpan)
+                  as BookCodeSpan;
+          expect(code.code, contains('Code'));
+        },
+      );
 
-      test('Parses span class="style-X" into BookNamedStyle with style name and inner inlines', () {
-        const html =
-            '<p>Normal text <span class="style-custom-accent"><strong>Styled Bold</strong> and plain</span></p>';
+      test(
+        'Parses span class="style-X" into BookNamedStyle with style name and inner inlines',
+        () {
+          const html =
+              '<p>Normal text <span class="style-custom-accent"><strong>Styled Bold</strong> and plain</span></p>';
 
-        final blocks = parser.parseFromString(html);
-        final p = blocks.first as BookParagraph;
+          final blocks = parser.parseFromString(html);
+          final p = blocks.first as BookParagraph;
 
-        expect(p.inlines.any((i) => i is BookNamedStyle), isTrue);
-        final namedStyle = p.inlines.firstWhere((i) => i is BookNamedStyle) as BookNamedStyle;
-        expect(namedStyle.name, equals('custom-accent'));
-        expect(namedStyle.inlines.any((i) => i is BookStrong), isTrue);
-      });
+          expect(p.inlines.any((i) => i is BookNamedStyle), isTrue);
+          final namedStyle =
+              p.inlines.firstWhere((i) => i is BookNamedStyle)
+                  as BookNamedStyle;
+          expect(namedStyle.name, equals('custom-accent'));
+          expect(namedStyle.inlines.any((i) => i is BookStrong), isTrue);
+        },
+      );
 
       test('Parses EPUB 3 footnote references and anchors correctly', () {
         const html =
@@ -383,7 +439,10 @@ void main() {
         final blocks = parser.parseFromString(html);
         final p = blocks.first as BookParagraph;
 
-        expect(p.inlines.any((i) => i is BookAnchor && i.id == 'anchor-1'), isTrue);
+        expect(
+          p.inlines.any((i) => i is BookAnchor && i.id == 'anchor-1'),
+          isTrue,
+        );
 
         final fnRefs = p.inlines.whereType<BookFootnoteRef>().toList();
         expect(fnRefs.length, equals(2));
@@ -407,31 +466,38 @@ void main() {
         expect(blocks[2], isA<BookParagraph>());
 
         final mathBlock = blocks[1] as BookMathBlock;
-        expect(mathBlock.mathml, contains('xmlns="http://www.w3.org/1998/Math/MathML"'));
+        expect(
+          mathBlock.mathml,
+          contains('xmlns="http://www.w3.org/1998/Math/MathML"'),
+        );
         expect(mathBlock.mathml, contains('<msup><mi>a</mi><mn>2</mn></msup>'));
       });
 
-      test('Isolates SVG graphics into BookSvgBlock preserving SVG structure', () {
-        const svg =
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>';
-        const html = '<section><h2>Diagram</h2>$svg</section>';
+      test(
+        'Isolates SVG graphics into BookSvgBlock preserving SVG structure',
+        () {
+          const svg =
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>';
+          const html = '<section><h2>Diagram</h2>$svg</section>';
 
-        final blocks = parser.parseFromString(html);
-        expect(blocks.length, equals(1));
-        expect(blocks.first, isA<BookSection>());
+          final blocks = parser.parseFromString(html);
+          expect(blocks.length, equals(1));
+          expect(blocks.first, isA<BookSection>());
 
-        final sec = blocks.first as BookSection;
-        expect(sec.blocks.length, equals(1));
-        expect(sec.blocks.first, isA<BookSvgBlock>());
+          final sec = blocks.first as BookSection;
+          expect(sec.blocks.length, equals(1));
+          expect(sec.blocks.first, isA<BookSvgBlock>());
 
-        final svgBlock = sec.blocks.first as BookSvgBlock;
-        expect(svgBlock.svg, contains('<circle cx="50" cy="50" r="40"'));
-      });
+          final svgBlock = sec.blocks.first as BookSvgBlock;
+          expect(svgBlock.svg, contains('<circle cx="50" cy="50" r="40"'));
+        },
+      );
     });
 
     group('7. Tolerance to Invalid / Dirty HTML', () {
       test('Handles unclosed tags gracefully', () {
-        const dirtyHtml = '<p>Paragraph 1 <b>bold without close<p>Paragraph 2 <i>italic unclosed</i>';
+        const dirtyHtml =
+            '<p>Paragraph 1 <b>bold without close<p>Paragraph 2 <i>italic unclosed</i>';
         final blocks = parser.parseFromString(dirtyHtml);
 
         expect(blocks.length, equals(2));
@@ -443,8 +509,11 @@ void main() {
 
         final p2 = blocks[1] as BookParagraph;
         // In HTML5 active formatting element reconstruction, p2 contains <b> which contains <i>
-        final hasItalic = p2.inlines.any((i) =>
-            i is BookEmphasis || (i is BookStrong && i.children.any((c) => c is BookEmphasis)));
+        final hasItalic = p2.inlines.any(
+          (i) =>
+              i is BookEmphasis ||
+              (i is BookStrong && i.children.any((c) => c is BookEmphasis)),
+        );
         expect(hasItalic, isTrue);
       });
 
@@ -471,42 +540,57 @@ void main() {
       });
 
       test('Decodes all standard and numeric HTML entities', () {
-        const html = '<p>&quot;Hello &amp; welcome &mdash; 5 &gt; 3 &amp;&amp; 2 &lt; 4 &apos;copyright&apos; &copy; 2026&#33;&quot;</p>';
+        const html =
+            '<p>&quot;Hello &amp; welcome &mdash; 5 &gt; 3 &amp;&amp; 2 &lt; 4 &apos;copyright&apos; &copy; 2026&#33;&quot;</p>';
         final blocks = parser.parseFromString(html);
 
         final p = blocks.first as BookParagraph;
         final text = (p.inlines.first as BookText).text;
-        expect(text, equals('"Hello & welcome — 5 > 3 && 2 < 4 \'copyright\' © 2026!"'));
+        expect(
+          text,
+          equals('"Hello & welcome — 5 > 3 && 2 < 4 \'copyright\' © 2026!"'),
+        );
       });
     });
 
     group('8. Strict Mode and Logger Integration', () {
-      test('Throws BookParseException in strictMode for unknown custom element', () {
-        final strictParser = HtmlParser(strictMode: true);
-        const html = '<custom-unsupported-tag>Content</custom-unsupported-tag>';
+      test(
+        'Throws BookParseException in strictMode for unknown custom element',
+        () {
+          final strictParser = HtmlParser(strictMode: true);
+          const html =
+              '<custom-unsupported-tag>Content</custom-unsupported-tag>';
 
-        expect(
-          () => strictParser.parseFromString(html),
-          throwsA(isA<BookParseException>()),
-        );
-      });
+          expect(
+            () => strictParser.parseFromString(html),
+            throwsA(isA<BookParseException>()),
+          );
+        },
+      );
 
-      test('Logs warning and produces BookRawHtmlBlock in non-strict mode for unknown element', () {
-        final warnings = <String>[];
-        final lenientParser = HtmlParser(
-          strictMode: false,
-          logger: (w) => warnings.add(w),
-        );
+      test(
+        'Logs warning and produces BookRawHtmlBlock in non-strict mode for unknown element',
+        () {
+          final warnings = <String>[];
+          final lenientParser = HtmlParser(
+            strictMode: false,
+            logger: (w) => warnings.add(w),
+          );
 
-        const html = '<custom-widget data-prop="val">Custom Widget Content</custom-widget>';
-        final blocks = lenientParser.parseFromString(html);
+          const html =
+              '<custom-widget data-prop="val">Custom Widget Content</custom-widget>';
+          final blocks = lenientParser.parseFromString(html);
 
-        expect(warnings.isNotEmpty, isTrue);
-        expect(warnings.first, contains('custom-widget'));
-        expect(blocks.length, equals(1));
-        expect(blocks.first, isA<BookRawHtmlBlock>());
-        expect((blocks.first as BookRawHtmlBlock).html, contains('custom-widget'));
-      });
+          expect(warnings.isNotEmpty, isTrue);
+          expect(warnings.first, contains('custom-widget'));
+          expect(blocks.length, equals(1));
+          expect(blocks.first, isA<BookRawHtmlBlock>());
+          expect(
+            (blocks.first as BookRawHtmlBlock).html,
+            contains('custom-widget'),
+          );
+        },
+      );
     });
 
     group('9. GoldenComparator and AST Normalization', () {

@@ -139,7 +139,9 @@ void main() {
 
   final win1251Bytes = encodeWin1251(litresFb2Xml);
   File('test/fixtures/fb2/litres_sample.fb2').writeAsBytesSync(win1251Bytes);
-  print('Wrote test/fixtures/fb2/litres_sample.fb2 (\${win1251Bytes.length} bytes)');
+  print(
+    'Wrote test/fixtures/fb2/litres_sample.fb2 (\${win1251Bytes.length} bytes)',
+  );
 
   // 2. fb2_21_sample.fb2 (UTF-8, all FB2 2.1 elements)
   final fb221Xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -220,7 +222,9 @@ void main() {
 
   final fb221Bytes = Uint8List.fromList(utf8.encode(fb221Xml));
   File('test/fixtures/fb2/fb2_21_sample.fb2').writeAsBytesSync(fb221Bytes);
-  print('Wrote test/fixtures/fb2/fb2_21_sample.fb2 (\${fb221Bytes.length} bytes)');
+  print(
+    'Wrote test/fixtures/fb2/fb2_21_sample.fb2 (\${fb221Bytes.length} bytes)',
+  );
 
   // 3. fb2_22_sample.fb2 (FB2 2.2 with style, custom-info, multiple body)
   final fb222Xml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -286,14 +290,18 @@ void main() {
 
   final fb222Bytes = Uint8List.fromList(utf8.encode(fb222Xml));
   File('test/fixtures/fb2/fb2_22_sample.fb2').writeAsBytesSync(fb222Bytes);
-  print('Wrote test/fixtures/fb2/fb2_22_sample.fb2 (\${fb222Bytes.length} bytes)');
+  print(
+    'Wrote test/fixtures/fb2/fb2_22_sample.fb2 (\${fb222Bytes.length} bytes)',
+  );
 
   // 4. calibre_sample.epub (EPUB 2 generated with calibre:series, toc.ncx, cover)
   final archive = Archive();
 
   // mimetype
   final mimetypeBytes = utf8.encode('application/epub+zip');
-  archive.addFile(ArchiveFile.noCompress('mimetype', mimetypeBytes.length, mimetypeBytes));
+  archive.addFile(
+    ArchiveFile.noCompress('mimetype', mimetypeBytes.length, mimetypeBytes),
+  );
 
   // META-INF/container.xml
   const containerXml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -302,7 +310,13 @@ void main() {
     <rootfile full-path="content.opf" media-type="application/oebps-package+xml"/>
   </rootfiles>
 </container>''';
-  archive.addFile(ArchiveFile('META-INF/container.xml', containerXml.length, utf8.encode(containerXml)));
+  archive.addFile(
+    ArchiveFile(
+      'META-INF/container.xml',
+      containerXml.length,
+      utf8.encode(containerXml),
+    ),
+  );
 
   // content.opf
   const opfXml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -339,7 +353,9 @@ void main() {
     <reference type="cover" title="Cover" href="text/cover.xhtml"/>
   </guide>
 </package>''';
-  archive.addFile(ArchiveFile('content.opf', opfXml.length, utf8.encode(opfXml)));
+  archive.addFile(
+    ArchiveFile('content.opf', opfXml.length, utf8.encode(opfXml)),
+  );
 
   // toc.ncx
   const ncxXml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -381,7 +397,9 @@ void main() {
     </div>
   </body>
 </html>''';
-  archive.addFile(ArchiveFile('text/cover.xhtml', coverXhtml.length, utf8.encode(coverXhtml)));
+  archive.addFile(
+    ArchiveFile('text/cover.xhtml', coverXhtml.length, utf8.encode(coverXhtml)),
+  );
 
   // text/chap1.xhtml
   const chap1Xhtml = '''<?xml version="1.0" encoding="utf-8"?>
@@ -398,7 +416,9 @@ void main() {
     </blockquote>
   </body>
 </html>''';
-  archive.addFile(ArchiveFile('text/chap1.xhtml', chap1Xhtml.length, utf8.encode(chap1Xhtml)));
+  archive.addFile(
+    ArchiveFile('text/chap1.xhtml', chap1Xhtml.length, utf8.encode(chap1Xhtml)),
+  );
 
   // text/chap2.xhtml
   const chap2Xhtml = '''<?xml version="1.0" encoding="utf-8"?>
@@ -416,17 +436,27 @@ void main() {
     </ul>
   </body>
 </html>''';
-  archive.addFile(ArchiveFile('text/chap2.xhtml', chap2Xhtml.length, utf8.encode(chap2Xhtml)));
+  archive.addFile(
+    ArchiveFile('text/chap2.xhtml', chap2Xhtml.length, utf8.encode(chap2Xhtml)),
+  );
 
   // styles/stylesheet.css
   const css = 'body { font-family: serif; } h1 { color: #333; }';
-  archive.addFile(ArchiveFile('styles/stylesheet.css', css.length, utf8.encode(css)));
+  archive.addFile(
+    ArchiveFile('styles/stylesheet.css', css.length, utf8.encode(css)),
+  );
 
   // images/cover.jpg
-  final coverBytes = base64Decode('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=');
-  archive.addFile(ArchiveFile('images/cover.jpg', coverBytes.length, coverBytes));
+  final coverBytes = base64Decode(
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+  );
+  archive.addFile(
+    ArchiveFile('images/cover.jpg', coverBytes.length, coverBytes),
+  );
 
   final zipBytes = Uint8List.fromList(ZipEncoder().encode(archive));
   File('test/fixtures/epub/calibre_sample.epub').writeAsBytesSync(zipBytes);
-  print('Wrote test/fixtures/epub/calibre_sample.epub (\${zipBytes.length} bytes)');
+  print(
+    'Wrote test/fixtures/epub/calibre_sample.epub (\${zipBytes.length} bytes)',
+  );
 }

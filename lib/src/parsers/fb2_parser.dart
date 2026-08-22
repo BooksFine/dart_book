@@ -12,11 +12,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
   final bool strictMode;
   final void Function(String warning)? logger;
 
-  Fb2Parser({
-    this.registrar,
-    this.strictMode = false,
-    this.logger,
-  });
+  Fb2Parser({this.registrar, this.strictMode = false, this.logger});
 
   @override
   List<BookBlock> parseFromString(String text) {
@@ -104,9 +100,13 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         ];
       case 'cite':
         final textAuthor = element.findElements('text-author').firstOrNull;
-        final citation = textAuthor != null ? _parseFb2Inlines(textAuthor) : const <BookInline>[];
+        final citation = textAuthor != null
+            ? _parseFb2Inlines(textAuthor)
+            : const <BookInline>[];
         final innerBlocks = parse(
-          element.children.where((e) => e is! XmlElement || e.localName != 'text-author'),
+          element.children.where(
+            (e) => e is! XmlElement || e.localName != 'text-author',
+          ),
         );
         return [BookQuote(blocks: innerBlocks, citation: citation)];
       case 'poem':
@@ -123,14 +123,20 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         final rows = <BookTableRow>[];
         for (final tr in element.findElements('tr')) {
           final cells = <BookTableCell>[];
-          for (final cell in tr.children.whereType<XmlElement>().where((e) => e.localName == 'td' || e.localName == 'th')) {
-            final colSpan = int.tryParse(cell.getAttribute('colspan') ?? '') ?? 1;
-            final rowSpan = int.tryParse(cell.getAttribute('rowspan') ?? '') ?? 1;
+          for (final cell in tr.children.whereType<XmlElement>().where(
+            (e) => e.localName == 'td' || e.localName == 'th',
+          )) {
+            final colSpan =
+                int.tryParse(cell.getAttribute('colspan') ?? '') ?? 1;
+            final rowSpan =
+                int.tryParse(cell.getAttribute('rowspan') ?? '') ?? 1;
             final align = cell.getAttribute('align');
             final vAlign = cell.getAttribute('valign');
             final pElements = cell.findElements('p').toList();
             final cellBlocks = pElements.isNotEmpty
-                ? pElements.map((p) => BookParagraph(inlines: _parseFb2Inlines(p))).toList()
+                ? pElements
+                      .map((p) => BookParagraph(inlines: _parseFb2Inlines(p)))
+                      .toList()
                 : [BookParagraph(inlines: _parseFb2Inlines(cell))];
             cells.add(
               BookTableCell(
@@ -147,9 +153,13 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         return [BookTable(rows: rows)];
       case 'epigraph':
         final textAuthor = element.findElements('text-author').firstOrNull;
-        final citation = textAuthor != null ? _parseFb2Inlines(textAuthor) : const <BookInline>[];
+        final citation = textAuthor != null
+            ? _parseFb2Inlines(textAuthor)
+            : const <BookInline>[];
         final innerBlocks = parse(
-          element.children.where((e) => e is! XmlElement || e.localName != 'text-author'),
+          element.children.where(
+            (e) => e is! XmlElement || e.localName != 'text-author',
+          ),
         );
         return [
           BookQuote(
@@ -166,7 +176,9 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         if (strictMode) {
           throw BookParseException('Unhandled FB2 element <$name>', tag: name);
         }
-        logger?.call('Warning: unhandled FB2 element <$name>, parsing children');
+        logger?.call(
+          'Warning: unhandled FB2 element <$name>, parsing children',
+        );
         return parse(element.children);
     }
   }
@@ -195,7 +207,9 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             final styleName = child.getAttribute('name') ?? '';
             final innerInlines = _parseFb2Inlines(child);
             if (styleName.isNotEmpty) {
-              inlines.add(BookNamedStyle(name: styleName, inlines: innerInlines));
+              inlines.add(
+                BookNamedStyle(name: styleName, inlines: innerInlines),
+              );
             } else {
               inlines.addAll(innerInlines);
             }
@@ -205,9 +219,13 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
                 child.getAttribute('href') ??
                 '';
             final type = child.getAttribute('type');
-            if (type == 'note' || href.startsWith('#n_') || href.startsWith('#note')) {
+            if (type == 'note' ||
+                href.startsWith('#n_') ||
+                href.startsWith('#note')) {
               final id = href.startsWith('#') ? href.substring(1) : href;
-              inlines.add(BookFootnoteRef(id: id, label: _parseFb2Inlines(child)));
+              inlines.add(
+                BookFootnoteRef(id: id, label: _parseFb2Inlines(child)),
+              );
             } else {
               inlines.add(
                 BookLink(
@@ -253,8 +271,8 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       }
       return inlines;
     }
-    return _parseFb2Inlines(titleElement)
-        .where((i) => i is! BookText || i.text.trim().isNotEmpty)
-        .toList();
+    return _parseFb2Inlines(
+      titleElement,
+    ).where((i) => i is! BookText || i.text.trim().isNotEmpty).toList();
   }
 }

@@ -43,7 +43,11 @@ class Fb2Encoder implements BookEncoder {
     return Uint8List.fromList(utf8.encode(xml));
   }
 
-  String _buildXml(Book book, {BookEncodingOptions? options, bool pretty = true}) {
+  String _buildXml(
+    Book book, {
+    BookEncodingOptions? options,
+    bool pretty = true,
+  }) {
     final ctx = _Fb2Context(book, options);
     final writer = _Fb2XmlWriter(pretty: pretty);
 
@@ -91,7 +95,9 @@ class Fb2Encoder implements BookEncoder {
       }
       if (name.nickname?.trim().isNotEmpty == true) {
         writer.element('nickname', text: name.nickname!.trim());
-      } else if (name.first == null && name.last == null && name.display?.trim().isNotEmpty == true) {
+      } else if (name.first == null &&
+          name.last == null &&
+          name.display?.trim().isNotEmpty == true) {
         writer.element('nickname', text: name.display!.trim());
       }
       if (author.homePage != null) {
@@ -142,7 +148,9 @@ class Fb2Encoder implements BookEncoder {
       writer.element('src-lang', text: metadata.srcLang!);
     }
 
-    final translators = metadata.contributorsByRole(BookContributorRole.translator);
+    final translators = metadata.contributorsByRole(
+      BookContributorRole.translator,
+    );
     for (final translator in translators) {
       writer.openElement('translator', blockChildren: true);
       final name = translator.name;
@@ -157,7 +165,9 @@ class Fb2Encoder implements BookEncoder {
       }
       if (name.nickname?.trim().isNotEmpty == true) {
         writer.element('nickname', text: name.nickname!.trim());
-      } else if (name.first == null && name.last == null && name.display?.trim().isNotEmpty == true) {
+      } else if (name.first == null &&
+          name.last == null &&
+          name.display?.trim().isNotEmpty == true) {
         writer.element('nickname', text: name.display!.trim());
       }
       if (translator.homePage != null) {
@@ -196,7 +206,9 @@ class Fb2Encoder implements BookEncoder {
         }
         if (name.nickname?.trim().isNotEmpty == true) {
           writer.element('nickname', text: name.nickname!.trim());
-        } else if (name.first == null && name.last == null && name.display?.trim().isNotEmpty == true) {
+        } else if (name.first == null &&
+            name.last == null &&
+            name.display?.trim().isNotEmpty == true) {
           writer.element('nickname', text: name.display!.trim());
         }
         writer.closeElement('author', blockChildren: true);
@@ -269,9 +281,17 @@ class Fb2Encoder implements BookEncoder {
   void _buildNotesBody(_Fb2XmlWriter writer, _Fb2Context ctx) {
     if (ctx.book.content.footnotes.isEmpty) return;
 
-    writer.openElement('body', attributes: {'name': 'notes'}, blockChildren: true);
+    writer.openElement(
+      'body',
+      attributes: {'name': 'notes'},
+      blockChildren: true,
+    );
     for (final footnote in ctx.book.content.footnotes) {
-      writer.openElement('section', attributes: {'id': footnote.id}, blockChildren: true);
+      writer.openElement(
+        'section',
+        attributes: {'id': footnote.id},
+        blockChildren: true,
+      );
       writer.openElement('title', blockChildren: true);
       writer.element('p', text: footnote.id);
       writer.closeElement('title', blockChildren: true);
@@ -289,11 +309,19 @@ class Fb2Encoder implements BookEncoder {
     }
   }
 
-  void _writeBlocks(_Fb2XmlWriter writer, List<BookBlock> blocks, _Fb2Context ctx) {
+  void _writeBlocks(
+    _Fb2XmlWriter writer,
+    List<BookBlock> blocks,
+    _Fb2Context ctx,
+  ) {
     for (final block in blocks) {
       switch (block) {
         case BookSection section:
-          writer.openElement('section', attributes: _idAttribute(section.id), blockChildren: true);
+          writer.openElement(
+            'section',
+            attributes: _idAttribute(section.id),
+            blockChildren: true,
+          );
           if (section.title.isNotEmpty) {
             writer.openElement('title', blockChildren: true);
             writer.openElement('p');
@@ -316,7 +344,9 @@ class Fb2Encoder implements BookEncoder {
           writer.closeElement('p');
 
         case BookQuote quote:
-          final tagName = quote.attributes['fb2-type'] == 'epigraph' ? 'epigraph' : 'cite';
+          final tagName = quote.attributes['fb2-type'] == 'epigraph'
+              ? 'epigraph'
+              : 'cite';
           writer.openElement(tagName, blockChildren: true);
           _writeBlocks(writer, quote.blocks, ctx);
           if (quote.citation.isNotEmpty) {
@@ -419,7 +449,11 @@ class Fb2Encoder implements BookEncoder {
     }
   }
 
-  void _writeInlines(_Fb2XmlWriter writer, List<BookInline> inlines, _Fb2Context ctx) {
+  void _writeInlines(
+    _Fb2XmlWriter writer,
+    List<BookInline> inlines,
+    _Fb2Context ctx,
+  ) {
     for (final inline in inlines) {
       switch (inline) {
         case BookText text:
@@ -449,12 +483,20 @@ class Fb2Encoder implements BookEncoder {
           writer.closeElement('code', inline: true);
 
         case BookNamedStyle style:
-          writer.openElement('style', attributes: {'name': style.name}, inline: true);
+          writer.openElement(
+            'style',
+            attributes: {'name': style.name},
+            inline: true,
+          );
           _writeInlines(writer, style.inlines, ctx);
           writer.closeElement('style', inline: true);
 
         case BookLink link:
-          writer.openElement('a', attributes: {'l:href': link.href.toString()}, inline: true);
+          writer.openElement(
+            'a',
+            attributes: {'l:href': link.href.toString()},
+            inline: true,
+          );
           _writeInlines(writer, link.children, ctx);
           writer.closeElement('a', inline: true);
 
@@ -480,7 +522,11 @@ class Fb2Encoder implements BookEncoder {
           writer.closeElement('sub', inline: true);
 
         case BookFootnoteRef footnoteRef:
-          writer.openElement('a', attributes: {'l:href': '#${footnoteRef.id}', 'type': 'note'}, inline: true);
+          writer.openElement(
+            'a',
+            attributes: {'l:href': '#${footnoteRef.id}', 'type': 'note'},
+            inline: true,
+          );
           if (footnoteRef.label.isNotEmpty) {
             _writeInlines(writer, footnoteRef.label, ctx);
           } else {
@@ -540,7 +586,11 @@ class _Fb2Context {
       cleanId = name.contains('.') ? name : '$name.$ext';
     } else {
       final policy = options?.namingPolicy ?? BookResourceNamingPolicy.preserve;
-      final generated = policy.generateName(src, isInline: false, index: ++_imageCounter);
+      final generated = policy.generateName(
+        src,
+        isInline: false,
+        index: ++_imageCounter,
+      );
       cleanId = generated.contains('.') ? generated : '$generated.$ext';
     }
 
@@ -597,7 +647,11 @@ class _Fb2XmlWriter {
     }
   }
 
-  void closeElement(String name, {bool inline = false, bool blockChildren = false}) {
+  void closeElement(
+    String name, {
+    bool inline = false,
+    bool blockChildren = false,
+  }) {
     if (!inline && blockChildren) {
       _indentLevel--;
       _indent();
@@ -612,9 +666,19 @@ class _Fb2XmlWriter {
 
   /// Листовой элемент: свой отступ, `<tag>текст</tag>` или `<tag/>` в одной строке.
   /// Уровень отступа не трогает.
-  void element(String name, {Map<String, String>? attributes, String? text, bool inline = false}) {
+  void element(
+    String name, {
+    Map<String, String>? attributes,
+    String? text,
+    bool inline = false,
+  }) {
     if (text == null || text.isEmpty) {
-      openElement(name, attributes: attributes, inline: inline, selfClosing: true);
+      openElement(
+        name,
+        attributes: attributes,
+        inline: inline,
+        selfClosing: true,
+      );
     } else {
       if (!inline) _indent();
       _buffer.write('<$name');
@@ -637,7 +701,9 @@ class _Fb2XmlWriter {
 
   void binaryElement(String id, String mediaType, Uint8List bytes) {
     if (pretty) _indent();
-    _buffer.write('<binary id="${_escape(id)}" content-type="${_escape(mediaType)}">');
+    _buffer.write(
+      '<binary id="${_escape(id)}" content-type="${_escape(mediaType)}">',
+    );
     _buffer.write(base64Encode(bytes));
     _buffer.write('</binary>');
     if (pretty) _newline();

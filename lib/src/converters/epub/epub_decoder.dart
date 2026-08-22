@@ -39,7 +39,8 @@ class EpubDecoder implements BookDecoder {
     final opfPath = ocfContainer.primaryOpfPath;
 
     final opfFile = archive.findFile(opfPath);
-    if (opfFile == null) throw Exception('Invalid EPUB: OPF file not found at $opfPath');
+    if (opfFile == null)
+      throw Exception('Invalid EPUB: OPF file not found at $opfPath');
 
     final opfXml = XmlDocument.parse(utf8.decode(opfFile.content));
     final opfDir = opfPath.contains('/')
@@ -52,13 +53,20 @@ class EpubDecoder implements BookDecoder {
       final href = element.getAttribute('href')!;
       final mediaType = element.getAttribute('media-type')!;
       final properties = element.getAttribute('properties');
-      manifest[itemId] = _EpubItem(itemId, href, mediaType, properties: properties);
+      manifest[itemId] = _EpubItem(
+        itemId,
+        href,
+        mediaType,
+        properties: properties,
+      );
     }
 
     // Extract cover image (EPUB 3 properties="cover-image" or EPUB 2 <meta name="cover" content="...">)
     var coverItemId = manifest.values
         .firstWhere(
-          (item) => item.properties?.split(RegExp(r'\s+')).contains('cover-image') == true,
+          (item) =>
+              item.properties?.split(RegExp(r'\s+')).contains('cover-image') ==
+              true,
           orElse: () => _EpubItem('', '', ''),
         )
         .id;
@@ -69,7 +77,9 @@ class EpubDecoder implements BookDecoder {
           .where((e) => e.getAttribute('name')?.toLowerCase() == 'cover')
           .firstOrNull;
       final metaCover = metaCoverElem?.getAttribute('content');
-      if (metaCover != null && metaCover.isNotEmpty && manifest.containsKey(metaCover)) {
+      if (metaCover != null &&
+          metaCover.isNotEmpty &&
+          manifest.containsKey(metaCover)) {
         coverItemId = metaCover;
       }
     }
@@ -98,7 +108,9 @@ class EpubDecoder implements BookDecoder {
     if (navItem.href.isNotEmpty) {
       final navFile = archive.findFile(_joinPath(opfDir, navItem.href));
       if (navFile != null) {
-        final navDoc = EpubNavDocument.parseFromString(utf8.decode(navFile.content));
+        final navDoc = EpubNavDocument.parseFromString(
+          utf8.decode(navFile.content),
+        );
         for (final entry in navDoc.toc) {
           if (entry.title.isNotEmpty && entry.href.isNotEmpty) {
             navTitlesByHref[entry.href.split('#').first] = entry.title;
@@ -109,13 +121,17 @@ class EpubDecoder implements BookDecoder {
 
     if (navTitlesByHref.isEmpty) {
       final ncxItem = manifest.values.firstWhere(
-        (item) => item.mediaType == 'application/x-dtbncx+xml' || item.href.endsWith('.ncx'),
+        (item) =>
+            item.mediaType == 'application/x-dtbncx+xml' ||
+            item.href.endsWith('.ncx'),
         orElse: () => _EpubItem('', '', ''),
       );
       if (ncxItem.href.isNotEmpty) {
         final ncxFile = archive.findFile(_joinPath(opfDir, ncxItem.href));
         if (ncxFile != null) {
-          final ncxDoc = EpubNcxDocument.parseFromString(utf8.decode(ncxFile.content));
+          final ncxDoc = EpubNcxDocument.parseFromString(
+            utf8.decode(ncxFile.content),
+          );
           for (final entry in ncxDoc.navMap) {
             if (entry.title.isNotEmpty && entry.href.isNotEmpty) {
               navTitlesByHref[entry.href.split('#').first] = entry.title;
@@ -177,11 +193,7 @@ class EpubDecoder implements BookDecoder {
 
       final title = navTitlesByHref[item.href] ?? item.id;
       blocks.add(
-        BookSection(
-          id: idref,
-          title: [BookText(title)],
-          blocks: chapterBlocks,
-        ),
+        BookSection(id: idref, title: [BookText(title)], blocks: chapterBlocks),
       );
     }
 
@@ -190,7 +202,8 @@ class EpubDecoder implements BookDecoder {
       final isImage = item.mediaType.startsWith('image/');
       final isAudio = item.mediaType.startsWith('audio/');
       final isVideo = item.mediaType.startsWith('video/');
-      final isFont = item.mediaType.startsWith('font/') ||
+      final isFont =
+          item.mediaType.startsWith('font/') ||
           item.mediaType.contains('font') ||
           item.mediaType.contains('opentype');
       final isCss = item.mediaType == 'text/css';
@@ -201,7 +214,8 @@ class EpubDecoder implements BookDecoder {
         if (file != null) {
           var rawBytes = Uint8List.fromList(file.content);
           if (isFont) {
-            final obfAlgo = encryptionInfo.obfuscatedFonts[path] ??
+            final obfAlgo =
+                encryptionInfo.obfuscatedFonts[path] ??
                 encryptionInfo.obfuscatedFonts[item.href];
             if (obfAlgo != null) {
               rawBytes = OcfContainer.deobfuscateFont(
@@ -243,15 +257,23 @@ class EpubDecoder implements BookDecoder {
   }) {
     final metadataElement = opfXml.findAllElements('metadata').first;
 
-    final id =
-        metadataElement.findAllElements('dc:identifier').firstOrNull?.innerText;
-    
-    final titleElement = metadataElement.findAllElements('dc:title').firstOrNull;
+    final id = metadataElement
+        .findAllElements('dc:identifier')
+        .firstOrNull
+        ?.innerText;
+
+    final titleElement = metadataElement
+        .findAllElements('dc:title')
+        .firstOrNull;
     if (titleElement == null && options?.strictMode == true) {
-      throw BookMalformedMetadataException('Missing required element <dc:title> in OPF metadata');
+      throw BookMalformedMetadataException(
+        'Missing required element <dc:title> in OPF metadata',
+      );
     }
     if (titleElement == null) {
-      options?.logger?.call('Warning: missing <dc:title> in OPF metadata, fallback to "Untitled"');
+      options?.logger?.call(
+        'Warning: missing <dc:title> in OPF metadata, fallback to "Untitled"',
+      );
     }
     final title = titleElement?.innerText ?? 'Untitled';
 
@@ -259,10 +281,16 @@ class EpubDecoder implements BookDecoder {
         metadataElement.findAllElements('dc:language').firstOrNull?.innerText ??
         'en';
 
-    final descriptionText =
-        metadataElement.findAllElements('dc:description').firstOrNull?.innerText;
+    final descriptionText = metadataElement
+        .findAllElements('dc:description')
+        .firstOrNull
+        ?.innerText;
     final annotation = descriptionText != null && descriptionText.isNotEmpty
-        ? BookContent(blocks: [BookParagraph(inlines: [BookText(descriptionText)])])
+        ? BookContent(
+            blocks: [
+              BookParagraph(inlines: [BookText(descriptionText)]),
+            ],
+          )
         : null;
 
     final contributors = <BookContributor>[];
@@ -285,17 +313,25 @@ class EpubDecoder implements BookDecoder {
 
     final subjects = metadataElement
         .findAllElements('dc:subject')
-        .map((e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()))
+        .map(
+          (e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()),
+        )
         .toList();
 
     // Publisher & ISBN
-    final publisher = metadataElement.findAllElements('dc:publisher').firstOrNull?.innerText.trim();
+    final publisher = metadataElement
+        .findAllElements('dc:publisher')
+        .firstOrNull
+        ?.innerText
+        .trim();
     String? isbn;
     for (final ident in metadataElement.findAllElements('dc:identifier')) {
       final scheme = ident.getAttribute('opf:scheme')?.toUpperCase();
       final text = ident.innerText.trim();
       if (scheme == 'ISBN' || text.toLowerCase().startsWith('urn:isbn:')) {
-        isbn = text.replaceFirst(RegExp(r'^urn:isbn:', caseSensitive: false), '').trim();
+        isbn = text
+            .replaceFirst(RegExp(r'^urn:isbn:', caseSensitive: false), '')
+            .trim();
         break;
       }
     }
@@ -305,7 +341,8 @@ class EpubDecoder implements BookDecoder {
     if (dateText != null && dateText.isNotEmpty) {
       publishedAt = DateTime.tryParse(dateText);
     }
-    final publishInfo = (publisher != null || isbn != null || publishedAt != null)
+    final publishInfo =
+        (publisher != null || isbn != null || publishedAt != null)
         ? BookPublishInfo(
             publisher: publisher?.isNotEmpty == true ? publisher : null,
             isbn: isbn?.isNotEmpty == true ? isbn : null,
@@ -324,7 +361,11 @@ class EpubDecoder implements BookDecoder {
         if (collectionId != null) {
           final posElem = metadataElement
               .findAllElements('meta')
-              .where((e) => e.getAttribute('refines') == '#$collectionId' && e.getAttribute('property') == 'group-position')
+              .where(
+                (e) =>
+                    e.getAttribute('refines') == '#$collectionId' &&
+                    e.getAttribute('property') == 'group-position',
+              )
               .firstOrNull;
           if (posElem != null) {
             position = int.tryParse(posElem.innerText.trim());
@@ -348,13 +389,20 @@ class EpubDecoder implements BookDecoder {
             .firstOrNull
             ?.getAttribute('content');
         seriesList.add(
-          BookSeries(name: calibreSeries, number: posStr != null ? int.tryParse(posStr) : null),
+          BookSeries(
+            name: calibreSeries,
+            number: posStr != null ? int.tryParse(posStr) : null,
+          ),
         );
       }
     }
 
     // Source info
-    final sourceText = metadataElement.findAllElements('dc:source').firstOrNull?.innerText.trim();
+    final sourceText = metadataElement
+        .findAllElements('dc:source')
+        .firstOrNull
+        ?.innerText
+        .trim();
     final sourceLangMeta = metadataElement
         .findAllElements('meta')
         .where((e) => e.getAttribute('property') == 'source-language')
@@ -390,7 +438,9 @@ class EpubDecoder implements BookDecoder {
         series: seriesList,
         publishInfo: publishInfo,
         srcLang: sourceLangMeta?.isNotEmpty == true ? sourceLangMeta : null,
-        srcTitleInfo: sourceText?.isNotEmpty == true ? BookSourceTitleInfo(title: sourceText) : null,
+        srcTitleInfo: sourceText?.isNotEmpty == true
+            ? BookSourceTitleInfo(title: sourceText)
+            : null,
         layout: layout,
         publishedAt: publishedAt,
       ),
@@ -402,7 +452,9 @@ class EpubDecoder implements BookDecoder {
     final normalizedDir = dir.replaceAll(r'\', '/');
     final normalizedFile = file.replaceAll(r'\', '/');
     if (normalizedDir.isEmpty) {
-      return normalizedFile.startsWith('/') ? normalizedFile.substring(1) : normalizedFile;
+      return normalizedFile.startsWith('/')
+          ? normalizedFile.substring(1)
+          : normalizedFile;
     }
     final parts = normalizedDir.split('/')..addAll(normalizedFile.split('/'));
     final result = <String>[];

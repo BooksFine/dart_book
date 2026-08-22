@@ -28,7 +28,8 @@ extension BookResourceResolverX on Book {
       int completedCount,
       int totalCount,
       List<BookResourceDownloadState> states,
-    )? onProgress,
+    )?
+    onProgress,
     int? maxConcurrent,
   }) async {
     final resourcesById = <String, BookResource>{
@@ -36,8 +37,9 @@ extension BookResourceResolverX on Book {
     };
 
     final requests = collectResourceRequestsFromBook(this);
-    final pendingRequests =
-        requests.where((r) => !resourcesById.containsKey(r.id)).toList();
+    final pendingRequests = requests
+        .where((r) => !resourcesById.containsKey(r.id))
+        .toList();
 
     if (pendingRequests.isEmpty) {
       return this;
@@ -115,4 +117,3 @@ extension BookResourceResolverX on Book {
     );
   }
 }
-

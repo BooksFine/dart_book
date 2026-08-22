@@ -9,9 +9,7 @@ import 'package:dart_book/dart_book.dart';
 class AstNormalizer {
   /// Нормализует всю книгу [Book].
   static Book normalizeBook(Book book) {
-    return book.copyWith(
-      content: normalizeContent(book.content),
-    );
+    return book.copyWith(content: normalizeContent(book.content));
   }
 
   /// Нормализует контент книги [BookContent].
@@ -45,59 +43,62 @@ class AstNormalizer {
   /// Нормализует отдельный блок [BookBlock].
   static BookBlock? normalizeBlock(BookBlock block) {
     return switch (block) {
-      BookParagraph p => BookParagraph(
-          inlines: normalizeInlines(p.inlines),
-        ),
+      BookParagraph p => BookParagraph(inlines: normalizeInlines(p.inlines)),
       BookHeading h => BookHeading(
-          level: h.level,
-          text: normalizeInlines(h.text),
-        ),
+        level: h.level,
+        text: normalizeInlines(h.text),
+      ),
       BookSection s => BookSection(
-          id: s.id,
-          title: normalizeInlines(s.title),
-          blocks: normalizeBlocks(s.blocks),
-          children: s.children.map(normalizeBlock).whereType<BookSection>().toList(),
-        ),
+        id: s.id,
+        title: normalizeInlines(s.title),
+        blocks: normalizeBlocks(s.blocks),
+        children: s.children
+            .map(normalizeBlock)
+            .whereType<BookSection>()
+            .toList(),
+      ),
       BookQuote q => BookQuote(
-          blocks: normalizeBlocks(q.blocks),
-          citation: normalizeInlines(q.citation),
-        ),
+        blocks: normalizeBlocks(q.blocks),
+        citation: normalizeInlines(q.citation),
+      ),
       BookList l => BookList(
-          ordered: l.ordered,
-          items: l.items
-              .map((item) => BookListItem(blocks: normalizeBlocks(item.blocks)))
-              .toList(),
-        ),
+        ordered: l.ordered,
+        items: l.items
+            .map((item) => BookListItem(blocks: normalizeBlocks(item.blocks)))
+            .toList(),
+      ),
       BookTable t => BookTable(
-          rows: t.rows
-              .map(
-                (row) => BookTableRow(
-                  cells: row.cells
-                      .map(
-                        (cell) => BookTableCell(
-                          blocks: normalizeBlocks(cell.blocks),
-                          colSpan: cell.colSpan,
-                          rowSpan: cell.rowSpan,
-                          align: cell.align,
-                          vAlign: cell.vAlign,
-                        ),
-                      )
-                      .toList(),
-                ),
-              )
-              .toList(),
-        ),
+        rows: t.rows
+            .map(
+              (row) => BookTableRow(
+                cells: row.cells
+                    .map(
+                      (cell) => BookTableCell(
+                        blocks: normalizeBlocks(cell.blocks),
+                        colSpan: cell.colSpan,
+                        rowSpan: cell.rowSpan,
+                        align: cell.align,
+                        vAlign: cell.vAlign,
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
+            .toList(),
+      ),
       BookPoem poem => BookPoem(
-          stanzas: poem.stanzas
-              .map(
-                (s) => BookStanza(
-                  lines: s.lines
-                      .map((l) => BookPoemLine(inlines: normalizeInlines(l.inlines)))
-                      .toList(),
-                ),
-              )
-              .toList(),
-        ),
+        stanzas: poem.stanzas
+            .map(
+              (s) => BookStanza(
+                lines: s.lines
+                    .map(
+                      (l) => BookPoemLine(inlines: normalizeInlines(l.inlines)),
+                    )
+                    .toList(),
+              ),
+            )
+            .toList(),
+      ),
       _ => block,
     };
   }
@@ -133,19 +134,23 @@ class AstNormalizer {
       BookStrike st => BookStrike(children: normalizeInlines(st.children)),
       BookCodeSpan c => c,
       BookNamedStyle ns => BookNamedStyle(
-          name: ns.name,
-          inlines: normalizeInlines(ns.inlines),
-        ),
+        name: ns.name,
+        inlines: normalizeInlines(ns.inlines),
+      ),
       BookLink l => BookLink(
-          href: l.href,
-          children: normalizeInlines(l.children),
-        ),
-      BookSuperscript sup => BookSuperscript(children: normalizeInlines(sup.children)),
-      BookSubscript sub => BookSubscript(children: normalizeInlines(sub.children)),
+        href: l.href,
+        children: normalizeInlines(l.children),
+      ),
+      BookSuperscript sup => BookSuperscript(
+        children: normalizeInlines(sup.children),
+      ),
+      BookSubscript sub => BookSubscript(
+        children: normalizeInlines(sub.children),
+      ),
       BookFootnoteRef fn => BookFootnoteRef(
-          id: fn.id,
-          label: normalizeInlines(fn.label),
-        ),
+        id: fn.id,
+        label: normalizeInlines(fn.label),
+      ),
       _ => inline,
     };
   }

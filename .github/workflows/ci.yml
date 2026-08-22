@@ -1,0 +1,41 @@
+name: Dart CI & Test Matrix
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build_and_test:
+    name: Analyze, Test & Benchmarks (${{ matrix.os }}, Dart ${{ matrix.sdk }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        sdk: [stable, beta]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+
+      - name: Install Dependencies
+        run: dart pub get
+
+      - name: Check Code Formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Static Code Analysis
+        run: dart analyze --fatal-infos
+
+      - name: Run Full Test Suite (Unit, Integration, Security, Fuzzing)
+        run: dart test
+
+      - name: Run Performance Benchmarks
+        run: dart test test/stress/performance_benchmark_test.dart

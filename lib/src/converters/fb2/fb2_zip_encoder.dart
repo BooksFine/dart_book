@@ -8,7 +8,7 @@ class Fb2ZipEncoder implements BookEncoder {
   final Fb2Encoder _xmlEncoder;
 
   Fb2ZipEncoder({Fb2Encoder? xmlEncoder})
-      : _xmlEncoder = xmlEncoder ?? Fb2Encoder();
+    : _xmlEncoder = xmlEncoder ?? Fb2Encoder();
 
   @override
   bool canEncode(String extension) {
@@ -35,7 +35,9 @@ class Fb2ZipEncoder implements BookEncoder {
     final String filename;
     final entryName = options?.entryFilename?.trim();
     if (entryName != null && entryName.isNotEmpty) {
-      filename = entryName.toLowerCase().endsWith('.fb2') ? entryName : '$entryName.fb2';
+      filename = entryName.toLowerCase().endsWith('.fb2')
+          ? entryName
+          : '$entryName.fb2';
     } else {
       final rawName = book.metadata.title.trim().isNotEmpty
           ? book.metadata.title

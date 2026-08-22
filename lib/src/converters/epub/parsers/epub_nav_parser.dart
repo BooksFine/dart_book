@@ -29,19 +29,20 @@ class EpubNavDocument {
   final List<EpubNavEntry> toc;
   final List<EpubNavLandmark> landmarks;
 
-  const EpubNavDocument({
-    this.toc = const [],
-    this.landmarks = const [],
-  });
+  const EpubNavDocument({this.toc = const [], this.landmarks = const []});
 
-  static EpubNavDocument parseFromString(String xhtmlContent, {int maxDepth = 32}) {
+  static EpubNavDocument parseFromString(
+    String xhtmlContent, {
+    int maxDepth = 32,
+  }) {
     final document = html.parse(xhtmlContent);
-    
+
     final tocEntries = <EpubNavEntry>[];
     final landmarkEntries = <EpubNavLandmark>[];
 
     for (final nav in document.querySelectorAll('nav')) {
-      final epubType = nav.attributes['epub:type'] ?? nav.attributes['type'] ?? '';
+      final epubType =
+          nav.attributes['epub:type'] ?? nav.attributes['type'] ?? '';
       if (epubType.contains('toc')) {
         final ol = nav.querySelector('ol');
         if (ol != null) {
@@ -53,10 +54,13 @@ class EpubNavDocument {
         if (ol != null) {
           for (final a in ol.querySelectorAll('a')) {
             final href = a.attributes['href'];
-            final type = a.attributes['epub:type'] ?? a.attributes['type'] ?? '';
+            final type =
+                a.attributes['epub:type'] ?? a.attributes['type'] ?? '';
             final title = a.text.trim();
             if (href != null && href.isNotEmpty) {
-              landmarkEntries.add(EpubNavLandmark(type: type, title: title, href: href));
+              landmarkEntries.add(
+                EpubNavLandmark(type: type, title: title, href: href),
+              );
             }
           }
         }
@@ -66,7 +70,12 @@ class EpubNavDocument {
     return EpubNavDocument(toc: tocEntries, landmarks: landmarkEntries);
   }
 
-  static List<EpubNavEntry> _parseOl(dom.Element ol, Set<dom.Element> visited, int depth, int maxDepth) {
+  static List<EpubNavEntry> _parseOl(
+    dom.Element ol,
+    Set<dom.Element> visited,
+    int depth,
+    int maxDepth,
+  ) {
     if (depth >= maxDepth || visited.contains(ol)) return const [];
     visited.add(ol);
 
@@ -83,7 +92,9 @@ class EpubNavDocument {
         (c) => c.localName == 'ol',
         orElse: () => dom.Element.tag('ol'),
       );
-      final children = nestedOl.localName == 'ol' ? _parseOl(nestedOl, visited, depth + 1, maxDepth) : const <EpubNavEntry>[];
+      final children = nestedOl.localName == 'ol'
+          ? _parseOl(nestedOl, visited, depth + 1, maxDepth)
+          : const <EpubNavEntry>[];
 
       if (title.isNotEmpty || href.isNotEmpty) {
         entries.add(EpubNavEntry(title: title, href: href, children: children));

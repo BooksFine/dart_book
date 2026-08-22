@@ -10,8 +10,14 @@ class AstGenerator {
   AstGenerator([int? seed]) : _random = Random(seed ?? 42);
 
   /// Генерирует случайную книгу [Book] со всеми типами узлов.
-  Book generateBook({int maxDepth = 3, int blockCount = 10, bool includeResources = true}) {
-    final resources = includeResources ? _generateSampleResources() : const <BookResource>[];
+  Book generateBook({
+    int maxDepth = 3,
+    int blockCount = 10,
+    bool includeResources = true,
+  }) {
+    final resources = includeResources
+        ? _generateSampleResources()
+        : const <BookResource>[];
     return Book(
       metadata: BookMetadata(
         id: 'gen-book-${_random.nextInt(1000000)}',
@@ -36,9 +42,12 @@ class AstGenerator {
         publishInfo: BookPublishInfo(
           publisher: 'Издательство ${_generateString(4, 10)}',
           year: 2020 + _random.nextInt(6),
-          isbn: '978-5-${_random.nextInt(900) + 100}-${_random.nextInt(9000) + 1000}-0',
+          isbn:
+              '978-5-${_random.nextInt(900) + 100}-${_random.nextInt(9000) + 1000}-0',
         ),
-        cover: includeResources ? const BookCover(ref: BookResourceRef('img1.png')) : null,
+        cover: includeResources
+            ? const BookCover(ref: BookResourceRef('img1.png'))
+            : null,
       ),
       content: BookContent(
         blocks: List.generate(
@@ -49,7 +58,9 @@ class AstGenerator {
           BookFootnote(
             id: 'fn_1',
             blocks: [
-              BookParagraph(inlines: [BookText('Сноска: ${_generateString(10, 30)}')]),
+              BookParagraph(
+                inlines: [BookText('Сноска: ${_generateString(10, 30)}')],
+              ),
             ],
           ),
         ],
@@ -65,7 +76,9 @@ class AstGenerator {
 
     switch (type) {
       case 0:
-        return BookParagraph(inlines: _generateInlines(count: _random.nextInt(4) + 1));
+        return BookParagraph(
+          inlines: _generateInlines(count: _random.nextInt(4) + 1),
+        );
       case 1:
         return BookHeading(
           level: _random.nextInt(5) + 1,
@@ -81,7 +94,9 @@ class AstGenerator {
           ordered: _random.nextBool(),
           items: List.generate(
             _random.nextInt(3) + 1,
-            (_) => BookListItem(blocks: [BookParagraph(inlines: _generateInlines(count: 1))]),
+            (_) => BookListItem(
+              blocks: [BookParagraph(inlines: _generateInlines(count: 1))],
+            ),
           ),
         );
       case 4:
@@ -90,14 +105,18 @@ class AstGenerator {
             BookTableRow(
               cells: [
                 BookTableCell(
-                  blocks: [BookParagraph(inlines: [BookText(_generateString(3, 8))])],
+                  blocks: [
+                    BookParagraph(inlines: [BookText(_generateString(3, 8))]),
+                  ],
                   colSpan: 1,
                   rowSpan: 1,
                   align: 'center',
                   vAlign: 'top',
                 ),
                 BookTableCell(
-                  blocks: [BookParagraph(inlines: [BookText(_generateString(3, 8))])],
+                  blocks: [
+                    BookParagraph(inlines: [BookText(_generateString(3, 8))]),
+                  ],
                   align: 'right',
                   vAlign: 'bottom',
                 ),
@@ -108,10 +127,12 @@ class AstGenerator {
       case 5:
         return BookPoem(
           stanzas: [
-            BookStanza(lines: [
-              BookPoemLine(inlines: [BookText(_generateString(10, 25))]),
-              BookPoemLine(inlines: [BookText(_generateString(10, 25))]),
-            ]),
+            BookStanza(
+              lines: [
+                BookPoemLine(inlines: [BookText(_generateString(10, 25))]),
+                BookPoemLine(inlines: [BookText(_generateString(10, 25))]),
+              ],
+            ),
           ],
         );
       case 6:
@@ -132,7 +153,8 @@ class AstGenerator {
         return const BookEmptyLine();
       case 10:
         return const BookMathBlock(
-          mathml: '<math xmlns="http://www.w3.org/1998/Math/MathML"><msup><mi>x</mi><mn>2</mn></msup></math>',
+          mathml:
+              '<math xmlns="http://www.w3.org/1998/Math/MathML"><msup><mi>x</mi><mn>2</mn></msup></math>',
         );
       case 11:
       default:
@@ -158,13 +180,13 @@ class AstGenerator {
         3 => BookStrike(children: [BookText(_generateString(3, 10))]),
         4 => BookCodeSpan(_generateString(4, 12)),
         5 => BookNamedStyle(
-            name: 'style-${_random.nextInt(5)}',
-            inlines: [BookText(_generateString(4, 15))],
-          ),
+          name: 'style-${_random.nextInt(5)}',
+          inlines: [BookText(_generateString(4, 15))],
+        ),
         6 => BookLink(
-            href: Uri.parse('https://example.com/${_generateString(3, 8)}'),
-            children: [BookText(_generateString(4, 10))],
-          ),
+          href: Uri.parse('https://example.com/${_generateString(3, 8)}'),
+          children: [BookText(_generateString(4, 10))],
+        ),
         _ => const BookFootnoteRef(id: 'fn_1', label: [BookText('1')]),
       };
     });
@@ -188,13 +210,19 @@ class AstGenerator {
 
   /// Генерирует случайную строку на кириллице и латинице.
   String _generateString(int minLen, int maxLen) {
-    const chars = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789';
+    const chars =
+        'абвгдеёжзийклмнопрстуфхцчшщъыьэюя ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789';
     final len = minLen + _random.nextInt(maxLen - minLen + 1);
-    return List.generate(len, (_) => chars[_random.nextInt(chars.length)]).join();
+    return List.generate(
+      len,
+      (_) => chars[_random.nextInt(chars.length)],
+    ).join();
   }
 
   /// Генерирует массив случайных/мутированных байт для фаззинга.
   Uint8List generateCorruptedBytes(int length) {
-    return Uint8List.fromList(List.generate(length, (_) => _random.nextInt(256)));
+    return Uint8List.fromList(
+      List.generate(length, (_) => _random.nextInt(256)),
+    );
   }
 }

@@ -6,7 +6,10 @@ class EpubNcxDocument {
 
   const EpubNcxDocument({this.navMap = const []});
 
-  static EpubNcxDocument parseFromString(String xmlContent, {int maxDepth = 32}) {
+  static EpubNcxDocument parseFromString(
+    String xmlContent, {
+    int maxDepth = 32,
+  }) {
     final document = XmlDocument.parse(xmlContent);
     final navMapElement = document.findAllElements('navMap').firstOrNull;
     if (navMapElement == null) return const EpubNcxDocument();
@@ -22,9 +25,16 @@ class EpubNcxDocument {
     return EpubNcxDocument(navMap: entries);
   }
 
-  static EpubNavEntry _parseNavPoint(XmlElement navPoint, Set<XmlElement> visited, int depth, int maxDepth) {
-    final label = navPoint.findElements('navLabel').firstOrNull?.innerText.trim() ?? '';
-    final src = navPoint.findElements('content').firstOrNull?.getAttribute('src') ?? '';
+  static EpubNavEntry _parseNavPoint(
+    XmlElement navPoint,
+    Set<XmlElement> visited,
+    int depth,
+    int maxDepth,
+  ) {
+    final label =
+        navPoint.findElements('navLabel').firstOrNull?.innerText.trim() ?? '';
+    final src =
+        navPoint.findElements('content').firstOrNull?.getAttribute('src') ?? '';
 
     if (depth >= maxDepth || visited.contains(navPoint)) {
       return EpubNavEntry(title: label, href: src, children: const []);

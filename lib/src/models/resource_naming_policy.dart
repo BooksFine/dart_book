@@ -1,9 +1,6 @@
 /// Сигнатура функции для полностью кастомного генератора имен ресурсов.
-typedef ResourceNameGenerator = String Function(
-  String src, {
-  required bool isInline,
-  required int index,
-});
+typedef ResourceNameGenerator =
+    String Function(String src, {required bool isInline, required int index});
 
 /// Набор готовых и кастомных политик именования медиа-ресурсов (картинок, шрифтов, аудио).
 abstract class BookResourceNamingPolicy {
@@ -26,11 +23,7 @@ abstract class BookResourceNamingPolicy {
   const BookResourceNamingPolicy();
 
   /// Генерирует имя или идентификатор ресурса.
-  String generateName(
-    String src, {
-    required bool isInline,
-    required int index,
-  });
+  String generateName(String src, {required bool isInline, required int index});
 }
 
 class _PreserveNamingPolicy extends BookResourceNamingPolicy {

@@ -10,7 +10,9 @@ class EpubEncryptedResourceException extends EpubException {
   final List<String> encryptedPaths;
 
   EpubEncryptedResourceException(this.encryptedPaths)
-      : super('EPUB содержит зашифрованные (DRM) ресурсы: ${encryptedPaths.join(', ')}');
+    : super(
+        'EPUB содержит зашифрованные (DRM) ресурсы: ${encryptedPaths.join(', ')}',
+      );
 }
 
 /// Исключение, выбрасываемое при нарушении структуры OCF или OPF пакета.

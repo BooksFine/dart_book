@@ -10,7 +10,7 @@ class Fb2ZipDecoder implements BookDecoder {
   final Fb2Decoder _xmlDecoder;
 
   Fb2ZipDecoder({Fb2Decoder? xmlDecoder})
-      : _xmlDecoder = xmlDecoder ?? Fb2Decoder();
+    : _xmlDecoder = xmlDecoder ?? Fb2Decoder();
 
   @override
   bool canDecode(Uint8List bytes, {String? extension}) {

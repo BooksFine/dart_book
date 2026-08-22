@@ -33,7 +33,9 @@ class OcfContainer {
   /// Возвращает путь к основному OPF файлу.
   String get primaryOpfPath {
     if (rootfiles.isEmpty) {
-      throw const EpubInvalidPackageException('No rootfile found in META-INF/container.xml');
+      throw const EpubInvalidPackageException(
+        'No rootfile found in META-INF/container.xml',
+      );
     }
     return rootfiles.first.fullPath;
   }
@@ -42,7 +44,9 @@ class OcfContainer {
   static OcfContainer fromArchive(Archive archive) {
     final containerFile = archive.findFile('META-INF/container.xml');
     if (containerFile == null) {
-      throw const EpubInvalidPackageException('Invalid EPUB: META-INF/container.xml not found');
+      throw const EpubInvalidPackageException(
+        'Invalid EPUB: META-INF/container.xml not found',
+      );
     }
 
     final xmlStr = utf8.decode(containerFile.content);
@@ -51,14 +55,17 @@ class OcfContainer {
     final rootfiles = <OcfRootfile>[];
     for (final element in document.findAllElements('rootfile')) {
       final fullPath = element.getAttribute('full-path');
-      final mediaType = element.getAttribute('media-type') ?? 'application/oebps-package+xml';
+      final mediaType =
+          element.getAttribute('media-type') ?? 'application/oebps-package+xml';
       if (fullPath != null && fullPath.isNotEmpty) {
         rootfiles.add(OcfRootfile(fullPath: fullPath, mediaType: mediaType));
       }
     }
 
     if (rootfiles.isEmpty) {
-      throw const EpubInvalidPackageException('Invalid EPUB: META-INF/container.xml contains no valid rootfile');
+      throw const EpubInvalidPackageException(
+        'Invalid EPUB: META-INF/container.xml contains no valid rootfile',
+      );
     }
 
     return OcfContainer(rootfiles: rootfiles);
@@ -78,7 +85,10 @@ class OcfContainer {
       for (final encData in document.findAllElements('EncryptedData')) {
         final methodElem = encData.findElements('EncryptionMethod').firstOrNull;
         final algorithm = methodElem?.getAttribute('Algorithm') ?? '';
-        final uri = encData.findAllElements('CipherReference').firstOrNull?.getAttribute('URI');
+        final uri = encData
+            .findAllElements('CipherReference')
+            .firstOrNull
+            ?.getAttribute('URI');
         if (uri == null || uri.isEmpty) continue;
 
         if (algorithm == 'http://www.idpf.org/2008/embedding' ||
@@ -104,7 +114,11 @@ class OcfContainer {
   }
 
   /// Деобфусцирует шрифт по алгоритмам IDPF или Adobe.
-  static Uint8List deobfuscateFont(Uint8List bytes, String algorithm, String publicationUid) {
+  static Uint8List deobfuscateFont(
+    Uint8List bytes,
+    String algorithm,
+    String publicationUid,
+  ) {
     if (bytes.isEmpty) return bytes;
     final cleanUid = publicationUid.replaceAll(RegExp(r'[\s\t\r\n]'), '');
     final result = Uint8List.fromList(bytes);
@@ -118,7 +132,10 @@ class OcfContainer {
       }
     } else if (algorithm == 'http://ns.adobe.com/pdf/enc#RC') {
       // Adobe algorithm: UUID hex digits to 16 bytes, XOR first 1024 bytes (64 * 16 bytes)
-      final hex = cleanUid.replaceAll('urn:uuid:', '').replaceAll('-', '').replaceAll(':', '');
+      final hex = cleanUid
+          .replaceAll('urn:uuid:', '')
+          .replaceAll('-', '')
+          .replaceAll(':', '');
       final key = <int>[];
       for (var i = 0; i < hex.length - 1 && key.length < 16; i += 2) {
         final byte = int.tryParse(hex.substring(i, i + 2), radix: 16);

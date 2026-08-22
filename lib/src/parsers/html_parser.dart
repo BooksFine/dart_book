@@ -18,11 +18,7 @@ import '../models/exceptions.dart';
 /// final blocks = parser.parseFragment('<h1>Заголовок</h1><p>Текст</p>');
 /// ```
 class HtmlParser implements Parser<Iterable<dom.Node>> {
-  HtmlParser({
-    this.registrar,
-    this.strictMode = false,
-    this.logger,
-  });
+  HtmlParser({this.registrar, this.strictMode = false, this.logger});
 
   @override
   final BookResourceRegistrar? registrar;
@@ -78,13 +74,24 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'svg' => [BookSvgBlock(svg: node.outerHtml)],
       'table' => [_parseTable(node)],
       'br' => const [BookEmptyLine()],
-      'div' || 'main' || 'body' || 'header' || 'footer' || 'nav' || 'aside' || 'details' || 'summary' || 'address' =>
+      'div' ||
+      'main' ||
+      'body' ||
+      'header' ||
+      'footer' ||
+      'nav' ||
+      'aside' ||
+      'details' ||
+      'summary' ||
+      'address' =>
         node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
       _ => () {
         if (strictMode) {
           throw BookParseException('Unhandled HTML element <$tag>', tag: tag);
         }
-        logger?.call('Warning: unhandled HTML element <$tag>, fallback to BookRawHtmlBlock');
+        logger?.call(
+          'Warning: unhandled HTML element <$tag>, fallback to BookRawHtmlBlock',
+        );
         return <BookBlock>[BookRawHtmlBlock(node.outerHtml)];
       }(),
     };
@@ -92,7 +99,8 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
   BookCodeBlock _parseCodeBlock(dom.Element node) {
     final codeElem = node.querySelector('code') ?? node;
-    final lang = codeElem.attributes['data-language'] ??
+    final lang =
+        codeElem.attributes['data-language'] ??
         codeElem.attributes['lang'] ??
         codeElem.attributes['class'] ??
         node.attributes['data-language'] ??
@@ -104,10 +112,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       languageClean = languageClean.split('language-').last.split(' ').first;
     }
 
-    return BookCodeBlock(
-      code: node.text,
-      language: languageClean,
-    );
+    return BookCodeBlock(code: node.text, language: languageClean);
   }
 
   BookBlock _parseFigure(dom.Element element) {
@@ -129,14 +134,16 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     return BookParagraph(inlines: _parseInlines(element.nodes));
   }
 
-
-
   BookQuote _parseQuote(dom.Element element) {
     final citationElem = element.querySelector('.citation, cite, footer');
-    final citation = citationElem != null ? _parseInlines(citationElem.nodes) : const <BookInline>[];
+    final citation = citationElem != null
+        ? _parseInlines(citationElem.nodes)
+        : const <BookInline>[];
 
     final blockNodes = element.nodes.where(
-      (n) => !identical(n, citationElem) && (citationElem == null || !citationElem.contains(n)),
+      (n) =>
+          !identical(n, citationElem) &&
+          (citationElem == null || !citationElem.contains(n)),
     );
 
     return BookQuote(blocks: parse(blockNodes), citation: citation);
@@ -161,7 +168,8 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   }
 
   BookAudioBlock _parseAudioBlock(dom.Element element) {
-    final src = element.attributes['src'] ??
+    final src =
+        element.attributes['src'] ??
         element.querySelector('source')?.attributes['src'] ??
         '';
     final id = registrar?.call(src, isInline: false) ?? src;
@@ -172,12 +180,15 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   }
 
   BookVideoBlock _parseVideoBlock(dom.Element element) {
-    final src = element.attributes['src'] ??
+    final src =
+        element.attributes['src'] ??
         element.querySelector('source')?.attributes['src'] ??
         '';
     final poster = element.attributes['poster'];
     final id = registrar?.call(src, isInline: false) ?? src;
-    final posterId = poster != null ? registrar?.call(poster, isInline: false) ?? poster : null;
+    final posterId = poster != null
+        ? registrar?.call(poster, isInline: false) ?? poster
+        : null;
     return BookVideoBlock(
       ref: BookResourceRef(id),
       posterRef: posterId != null ? BookResourceRef(posterId) : null,
@@ -194,7 +205,9 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
     final contentNodes = <dom.Node>[];
     for (final child in element.nodes) {
-      if (identical(child, titleNode) || (titleNode != null && titleNode.contains(child))) continue;
+      if (identical(child, titleNode) ||
+          (titleNode != null && titleNode.contains(child)))
+        continue;
       contentNodes.add(child);
     }
 
@@ -263,11 +276,15 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
         var vAlign = cell.attributes['valign'];
         final style = cell.attributes['style'] ?? '';
         if (align == null && style.contains('text-align:')) {
-          final match = RegExp(r'text-align\s*:\s*([a-zA-Z]+)').firstMatch(style);
+          final match = RegExp(
+            r'text-align\s*:\s*([a-zA-Z]+)',
+          ).firstMatch(style);
           align = match?.group(1);
         }
         if (vAlign == null && style.contains('vertical-align:')) {
-          final match = RegExp(r'vertical-align\s*:\s*([a-zA-Z]+)').firstMatch(style);
+          final match = RegExp(
+            r'vertical-align\s*:\s*([a-zA-Z]+)',
+          ).firstMatch(style);
           vAlign = match?.group(1);
         }
 
@@ -339,8 +356,14 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     final parsedInlines = switch (tag) {
       'br' => const [BookLineBreak()],
       'strong' || 'b' => [BookStrong(children: _parseInlines(node.nodes))],
-      'em' || 'i' || 'u' || 'cite' || 'var' => [BookEmphasis(children: _parseInlines(node.nodes))],
-      's' || 'del' || 'strike' => [BookStrike(children: _parseInlines(node.nodes))],
+      'em' ||
+      'i' ||
+      'u' ||
+      'cite' ||
+      'var' => [BookEmphasis(children: _parseInlines(node.nodes))],
+      's' ||
+      'del' ||
+      'strike' => [BookStrike(children: _parseInlines(node.nodes))],
       'code' || 'kbd' || 'samp' => [BookCodeSpan(node.text)],
       'sup' => [BookSuperscript(children: _parseInlines(node.nodes))],
       'sub' => [BookSubscript(children: _parseInlines(node.nodes))],
@@ -359,16 +382,23 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     final className = node.attributes['class'];
     if (className != null && className.startsWith('style-')) {
       final styleName = className.substring('style-'.length);
-      return [BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes))];
+      return [
+        BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes)),
+      ];
     }
     return _parseInlines(node.nodes);
   }
 
   List<BookInline> _handleUnhandledInline(dom.Element node, String? tag) {
     if (strictMode) {
-      throw BookParseException('Unhandled HTML inline element <$tag>', tag: tag);
+      throw BookParseException(
+        'Unhandled HTML inline element <$tag>',
+        tag: tag,
+      );
     }
-    logger?.call('Warning: unhandled HTML inline element <$tag>, fallback to BookRawHtmlInline');
+    logger?.call(
+      'Warning: unhandled HTML inline element <$tag>, fallback to BookRawHtmlInline',
+    );
     return [BookRawHtmlInline(node.outerHtml)];
   }
 
@@ -393,11 +423,17 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     final href = (node.attributes['href'] ?? '').trim();
     final children = _parseInlines(node.nodes);
     final id = node.attributes['id'] ?? node.attributes['name'];
-    final epubType = node.attributes['epub:type'] ?? node.attributes['role'] ?? '';
+    final epubType =
+        node.attributes['epub:type'] ?? node.attributes['role'] ?? '';
 
     if (epubType.contains('noteref') || epubType.contains('doc-noteref')) {
       final noteId = href.startsWith('#') ? href.substring(1) : href;
-      return [BookFootnoteRef(id: noteId.isNotEmpty ? noteId : (id ?? ''), label: children)];
+      return [
+        BookFootnoteRef(
+          id: noteId.isNotEmpty ? noteId : (id ?? ''),
+          label: children,
+        ),
+      ];
     }
 
     if (href.isEmpty) {

@@ -1,0 +1,4 @@
+# Standalone benchmark runner options
+analyzer:
+  exclude:
+    - '**'

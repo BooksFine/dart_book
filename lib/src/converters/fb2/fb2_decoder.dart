@@ -35,13 +35,23 @@ class Fb2Decoder implements BookDecoder {
     if (options?.strictMode == true) {
       content = rawContent;
       if (RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]').hasMatch(content)) {
-        throw const BookParseException('Illegal XML 1.0 control character found in strict mode');
+        throw const BookParseException(
+          'Illegal XML 1.0 control character found in strict mode',
+        );
       }
-      if (RegExp(r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)').hasMatch(content)) {
-        throw const BookParseException('Unescaped ampersand found in XML in strict mode');
+      if (RegExp(
+        r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)',
+      ).hasMatch(content)) {
+        throw const BookParseException(
+          'Unescaped ampersand found in XML in strict mode',
+        );
       }
-      if (RegExp(r'&(nbsp|mdash|ndash|laquo|raquo|hellip|copy|reg|trade|bull|euro);').hasMatch(content)) {
-        throw const BookParseException('Undeclared HTML entity found in strict XML');
+      if (RegExp(
+        r'&(nbsp|mdash|ndash|laquo|raquo|hellip|copy|reg|trade|bull|euro);',
+      ).hasMatch(content)) {
+        throw const BookParseException(
+          'Undeclared HTML entity found in strict XML',
+        );
       }
       try {
         document = XmlDocument.parse(content);
@@ -63,17 +73,23 @@ class Fb2Decoder implements BookDecoder {
     // 1. Извлекаем метаданные
     final description = root.findElements('description').firstOrNull;
     if (description == null && options?.strictMode == true) {
-      throw BookMalformedMetadataException('Missing required element <description> in FB2 metadata');
+      throw BookMalformedMetadataException(
+        'Missing required element <description> in FB2 metadata',
+      );
     }
 
     final titleInfo = description?.findElements('title-info').firstOrNull;
     final titleElement = titleInfo?.findElements('book-title').firstOrNull;
 
     if (titleElement == null && options?.strictMode == true) {
-      throw BookMalformedMetadataException('Missing required element <book-title> in FB2 metadata');
+      throw BookMalformedMetadataException(
+        'Missing required element <book-title> in FB2 metadata',
+      );
     }
     if (titleElement == null) {
-      options?.logger?.call('Warning: missing <book-title> in FB2 metadata, fallback to "Untitled"');
+      options?.logger?.call(
+        'Warning: missing <book-title> in FB2 metadata, fallback to "Untitled"',
+      );
     }
     final title = titleElement?.innerText ?? 'Untitled';
     final docInfo = description?.findElements('document-info').firstOrNull;
@@ -89,9 +105,13 @@ class Fb2Decoder implements BookDecoder {
       },
     );
 
-    final genres = titleInfo
+    final genres =
+        titleInfo
             ?.findElements('genre')
-            .map((e) => BookGenre(code: e.innerText.trim(), name: e.innerText.trim()))
+            .map(
+              (e) =>
+                  BookGenre(code: e.innerText.trim(), name: e.innerText.trim()),
+            )
             .toList() ??
         const [];
 
@@ -100,15 +120,20 @@ class Fb2Decoder implements BookDecoder {
         ? BookContent(blocks: parser.parse(annotationElem.children))
         : null;
 
-    final coverHref = titleInfo
+    final coverHref =
+        titleInfo
             ?.findElements('coverpage')
             .firstOrNull
             ?.findElements('image')
             .firstOrNull
             ?.getAttribute('l:href') ??
         '';
-    final coverId = coverHref.startsWith('#') ? coverHref.substring(1) : coverHref;
-    final cover = coverId.isNotEmpty ? BookCover(ref: BookResourceRef(coverId)) : null;
+    final coverId = coverHref.startsWith('#')
+        ? coverHref.substring(1)
+        : coverHref;
+    final cover = coverId.isNotEmpty
+        ? BookCover(ref: BookResourceRef(coverId))
+        : null;
 
     final customInfoSeqUrl = description
         ?.findElements('custom-info')
@@ -121,7 +146,8 @@ class Fb2Decoder implements BookDecoder {
         : null;
 
     final seriesList = <BookSeries>[];
-    for (final seqElem in titleInfo?.findElements('sequence') ?? const <XmlElement>[]) {
+    for (final seqElem
+        in titleInfo?.findElements('sequence') ?? const <XmlElement>[]) {
       final name = seqElem.getAttribute('name');
       if (name != null && name.isNotEmpty) {
         seriesList.add(
@@ -137,19 +163,46 @@ class Fb2Decoder implements BookDecoder {
       seriesList.add(BookSeries(name: '', url: seriesUrl));
     }
 
-    final keywordsText = titleInfo?.findElements('keywords').firstOrNull?.innerText;
+    final keywordsText = titleInfo
+        ?.findElements('keywords')
+        .firstOrNull
+        ?.innerText;
     final keywords = keywordsText != null
-        ? keywordsText.split(RegExp(r'[,;]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        ? keywordsText
+              .split(RegExp(r'[,;]'))
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList()
         : const <String>[];
 
     final contributors = <BookContributor>[];
     if (titleInfo != null) {
       for (final e in titleInfo.findElements('author')) {
-        final firstName = e.findElements('first-name').firstOrNull?.innerText.trim();
-        final middleName = e.findElements('middle-name').firstOrNull?.innerText.trim();
-        final lastName = e.findElements('last-name').firstOrNull?.innerText.trim();
-        final nickname = e.findElements('nickname').firstOrNull?.innerText.trim();
-        final homePageStr = e.findElements('home-page').firstOrNull?.innerText.trim();
+        final firstName = e
+            .findElements('first-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final middleName = e
+            .findElements('middle-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final lastName = e
+            .findElements('last-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final nickname = e
+            .findElements('nickname')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final homePageStr = e
+            .findElements('home-page')
+            .firstOrNull
+            ?.innerText
+            .trim();
         final emailStr = e.findElements('email').firstOrNull?.innerText.trim();
 
         final nameParts = [
@@ -171,17 +224,39 @@ class Fb2Decoder implements BookDecoder {
               nickname: nickname?.isNotEmpty == true ? nickname : null,
               display: display,
             ),
-            homePage: homePageStr != null && homePageStr.isNotEmpty ? Uri.tryParse(homePageStr) : null,
+            homePage: homePageStr != null && homePageStr.isNotEmpty
+                ? Uri.tryParse(homePageStr)
+                : null,
             email: emailStr != null && emailStr.isNotEmpty ? emailStr : null,
           ),
         );
       }
       for (final e in titleInfo.findElements('translator')) {
-        final firstName = e.findElements('first-name').firstOrNull?.innerText.trim();
-        final middleName = e.findElements('middle-name').firstOrNull?.innerText.trim();
-        final lastName = e.findElements('last-name').firstOrNull?.innerText.trim();
-        final nickname = e.findElements('nickname').firstOrNull?.innerText.trim();
-        final homePageStr = e.findElements('home-page').firstOrNull?.innerText.trim();
+        final firstName = e
+            .findElements('first-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final middleName = e
+            .findElements('middle-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final lastName = e
+            .findElements('last-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final nickname = e
+            .findElements('nickname')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final homePageStr = e
+            .findElements('home-page')
+            .firstOrNull
+            ?.innerText
+            .trim();
         final emailStr = e.findElements('email').firstOrNull?.innerText.trim();
 
         final nameParts = [
@@ -203,7 +278,9 @@ class Fb2Decoder implements BookDecoder {
               nickname: nickname?.isNotEmpty == true ? nickname : null,
               display: display,
             ),
-            homePage: homePageStr != null && homePageStr.isNotEmpty ? Uri.tryParse(homePageStr) : null,
+            homePage: homePageStr != null && homePageStr.isNotEmpty
+                ? Uri.tryParse(homePageStr)
+                : null,
             email: emailStr != null && emailStr.isNotEmpty ? emailStr : null,
           ),
         );
@@ -213,10 +290,26 @@ class Fb2Decoder implements BookDecoder {
     final pubInfoElem = description?.findElements('publish-info').firstOrNull;
     BookPublishInfo? publishInfo;
     if (pubInfoElem != null) {
-      final publisher = pubInfoElem.findElements('publisher').firstOrNull?.innerText.trim();
-      final city = pubInfoElem.findElements('city').firstOrNull?.innerText.trim();
-      final yearStr = pubInfoElem.findElements('year').firstOrNull?.innerText.trim();
-      final isbn = pubInfoElem.findElements('isbn').firstOrNull?.innerText.trim();
+      final publisher = pubInfoElem
+          .findElements('publisher')
+          .firstOrNull
+          ?.innerText
+          .trim();
+      final city = pubInfoElem
+          .findElements('city')
+          .firstOrNull
+          ?.innerText
+          .trim();
+      final yearStr = pubInfoElem
+          .findElements('year')
+          .firstOrNull
+          ?.innerText
+          .trim();
+      final isbn = pubInfoElem
+          .findElements('isbn')
+          .firstOrNull
+          ?.innerText
+          .trim();
       publishInfo = BookPublishInfo(
         publisher: publisher?.isNotEmpty == true ? publisher : null,
         city: city?.isNotEmpty == true ? city : null,
@@ -225,18 +318,48 @@ class Fb2Decoder implements BookDecoder {
       );
     }
 
-    final srcLang = titleInfo?.findElements('src-lang').firstOrNull?.innerText.trim();
-    final srcTitleInfoElem = description?.findElements('src-title-info').firstOrNull;
+    final srcLang = titleInfo
+        ?.findElements('src-lang')
+        .firstOrNull
+        ?.innerText
+        .trim();
+    final srcTitleInfoElem = description
+        ?.findElements('src-title-info')
+        .firstOrNull;
     BookSourceTitleInfo? srcTitleInfo;
     if (srcTitleInfoElem != null) {
-      final srcTitle = srcTitleInfoElem.findElements('book-title').firstOrNull?.innerText.trim();
-      final srcLanguage = srcTitleInfoElem.findElements('lang').firstOrNull?.innerText.trim();
+      final srcTitle = srcTitleInfoElem
+          .findElements('book-title')
+          .firstOrNull
+          ?.innerText
+          .trim();
+      final srcLanguage = srcTitleInfoElem
+          .findElements('lang')
+          .firstOrNull
+          ?.innerText
+          .trim();
       final srcAuthors = <BookContributor>[];
       for (final e in srcTitleInfoElem.findElements('author')) {
-        final firstName = e.findElements('first-name').firstOrNull?.innerText.trim();
-        final middleName = e.findElements('middle-name').firstOrNull?.innerText.trim();
-        final lastName = e.findElements('last-name').firstOrNull?.innerText.trim();
-        final nickname = e.findElements('nickname').firstOrNull?.innerText.trim();
+        final firstName = e
+            .findElements('first-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final middleName = e
+            .findElements('middle-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final lastName = e
+            .findElements('last-name')
+            .firstOrNull
+            ?.innerText
+            .trim();
+        final nickname = e
+            .findElements('nickname')
+            .firstOrNull
+            ?.innerText
+            .trim();
         final nameParts = [
           if (firstName != null && firstName.isNotEmpty) firstName,
           if (middleName != null && middleName.isNotEmpty) middleName,
@@ -265,7 +388,8 @@ class Fb2Decoder implements BookDecoder {
       );
     }
 
-    final dateElem = titleInfo?.findElements('date').firstOrNull ??
+    final dateElem =
+        titleInfo?.findElements('date').firstOrNull ??
         docInfo?.findElements('date').firstOrNull;
     final dateValue = dateElem?.getAttribute('value');
     final dateText = dateElem?.innerText.trim();
@@ -325,13 +449,16 @@ class Fb2Decoder implements BookDecoder {
           );
           footnotes.add(BookFootnote(id: sectionId, blocks: sectionBlocks));
         }
-        if (footnotes.length == initialFootnoteCount && body.children.isNotEmpty) {
+        if (footnotes.length == initialFootnoteCount &&
+            body.children.isNotEmpty) {
           final bodyBlocks = parser.parse(
             body.children.where(
               (e) => e is! XmlElement || e.localName != 'title',
             ),
           );
-          footnotes.add(BookFootnote(id: bodyName ?? 'notes', blocks: bodyBlocks));
+          footnotes.add(
+            BookFootnote(id: bodyName ?? 'notes', blocks: bodyBlocks),
+          );
         }
       } else {
         final bodyBlocks = parser.parse(
@@ -420,19 +547,69 @@ String _decodeXmlBytes(Uint8List rawBytes) {
 }
 
 const _win1251Lookup = <int, int>{
-  0x80: 0x0402, 0x81: 0x0403, 0x82: 0x201A, 0x83: 0x0453, 0x84: 0x201E,
-  0x85: 0x2026, 0x86: 0x2020, 0x87: 0x2021, 0x88: 0x20AC, 0x89: 0x2030,
-  0x8A: 0x0409, 0x8B: 0x2039, 0x8C: 0x040A, 0x8D: 0x040C, 0x8E: 0x040B,
-  0x8F: 0x040F, 0x90: 0x0452, 0x91: 0x2018, 0x92: 0x2019, 0x93: 0x201C,
-  0x94: 0x201D, 0x95: 0x2022, 0x96: 0x2013, 0x97: 0x2014, 0x99: 0x2122,
-  0x9A: 0x0459, 0x9B: 0x203A, 0x9C: 0x045A, 0x9D: 0x045C, 0x9E: 0x045B,
-  0x9F: 0x045F, 0xA0: 0x00A0, 0xA1: 0x040E, 0xA2: 0x045E, 0xA3: 0x0408,
-  0xA4: 0x00A4, 0xA5: 0x0490, 0xA6: 0x00A6, 0xA7: 0x00A7, 0xA8: 0x0401,
-  0xA9: 0x00A9, 0xAA: 0x0404, 0xAB: 0x00AB, 0xAC: 0x00AC, 0xAD: 0x00AD,
-  0xAE: 0x00AE, 0xAF: 0x0407, 0xB0: 0x00B0, 0xB1: 0x00B1, 0xB2: 0x0406,
-  0xB3: 0x0456, 0xB4: 0x0491, 0xB5: 0x00B5, 0xB6: 0x00B6, 0xB7: 0x00B7,
-  0xB8: 0x0451, 0xB9: 0x2116, 0xBA: 0x0454, 0xBB: 0x00BB, 0xBC: 0x0458,
-  0xBD: 0x0405, 0xBE: 0x0455, 0xBF: 0x0457,
+  0x80: 0x0402,
+  0x81: 0x0403,
+  0x82: 0x201A,
+  0x83: 0x0453,
+  0x84: 0x201E,
+  0x85: 0x2026,
+  0x86: 0x2020,
+  0x87: 0x2021,
+  0x88: 0x20AC,
+  0x89: 0x2030,
+  0x8A: 0x0409,
+  0x8B: 0x2039,
+  0x8C: 0x040A,
+  0x8D: 0x040C,
+  0x8E: 0x040B,
+  0x8F: 0x040F,
+  0x90: 0x0452,
+  0x91: 0x2018,
+  0x92: 0x2019,
+  0x93: 0x201C,
+  0x94: 0x201D,
+  0x95: 0x2022,
+  0x96: 0x2013,
+  0x97: 0x2014,
+  0x99: 0x2122,
+  0x9A: 0x0459,
+  0x9B: 0x203A,
+  0x9C: 0x045A,
+  0x9D: 0x045C,
+  0x9E: 0x045B,
+  0x9F: 0x045F,
+  0xA0: 0x00A0,
+  0xA1: 0x040E,
+  0xA2: 0x045E,
+  0xA3: 0x0408,
+  0xA4: 0x00A4,
+  0xA5: 0x0490,
+  0xA6: 0x00A6,
+  0xA7: 0x00A7,
+  0xA8: 0x0401,
+  0xA9: 0x00A9,
+  0xAA: 0x0404,
+  0xAB: 0x00AB,
+  0xAC: 0x00AC,
+  0xAD: 0x00AD,
+  0xAE: 0x00AE,
+  0xAF: 0x0407,
+  0xB0: 0x00B0,
+  0xB1: 0x00B1,
+  0xB2: 0x0406,
+  0xB3: 0x0456,
+  0xB4: 0x0491,
+  0xB5: 0x00B5,
+  0xB6: 0x00B6,
+  0xB7: 0x00B7,
+  0xB8: 0x0451,
+  0xB9: 0x2116,
+  0xBA: 0x0454,
+  0xBB: 0x00BB,
+  0xBC: 0x0458,
+  0xBD: 0x0405,
+  0xBE: 0x0455,
+  0xBF: 0x0457,
 };
 
 String _decodeWindows1251(Uint8List bytes) {
