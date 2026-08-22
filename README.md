@@ -137,7 +137,7 @@ void processBlocks(Book book) {
       case BookTable(:final rows):
         print('Таблица: ${rows.length} строк');
 
-      case BookQuote(:final blocks, :final citation):
+      case BookQuote(:final citation):
         final cite = citation.whereType<BookText>().map((c) => c.text).join();
         print('Цитата: $cite');
 
@@ -145,7 +145,7 @@ void processBlocks(Book book) {
         final titleText = title.whereType<BookText>().map((t) => t.text).join();
         print('Раздел: $titleText');
 
-      case _:
+      default:
     }
   }
 }
