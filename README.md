@@ -316,21 +316,6 @@ const encodingOptions = BookEncodingOptions(
   - `BookLineBreak`.
 - **`BookResource`**: Binary payload (images, fonts, audio, CSS) with MIME types and IDs.
 
----
-
-## Performance
-
-Benchmarks on synthetic and real-world workloads (Dart 3, pure Dart without FFI):
-
-| Component / Scenario | Workload | Execution Time |
-| :--- | :--- | :---: |
-| `HtmlParser` | 10,000 paragraphs with inline styling | ~370 ms |
-| `Fb2Decoder` | 5,000 sections with footnotes | ~340 ms |
-| **Heavy Benchmark: 1,000 Chapters (~1.8 MB)** |
-| 🔹 `Fb2Encoder` | Build FB2 XML | ~45 ms |
-| 🔹 `Fb2Decoder` | Full FB2 to AST parsing | ~185 ms |
-| 🔹 `EpubEncoder` | Pack EPUB (1,000 XHTML + manifest) | ~205 ms |
-| 🔹 `EpubDecoder` | Unpack and parse EPUB | ~240 ms |
 
 ---
 
