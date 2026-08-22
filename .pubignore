@@ -1,0 +1,8 @@
+# Exclude large development artifacts, benchmarks, tests and spec submodules from pub.dev package bundle
+.github/
+.vscode/
+specs/
+coverage/
+tool/
+test/fixtures/
+.gitmodules
