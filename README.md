@@ -24,6 +24,7 @@
 - **Единое AST:** книга представляется строго типизированным деревом Dart 3 `sealed class` с поддержкой исчерпывающего pattern matching.
 - **Фоновые изоляты:** возможность разбора и кодирования в `Isolate.run` без блокировки главного UI-потока.
 - **Устойчивость к ошибкам:** автоопределение кодировок (UTF-8, Windows-1251), санитизация некорректного XML 1.0, автоматическая деобфускация шрифтов (IDPF, Adobe) и безопасная работа с архивами в памяти.
+- **Расширяемость:** регистрация собственных декодеров и энкодеров через `BookRegistry`.
 
 ---
 
@@ -39,10 +40,10 @@ void main() async {
   final bytes = await File('book.epub').readAsBytes();
   final book = await DartBook.load(bytes);
 
-  print(book.metadata.title);
-  print(book.metadata.language);
-  print(book.metadata.contributors.map((c) => c.name.display).join(', '));
-  print('Количество блоков: ${book.content.blocks.length}');
+  print('Название: ${book.metadata.title}');
+  print('Язык: ${book.metadata.language}');
+  print('Авторы: ${book.metadata.contributors.map((c) => c.name.display).join(', ')}');
+  print('Глав: ${book.content.blocks.length}');
 }
 ```
 
@@ -56,17 +57,67 @@ void main() async {
   final fb2Bytes = await File('input.fb2').readAsBytes();
   final book = await DartBook.load(fb2Bytes);
 
-  // Конвертация в EPUB
-  final epubBytes = EpubConverter.bookToEpub(book);
+  // Конвертация в EPUB 3 с Dual Navigation (NAV + NCX)
+  final epubBytes = await EpubConverter.bookToEpub(book);
   await File('output.epub').writeAsBytes(epubBytes);
 
   // Конвертация в FB2.zip
-  final fb2ZipBytes = Fb2Converter.bookToFb2Zip(book);
+  final fb2ZipBytes = await Fb2Converter.bookToFb2Zip(book);
   await File('output.fb2.zip').writeAsBytes(fb2ZipBytes);
 }
 ```
 
-### 3. Обход блоков контента
+### 3. Извлечение обложки и бинарных ресурсов
+
+```dart
+import 'package:dart_book/dart_book.dart';
+
+void extractAssets(Book book) {
+  // Получение обложки книги
+  if (book.metadata.cover != null) {
+    final coverRef = book.metadata.cover!.ref.id;
+    final coverResource = book.resourceById(coverRef);
+    if (coverResource != null) {
+      print('Обложка: ${coverResource.mediaType}, ${coverResource.bytes.length} байт');
+    }
+  }
+
+  // Список всех изображений
+  final images = book.resources.where((r) => r.mediaType.startsWith('image/'));
+  for (final img in images) {
+    print('Изображение: ${img.id} (${img.mediaType})');
+  }
+}
+```
+
+### 4. Пошаговая сборка книги через `BookBuilder`
+
+```dart
+import 'package:dart_book/dart_book.dart';
+
+Future<Book> createBook() async {
+  final builder = BookBuilder(
+    title: 'Хроники',
+    language: 'ru',
+    contributors: const [
+      BookContributor(
+        role: BookContributorRole.author,
+        name: PersonName(first: 'Иван', last: 'Иванов', display: 'Иван Иванов'),
+      ),
+    ],
+    genres: const [BookGenre(code: 'sf_fantasy', name: 'Фэнтези')],
+  );
+
+  // Добавление аннотации и глав из HTML
+  builder.setAnnotationHtml('<p>Краткое описание книги.</p>');
+  await builder.addChapterHtml('<h2>Глава 1</h2><p>Начало истории...</p>', title: 'Глава 1');
+  await builder.addChapterHtml('<h2>Глава 2</h2><p>Продолжение...</p>', title: 'Глава 2');
+
+  return await builder.build();
+}
+```
+
+### 5. Обход блоков контента (Pattern Matching)
 
 ```dart
 import 'package:dart_book/dart_book.dart';
@@ -75,7 +126,7 @@ void processBlocks(Book book) {
   for (final block in book.content.blocks) {
     switch (block) {
       case BookHeading(:final level, :final text):
-        print('H$level: $text');
+        print('H$level: ${text.map((t) => t.text).join()}');
 
       case BookParagraph(:final inlines):
         final text = inlines.whereType<BookText>().map((t) => t.text).join();
@@ -85,19 +136,19 @@ void processBlocks(Book book) {
         print('Таблица: ${rows.length} строк');
 
       case BookQuote(:final blocks, :final citation):
-        print('Цитата: $citation');
+        print('Цитата: ${citation.map((c) => c.text).join()}');
 
       case BookSection(:final title, :final blocks):
-        print('Раздел');
+        print('Раздел: ${title?.map((t) => t.text).join()}');
     }
   }
 }
 ```
 
-### 4. Разбор в фоновом изоляте
+### 6. Разбор в фоновом изоляте
 
 ```dart
-// Разбор книги без блокировки главного потока
+// Разбор книги в Isolate.run без блокировки главного потока UI
 final book = await DartBook.loadIsolated(
   bytes,
   filename: 'large_book.epub',
@@ -145,11 +196,43 @@ abstract class DartBook {
 - `Fb2Converter.bookToFb2(book, {isZip = false, options})` — сериализация в FB2 XML.
 - `Fb2Converter.bookToFb2Zip(book, {options})` — сериализация в `.fb2.zip`.
 
+### Реестр форматов `BookRegistry`
+
+Позволяет зарегистрировать собственный декодер или энкодер с приоритетом над стандартными:
+
+```dart
+// Регистрация кастомного декодера
+BookRegistry.registerDecoder(MyCustomFormatDecoder());
+
+// Регистрация кастомного энкодера
+BookRegistry.registerEncoder(MyCustomFormatEncoder());
+```
+
+### Загрузка внешних ресурсов `BookResourceResolver`
+
+Для книг со ссылками на внешние изображения поддерживается асинхронный резолвер:
+
+```dart
+final book = await DartBook.load(
+  bytes,
+  resourceResolver: (request, {onByteProgress}) async {
+    // request.source содержит исходный URL или путь
+    // onByteProgress(received, total) позволяет стримить прогресс
+    final response = await http.get(Uri.parse(request.source!));
+    return BookResource(
+      id: request.id,
+      mediaType: response.headers['content-type'] ?? 'image/jpeg',
+      bytes: response.bodyBytes,
+    );
+  },
+);
+```
+
 ### Опции
 
 ```dart
 const decodingOptions = BookDecodingOptions(
-  strictMode: false,             // true — выбрасывать исключения при неизвестных тегах
+  strictMode: false,             // true — выбрасывать исключения при неизвестных тегах/ошибках
   logger: (warn) => print(warn), // Обработчик предупреждений
 );
 
@@ -157,9 +240,9 @@ const encodingOptions = BookEncodingOptions(
   documentId: 'DOC-12345',
   programUsed: 'dart_book',
   entryFilename: 'book.fb2',
-  namingPolicy: BookResourceNamingPolicy.sequential,
-  pretty: false,
-  compressZip: true,
+  namingPolicy: BookResourceNamingPolicy.preserve, // preserve, sequential, hash, custom
+  pretty: true,
+  compressZip: true,                              // false отключает Deflate для быстрого экспорта
 );
 ```
 
@@ -170,7 +253,7 @@ const encodingOptions = BookEncodingOptions(
   - `BookParseException` — синтаксическая ошибка разметки (содержит поля `tag` и `line`).
   - `BookMalformedMetadataException` — отсутствие обязательных метаданных в strict-режиме.
   - `EpubException` — базовое исключение EPUB.
-    - `EpubEncryptedResourceException` — обнаружены DRM-ресурсы.
+    - `EpubEncryptedResourceException` — обнаружены зашифрованные DRM-ресурсы.
     - `EpubInvalidPackageException` — нарушение структуры OCF/OPF пакета.
 
 ---
@@ -178,10 +261,13 @@ const encodingOptions = BookEncodingOptions(
 ## Модель данных (AST)
 
 - **`Book`**: корневой объект (`metadata`, `content`, `resources`).
-- **`BookMetadata`**: название, язык, авторы (`BookContributor`), переводчики, жанры, серии, издательские данные (`BookPublishInfo`), язык/название оригинала (`srcLang`, `srcTitleInfo`), режим вёрстки (`layout`), аннотация, обложка.
+  - `resourceById(id)` — поиск ресурса по идентификатору.
+- **`BookMetadata`**: название, язык, авторы (`BookContributor`), переводчики, жанры, серии, издательские данные (`BookPublishInfo`), язык/название оригинала (`srcLang`, `srcTitleInfo`), режим вёрстки (`layout`), аннотация, обложка (`BookCover`).
+  - `primarySeries` — первая серия книги.
+  - `contributorsByRole(role)` — фильтрация участников по роли.
 - **`BookBlock`**:
   - `BookSection` — раздел / глава (`title`, `blocks`, `children`).
-  - `BookHeading` — заголовок (`level`, `text`, `inlines`).
+  - `BookHeading` — заголовок (`level`, `text`).
   - `BookParagraph` — абзац (`inlines`).
   - `BookQuote` — цитата или эпиграф (`blocks`, `citation`).
   - `BookList` — нумерованный/маркированный список (`ordered`, `items`).

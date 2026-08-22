@@ -10,7 +10,7 @@ class BookEncodingOptions {
   /// Имя файла внутри архива для FB2.ZIP (например: "НазваниеКниги.fb2").
   final String? entryFilename;
 
-  /// Политика именования медиа-ресурсов (по умолчанию: sequential — img_001.jpg, img_002.png...).
+  /// Политика именования медиа-ресурсов (по умолчанию: preserve — сохранение оригинальных имён).
   final BookResourceNamingPolicy namingPolicy;
 
   /// Имя файла для обложки (по умолчанию: "cover").
