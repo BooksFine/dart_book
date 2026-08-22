@@ -1,7 +1,7 @@
 import 'package:dart_book/dart_book.dart';
 
 Future<void> main() async {
-  // 1. Распарсить HTML-фрагмент в блоки книги через HtmlParser
+  // 1. Parse HTML snippet into book AST blocks using HtmlParser
   final htmlParser = HtmlParser(
     registrar: (src, {required isInline}) => 'resource-$src',
   );
@@ -10,7 +10,7 @@ Future<void> main() async {
   );
   print('Parsed ${blocks.length} blocks from HTML content.');
 
-  // 2. Сформировать универсальную модель Book
+  // 2. Build the unified Book model
   final book = Book(
     metadata: const BookMetadata(
       id: 'demo-1',
@@ -27,14 +27,14 @@ Future<void> main() async {
     resources: const [],
   );
 
-  // 3. Закодировать в FB2 и EPUB
+  // 3. Encode to FB2 and EPUB
   final fb2Bytes = await Fb2Converter.bookToFb2(book);
   print('Generated FB2 size: ${fb2Bytes.length} bytes');
 
   final epubBytes = await EpubConverter.bookToEpub(book);
   print('Generated EPUB size: ${epubBytes.length} bytes');
 
-  // 4. Загрузить обратно из байт через DartBook.load (авторазбор формата)
+  // 4. Load back from bytes via DartBook.load (auto-detected format)
   final loadedFb2 = await DartBook.load(fb2Bytes, filename: 'book.fb2');
   print('Loaded FB2 title: ${loadedFb2.metadata.title}');
 

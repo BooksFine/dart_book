@@ -38,30 +38,30 @@ export 'src/converters/fb2/fb2_zip_encoder.dart';
 export 'src/parsers/html_parser.dart';
 export 'src/parsers/fb2_parser.dart';
 
-/// Главная точка входа библиотеки `dart_book`.
+/// Main entry point for the `dart_book` library.
 ///
-/// Предоставляет удобный метод [load] для загрузки книги
-/// из байт без необходимости вручную выбирать формат.
+/// Provides convenient methods like [load] to read and decode books
+/// without needing to manually determine or specify the format.
 ///
-/// Поддерживаемые форматы: **EPUB** и **FB2** (FB2.zip).
+/// Supported formats: **EPUB** and **FB2** (including FB2.zip).
 ///
-/// Пример:
+/// Example:
 /// ```dart
 /// final bytes = await File('book.epub').readAsBytes();
 /// final book = await DartBook.load(bytes, filename: 'book.epub');
 /// print(book.metadata.title);
 /// ```
 abstract class DartBook {
-  /// Загружает книгу из [bytes], автоматически определяя формат.
+  /// Loads a book from [bytes], automatically detecting the format.
   ///
-  /// Формат определяется по сигнатуре байт и расширению из [filename]
-  /// через [BookRegistry].
+  /// Format detection is performed using byte signatures and optional extension
+  /// from [filename] via [BookRegistry].
   ///
-  /// - [filename] — имя файла; расширение извлекается автоматически.
-  /// - [options] — опции декодирования: идентификатор книги и код языка.
-  /// - [resourceResolver] — callback для загрузки внешних ресурсов.
+  /// - [filename]: file name/path; extension is extracted automatically.
+  /// - [options]: decoding options (strictMode, custom logger, etc.).
+  /// - [resourceResolver]: optional callback to resolve external resources.
   ///
-  /// Бросает [Exception], если подходящий декодер не найден.
+  /// Throws [Exception] if no suitable decoder is found.
   static Future<Book> load(
     Uint8List bytes, {
     String? filename,
@@ -75,7 +75,7 @@ abstract class DartBook {
 
     if (decoder == null) {
       throw Exception(
-        'Не удалось найти подходящий декодер для файла ${filename ?? 'без имени'}',
+        'Could not find a suitable decoder for file ${filename ?? 'unnamed'}',
       );
     }
 
@@ -91,10 +91,10 @@ abstract class DartBook {
     return book;
   }
 
-  /// Загружает книгу в БЭКГРАУНД ИЗОЛЯТЕ (`Isolate.run`).
+  /// Loads a book inside a background isolate (`Isolate.run`).
   ///
-  /// Рекомендуется для приложений с высокой частотой обновления (144 FPS / 120 Hz ProMotion),
-  /// чтобы гарантировать 0 миллисекунд блокировки основного потока отрисовки (UI).
+  /// Recommended for high refresh rate UI apps (120 Hz / 144 FPS)
+  /// to ensure 0 ms main UI thread blocking.
   static Future<Book> loadIsolated(
     Uint8List bytes, {
     String? filename,
@@ -111,10 +111,10 @@ abstract class DartBook {
     );
   }
 
-  /// Кодирует книгу в указанный формат в БЭКГРАУНД ИЗОЛЯТЕ (`Isolate.run`).
+  /// Encodes a book to the specified format in a background isolate (`Isolate.run`).
   ///
-  /// Рекомендуется для кодирования тяжелых файлов (FB2.ZIP / EPUB) с претификацией и сжатием,
-  /// чтобы гарантировать 0 миллисекунд блокировки основного потока отрисовки (UI).
+  /// Recommended for heavy encoding workloads (e.g. compressing FB2.ZIP / EPUB)
+  /// to ensure 0 ms main UI thread blocking.
   static Future<Uint8List> encodeIsolated(
     Book book,
     String extension, {
@@ -124,7 +124,7 @@ abstract class DartBook {
       final encoder = BookRegistry.findEncoder(extension);
       if (encoder == null) {
         throw Exception(
-          'Не удалось найти подходящий кодировщик для расширения $extension',
+          'Could not find a suitable encoder for extension $extension',
         );
       }
       return await encoder.encode(book, options: options);
