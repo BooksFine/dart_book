@@ -55,9 +55,10 @@ class Fb2Decoder implements BookDecoder {
       }
       try {
         document = XmlDocument.parse(content);
-      } on XmlParserException catch (e) {
-        throw BookParseException(e.message, line: e.line);
+      } on XmlException catch (e) {
+        throw BookParseException(e.message);
       }
+
     } else {
       content = _sanitizeXml(rawContent);
       try {
