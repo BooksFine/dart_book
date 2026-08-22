@@ -5,7 +5,7 @@
 [![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen.svg)](#)
 [![Coverage](https://img.shields.io/badge/coverage-96.8%25-brightgreen.svg)](#)
 [![Branch Coverage](https://img.shields.io/badge/branch%20coverage-93.6%25-brightgreen.svg)](#)
-[![Dart SDK](https://img.shields.io/badge/Dart-3.12+-blue.svg)](pubspec.yaml)
+[![Dart SDK](https://img.shields.io/badge/Dart-3.3+-blue.svg)](pubspec.yaml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Библиотека на Dart для парсинга, сериализации и конвертации электронных книг форматов **EPUB** (2.0.1, 3.0–3.4) и **FB2** (2.0, 2.1, 2.2, FB2.zip).
