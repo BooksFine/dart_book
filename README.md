@@ -4,7 +4,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-96.8%25-brightgreen.svg)](#)
 [![Branch Coverage](https://img.shields.io/badge/branch%20coverage-93.6%25-brightgreen.svg)](#)
 [![Dart SDK](https://img.shields.io/badge/Dart-3.12+-blue.svg)](#)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Библиотека на Dart для парсинга, сериализации и конвертации электронных книг форматов **EPUB** (2.0.1, 3.0–3.4) и **FB2** (2.0, 2.1, 2.2, FB2.zip).
 
@@ -372,4 +372,4 @@ dart test test/stress/performance_benchmark_test.dart
 
 ## Лицензия
 
-MIT. См. файл [LICENSE](LICENSE).
+Apache 2.0. См. файл [LICENSE](LICENSE).
