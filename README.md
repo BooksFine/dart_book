@@ -31,6 +31,29 @@ At the core of the library is a unified syntax tree (`Book` AST). Book formats a
 
 ---
 
+## Installation
+
+Add `dart_book` as a Git dependency in your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  dart_book:
+    git:
+      url: https://github.com/BooksFine/dart_book.git
+      ref: v1.0.0
+```
+
+Or install the latest commit from `main`:
+```yaml
+dependencies:
+  dart_book:
+    git:
+      url: https://github.com/BooksFine/dart_book.git
+      ref: main
+```
+
+---
+
 ## Quick Start
 
 ### 1. Read a Book and Inspect Metadata

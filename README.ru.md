@@ -31,6 +31,29 @@
 
 ---
 
+## Установка
+
+Подключите `dart_book` как Git-зависимость в вашем `pubspec.yaml`:
+
+```yaml
+dependencies:
+  dart_book:
+    git:
+      url: https://github.com/BooksFine/dart_book.git
+      ref: v1.0.0
+```
+
+Или последнюю версию из ветки `main`:
+```yaml
+dependencies:
+  dart_book:
+    git:
+      url: https://github.com/BooksFine/dart_book.git
+      ref: main
+```
+
+---
+
 ## Быстрый старт
 
 ### 1. Чтение книги и получение метаданных
