@@ -4,6 +4,25 @@
     "id": "fb2-22-spec-reference-doc-002",
     "language": "ru",
     "layout": "reflowable",
+    "keywords": [
+      "наука",
+      "кибернетика",
+      "будущее"
+    ],
+    "annotation": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "text",
+              "text": "Демонстрация расширенных возможностей FB2 2.2."
+            }
+          ]
+        }
+      ],
+      "footnotes": []
+    },
     "genres": [
       {
         "code": "sf",
@@ -23,7 +42,8 @@
     "series": [
       {
         "name": "Кибериада",
-        "number": 7
+        "number": 7,
+        "url": "https://cybernetics.example.org/series/cyberiada"
       }
     ]
   },

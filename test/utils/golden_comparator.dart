@@ -29,6 +29,10 @@ class GoldenComparator {
       'id': metadata.id,
       'language': metadata.language,
       'layout': metadata.layout.name,
+      if (metadata.srcLang != null) 'srcLang': metadata.srcLang,
+      if (metadata.keywords.isNotEmpty) 'keywords': metadata.keywords,
+      if (metadata.annotation != null)
+        'annotation': contentToJson(metadata.annotation!, normalize: false),
       if (metadata.genres.isNotEmpty)
         'genres': metadata.genres
             .map((g) => {'code': g.code, 'name': g.name})
@@ -41,9 +45,11 @@ class GoldenComparator {
                     if (c.name.first != null) 'first': c.name.first,
                     if (c.name.middle != null) 'middle': c.name.middle,
                     if (c.name.last != null) 'last': c.name.last,
+                    if (c.name.nickname != null) 'nickname': c.name.nickname,
                     if (c.name.display != null) 'display': c.name.display,
                   },
                   if (c.email != null) 'email': c.email,
+                  if (c.homePage != null) 'homePage': c.homePage.toString(),
                 })
             .toList(),
       if (metadata.series.isNotEmpty)
@@ -51,6 +57,7 @@ class GoldenComparator {
             .map((s) => {
                   'name': s.name,
                   if (s.number != null) 'number': s.number,
+                  if (s.url != null) 'url': s.url.toString(),
                 })
             .toList(),
       if (metadata.publishInfo != null)
@@ -70,11 +77,24 @@ class GoldenComparator {
             'title': metadata.srcTitleInfo!.title,
           if (metadata.srcTitleInfo!.language != null)
             'language': metadata.srcTitleInfo!.language,
+          if (metadata.srcTitleInfo!.authors.isNotEmpty)
+            'authors': metadata.srcTitleInfo!.authors
+                .map((a) => {
+                      if (a.name.first != null) 'first': a.name.first,
+                      if (a.name.middle != null) 'middle': a.name.middle,
+                      if (a.name.last != null) 'last': a.name.last,
+                      if (a.name.nickname != null) 'nickname': a.name.nickname,
+                      if (a.name.display != null) 'display': a.name.display,
+                    })
+                .toList(),
         },
-      if (metadata.cover != null) 'cover': {'ref': metadata.cover!.ref.id},
+      if (metadata.cover != null)
+        'cover': {
+          'ref': metadata.cover!.ref.id,
+          if (metadata.cover!.alt != null) 'alt': metadata.cover!.alt,
+        },
     };
   }
-
 
   /// Преобразует [BookContent] в структурированный `Map<String, dynamic>`.
   static Map<String, dynamic> contentToJson(BookContent content, {bool normalize = true}) {

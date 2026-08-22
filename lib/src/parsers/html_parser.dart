@@ -99,20 +99,27 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
   BookCodeBlock _parseCodeBlock(dom.Element node) {
     final codeElem = node.querySelector('code') ?? node;
-    final lang =
-        codeElem.attributes['data-language'] ??
-        codeElem.attributes['lang'] ??
-        codeElem.attributes['class'] ??
+    String? lang = codeElem.attributes['data-language'] ??
         node.attributes['data-language'] ??
-        node.attributes['lang'] ??
-        node.attributes['class'];
+        codeElem.attributes['lang'] ??
+        node.attributes['lang'];
 
-    var languageClean = lang;
-    if (languageClean != null && languageClean.contains('language-')) {
-      languageClean = languageClean.split('language-').last.split(' ').first;
+    if (lang == null) {
+      for (final cls in [...codeElem.classes, ...node.classes]) {
+        if (cls.startsWith('language-') && cls.length > 'language-'.length) {
+          lang = cls.substring('language-'.length);
+          break;
+        }
+      }
+    }
+    if (lang == null) {
+      final classAttr = codeElem.attributes['class'] ?? node.attributes['class'];
+      if (classAttr != null && classAttr.isNotEmpty) {
+        lang = classAttr.split(' ').first;
+      }
     }
 
-    return BookCodeBlock(code: node.text, language: languageClean);
+    return BookCodeBlock(code: node.text, language: lang);
   }
 
   BookBlock _parseFigure(dom.Element element) {
@@ -140,11 +147,12 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
         ? _parseInlines(citationElem.nodes)
         : const <BookInline>[];
 
-    final blockNodes = element.nodes.where(
-      (n) =>
-          !identical(n, citationElem) &&
-          (citationElem == null || !citationElem.contains(n)),
-    );
+    final blockNodes = <dom.Node>[];
+    for (final node in element.nodes) {
+      if (identical(node, citationElem)) continue;
+      if (citationElem != null && citationElem.contains(node)) continue;
+      blockNodes.add(node);
+    }
 
     return BookQuote(blocks: parse(blockNodes), citation: citation);
   }
@@ -240,23 +248,57 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     for (final child in element.children) {
       if ((child.localName ?? '').toLowerCase() != 'li') continue;
 
-      final hasBlockChild = child.children.any(
-        (c) => const {
-          'p',
-          'div',
-          'ul',
-          'ol',
-          'blockquote',
-          'table',
-          'pre',
-          'section',
-          'article',
-        }.contains((c.localName ?? '').toLowerCase()),
-      );
+      final blocks = <BookBlock>[];
+      final currentInlines = <dom.Node>[];
 
-      final blocks = hasBlockChild
-          ? parse(child.children)
-          : <BookBlock>[BookParagraph(inlines: _parseInlines(child.nodes))];
+      void flushInlines() {
+        if (currentInlines.isNotEmpty) {
+          final inlines = _parseInlines(currentInlines);
+          final hasVisible = inlines.any((i) => i is! BookText || i.text.trim().isNotEmpty);
+          if (hasVisible) {
+            blocks.add(BookParagraph(inlines: inlines));
+          }
+          currentInlines.clear();
+        }
+      }
+
+      for (final node in child.nodes) {
+        if (node is dom.Element &&
+            const {
+              'p',
+              'div',
+              'ul',
+              'ol',
+              'blockquote',
+              'table',
+              'pre',
+              'section',
+              'article',
+              'h1',
+              'h2',
+              'h3',
+              'h4',
+              'h5',
+              'h6',
+              'figure',
+              'hr',
+              'audio',
+              'video',
+              'math',
+              'svg',
+            }.contains((node.localName ?? '').toLowerCase())) {
+          flushInlines();
+          blocks.addAll(_parseBlockNode(node));
+        } else {
+          currentInlines.add(node);
+        }
+      }
+      flushInlines();
+
+      if (blocks.isEmpty) {
+        blocks.add(BookParagraph(inlines: _parseInlines(child.nodes)));
+      }
+
       items.add(BookListItem(blocks: blocks));
     }
     return BookList(ordered: ordered, items: items);
@@ -355,7 +397,6 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       inlines.add(BookAnchor(id));
     }
 
-
     final parsedInlines = switch (tag) {
       'br' => const [BookLineBreak()],
       'strong' || 'b' => [BookStrong(children: _parseInlines(node.nodes))],
@@ -382,12 +423,13 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   }
 
   List<BookInline> _parseSpan(dom.Element node) {
-    final className = node.attributes['class'];
-    if (className != null && className.startsWith('style-')) {
-      final styleName = className.substring('style-'.length);
-      return [
-        BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes)),
-      ];
+    for (final cls in node.classes) {
+      if (cls.startsWith('style-') && cls.length > 'style-'.length) {
+        final styleName = cls.substring('style-'.length);
+        return [
+          BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes)),
+        ];
+      }
     }
     return _parseInlines(node.nodes);
   }
@@ -431,12 +473,14 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
     if (epubType.contains('noteref') || epubType.contains('doc-noteref')) {
       final noteId = href.startsWith('#') ? href.substring(1) : href;
-      return [
-        BookFootnoteRef(
-          id: noteId.isNotEmpty ? noteId : (id ?? ''),
-          label: children,
-        ),
-      ];
+      final fnRef = BookFootnoteRef(
+        id: noteId.isNotEmpty ? noteId : (id ?? ''),
+        label: children,
+      );
+      if (id != null && id.isNotEmpty) {
+        return [BookAnchor(id), fnRef];
+      }
+      return [fnRef];
     }
 
     if (href.isEmpty) {

@@ -40,9 +40,8 @@ class EpubDecoder implements BookDecoder {
 
     final opfFile = archive.findFile(opfPath);
     if (opfFile == null) {
-      throw Exception('Invalid EPUB: OPF file not found at $opfPath');
+      throw EpubInvalidPackageException('Invalid EPUB: OPF file not found at $opfPath');
     }
-
 
     final opfXml = XmlDocument.parse(utf8.decode(opfFile.content));
     final opfDir = opfPath.contains('/')
@@ -51,16 +50,18 @@ class EpubDecoder implements BookDecoder {
 
     final manifest = <String, _EpubItem>{};
     for (final element in opfXml.findAllElements('item')) {
-      final itemId = element.getAttribute('id')!;
-      final href = element.getAttribute('href')!;
-      final mediaType = element.getAttribute('media-type')!;
+      final itemId = element.getAttribute('id') ?? '';
+      final href = element.getAttribute('href') ?? '';
+      final mediaType = element.getAttribute('media-type') ?? '';
       final properties = element.getAttribute('properties');
-      manifest[itemId] = _EpubItem(
-        itemId,
-        href,
-        mediaType,
-        properties: properties,
-      );
+      if (itemId.isNotEmpty && href.isNotEmpty) {
+        manifest[itemId] = _EpubItem(
+          itemId,
+          href,
+          mediaType,
+          properties: properties,
+        );
+      }
     }
 
     // Extract cover image (EPUB 3 properties="cover-image" or EPUB 2 <meta name="cover" content="...">)
@@ -145,7 +146,8 @@ class EpubDecoder implements BookDecoder {
 
     final spine = opfXml
         .findAllElements('itemref')
-        .map((e) => e.getAttribute('idref')!)
+        .map((e) => e.getAttribute('idref'))
+        .whereType<String>()
         .toList();
 
     final blocks = <BookBlock>[];

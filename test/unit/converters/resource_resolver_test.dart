@@ -105,6 +105,33 @@ void main() {
                     ),
                   ],
                 ),
+                const BookAudioBlock(
+                  ref: BookResourceRef('audio_track.mp3'),
+                  attributes: {'source-src': 'https://example.com/audio.mp3'},
+                ),
+                const BookVideoBlock(
+                  ref: BookResourceRef('video_clip.mp4'),
+                  posterRef: BookResourceRef('poster.jpg'),
+                  attributes: {
+                    'source-src': 'https://example.com/video.mp4',
+                    'source-poster-src': 'https://example.com/poster.jpg',
+                  },
+                ),
+              ],
+            ),
+          ],
+          footnotes: [
+            const BookFootnote(
+              id: 'fn1',
+              blocks: [
+                BookParagraph(
+                  inlines: [
+                    BookImageInline(
+                      ref: BookResourceRef('fn_diagram.png'),
+                      attributes: {'source-src': 'fn_diagram.png'},
+                    ),
+                  ],
+                ),
               ],
             ),
           ],
@@ -122,6 +149,10 @@ void main() {
       expect(reqIds, contains('item1.png'));
       expect(reqIds, contains('table_cell.png'));
       expect(reqIds, contains('poem_icon.png'));
+      expect(reqIds, contains('audio_track.mp3'));
+      expect(reqIds, contains('video_clip.mp4'));
+      expect(reqIds, contains('poster.jpg'));
+      expect(reqIds, contains('fn_diagram.png'));
     });
 
     test('resolveResources: downloads pending resources with progress callbacks', () async {

@@ -85,7 +85,7 @@ void main() {
 
   group('Stress: Crash-Free Invariant on Corrupted Byte Streams', () {
     test(
-      '50 mutated/corrupted byte streams never cause unhandled TypeError, RangeError, or StackOverflowError',
+      '50 mutated/corrupted byte streams never cause unhandled Errors (StateError, ArgumentError, TypeError, RangeError, StackOverflowError)',
       () async {
         final generator = AstGenerator(9999);
         final testLengths = [
@@ -119,153 +119,79 @@ void main() {
           // 1. DartBook.load
           try {
             await DartBook.load(bytes, filename: 'fuzz_$i.epub');
-          } on TypeError catch (e) {
-            fail(
-              'Unhandled TypeError in DartBook.load (EPUB) for length $length: $e',
-            );
-          } on RangeError catch (e) {
-            fail(
-              'Unhandled RangeError in DartBook.load (EPUB) for length $length: $e',
-            );
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in DartBook.load (EPUB) for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in DartBook.load (EPUB) for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           try {
             await DartBook.load(bytes, filename: 'fuzz_$i.fb2');
-          } on TypeError catch (e) {
-            fail(
-              'Unhandled TypeError in DartBook.load (FB2) for length $length: $e',
-            );
-          } on RangeError catch (e) {
-            fail(
-              'Unhandled RangeError in DartBook.load (FB2) for length $length: $e',
-            );
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in DartBook.load (FB2) for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in DartBook.load (FB2) for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
-          // 2. EpubDecoder
+          // 2. EpubDecoder direct decode
           try {
-            if (EpubDecoder().canDecode(bytes)) {
-              await EpubDecoder().decode(bytes);
-            }
-          } on TypeError catch (e) {
-            fail('Unhandled TypeError in EpubDecoder for length $length: $e');
-          } on RangeError catch (e) {
-            fail('Unhandled RangeError in EpubDecoder for length $length: $e');
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in EpubDecoder for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+            await EpubDecoder().decode(bytes);
+          } on Error catch (e, st) {
+            fail('Unhandled Error in EpubDecoder for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           // 3. Fb2Decoder
           try {
             Fb2Decoder().decode(bytes);
-          } on TypeError catch (e) {
-            fail('Unhandled TypeError in Fb2Decoder for length $length: $e');
-          } on RangeError catch (e) {
-            fail('Unhandled RangeError in Fb2Decoder for length $length: $e');
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in Fb2Decoder for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in Fb2Decoder for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           // 4. Fb2ZipDecoder
           try {
             Fb2ZipDecoder().decode(bytes);
-          } on TypeError catch (e) {
-            fail('Unhandled TypeError in Fb2ZipDecoder for length $length: $e');
-          } on RangeError catch (e) {
-            fail(
-              'Unhandled RangeError in Fb2ZipDecoder for length $length: $e',
-            );
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in Fb2ZipDecoder for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in Fb2ZipDecoder for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           // 5. HtmlParser & Fb2Parser
           try {
             HtmlParser().parseFromString(asString);
-          } on TypeError catch (e) {
-            fail('Unhandled TypeError in HtmlParser for length $length: $e');
-          } on RangeError catch (e) {
-            fail('Unhandled RangeError in HtmlParser for length $length: $e');
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in HtmlParser for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in HtmlParser for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           try {
             Fb2Parser().parseFromString(asString);
-          } on TypeError catch (e) {
-            fail('Unhandled TypeError in Fb2Parser for length $length: $e');
-          } on RangeError catch (e) {
-            fail('Unhandled RangeError in Fb2Parser for length $length: $e');
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in Fb2Parser for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in Fb2Parser for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           // 6. EpubNavDocument & EpubNcxDocument
           try {
             EpubNavDocument.parseFromString(asString);
-          } on TypeError catch (e) {
-            fail(
-              'Unhandled TypeError in EpubNavDocument for length $length: $e',
-            );
-          } on RangeError catch (e) {
-            fail(
-              'Unhandled RangeError in EpubNavDocument for length $length: $e',
-            );
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in EpubNavDocument for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in EpubNavDocument for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
 
           try {
             EpubNcxDocument.parseFromString(asString);
-          } on TypeError catch (e) {
-            fail(
-              'Unhandled TypeError in EpubNcxDocument for length $length: $e',
-            );
-          } on RangeError catch (e) {
-            fail(
-              'Unhandled RangeError in EpubNcxDocument for length $length: $e',
-            );
-          } on StackOverflowError catch (e) {
-            fail(
-              'Unhandled StackOverflowError in EpubNcxDocument for length $length: $e',
-            );
-          } catch (_) {
-            // Cleanly caught exception
+          } on Error catch (e, st) {
+            fail('Unhandled Error in EpubNcxDocument for length $length: $e\n$st');
+          } on Exception catch (_) {
+            // Expected exception cleanly handled
           }
         }
       },

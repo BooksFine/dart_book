@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:dart_book/dart_book.dart';
-import 'package:dart_book/src/converters/epub/epub_exceptions.dart';
-import 'package:dart_book/src/converters/epub/ocf/ocf_container.dart';
 import 'package:test/test.dart';
 
 
@@ -123,7 +121,7 @@ void main() {
 
       final fb2ZipBytes = await fb2ZipConverter.encode(dummyBook);
       expect(fb2ZipConverter.canDecode(fb2ZipBytes, extension: 'fb2.zip'), isTrue);
-      final decodedFb2Zip = await fb2ZipConverter.decode(fb2ZipBytes);
+      final decodedFb2Zip = fb2ZipConverter.decode(fb2ZipBytes);
       expect(decodedFb2Zip.metadata.title, equals('Converter Book'));
 
       // Static direct bookToFb2Zip

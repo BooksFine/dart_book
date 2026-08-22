@@ -49,8 +49,35 @@ class EpubSmilDocument {
 
   static double? _parseClockValue(String? value) {
     if (value == null || value.trim().isEmpty) return null;
-    var str = value.trim();
-    if (str.endsWith('s')) str = str.substring(0, str.length - 1);
+    final str = value.trim();
+    if (str.endsWith('ms')) {
+      final ms = double.tryParse(str.substring(0, str.length - 2));
+      return ms != null ? ms / 1000.0 : null;
+    }
+    if (str.endsWith('s')) {
+      return double.tryParse(str.substring(0, str.length - 1));
+    }
+    if (str.endsWith('min')) {
+      final min = double.tryParse(str.substring(0, str.length - 3));
+      return min != null ? min * 60.0 : null;
+    }
+    if (str.endsWith('h')) {
+      final h = double.tryParse(str.substring(0, str.length - 1));
+      return h != null ? h * 3600.0 : null;
+    }
+    if (str.contains(':')) {
+      final parts = str.split(':');
+      if (parts.length == 3) {
+        final h = double.tryParse(parts[0]) ?? 0;
+        final m = double.tryParse(parts[1]) ?? 0;
+        final s = double.tryParse(parts[2]) ?? 0;
+        return h * 3600 + m * 60 + s;
+      } else if (parts.length == 2) {
+        final m = double.tryParse(parts[0]) ?? 0;
+        final s = double.tryParse(parts[1]) ?? 0;
+        return m * 60 + s;
+      }
+    }
     return double.tryParse(str);
   }
 }

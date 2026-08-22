@@ -76,6 +76,15 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       case 'title':
         return [BookHeading(level: 1, text: _parseFb2Title(element))];
       case 'subtitle':
+        final paragraphs = element.findElements('p').toList();
+        if (paragraphs.isNotEmpty) {
+          final inlines = <BookInline>[];
+          for (var i = 0; i < paragraphs.length; i++) {
+            if (i > 0) inlines.add(const BookLineBreak());
+            inlines.addAll(_parseFb2Inlines(paragraphs[i]));
+          }
+          return [BookHeading(level: 2, text: inlines)];
+        }
         return [BookHeading(level: 2, text: _parseFb2Inlines(element))];
       case 'empty-line':
         return [const BookEmptyLine()];
@@ -99,10 +108,12 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
           ),
         ];
       case 'cite':
-        final textAuthor = element.findElements('text-author').firstOrNull;
-        final citation = textAuthor != null
-            ? _parseFb2Inlines(textAuthor)
-            : const <BookInline>[];
+        final textAuthors = element.findElements('text-author').toList();
+        final citation = <BookInline>[];
+        for (var i = 0; i < textAuthors.length; i++) {
+          if (i > 0) citation.add(const BookText(', '));
+          citation.addAll(_parseFb2Inlines(textAuthors[i]));
+        }
         final innerBlocks = parse(
           element.children.where(
             (e) => e is! XmlElement || e.localName != 'text-author',
@@ -152,10 +163,12 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
         }
         return [BookTable(rows: rows)];
       case 'epigraph':
-        final textAuthor = element.findElements('text-author').firstOrNull;
-        final citation = textAuthor != null
-            ? _parseFb2Inlines(textAuthor)
-            : const <BookInline>[];
+        final textAuthors = element.findElements('text-author').toList();
+        final citation = <BookInline>[];
+        for (var i = 0; i < textAuthors.length; i++) {
+          if (i > 0) citation.add(const BookText(', '));
+          citation.addAll(_parseFb2Inlines(textAuthors[i]));
+        }
         final innerBlocks = parse(
           element.children.where(
             (e) => e is! XmlElement || e.localName != 'text-author',
@@ -213,6 +226,8 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             } else {
               inlines.addAll(innerInlines);
             }
+          case 'empty-line':
+            inlines.add(const BookLineBreak());
           case 'a':
             final href =
                 child.getAttribute('l:href') ??
@@ -227,9 +242,10 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
                 BookFootnoteRef(id: id, label: _parseFb2Inlines(child)),
               );
             } else {
+              final uri = Uri.tryParse(href) ?? Uri();
               inlines.add(
                 BookLink(
-                  href: Uri.parse(href),
+                  href: uri,
                   children: _parseFb2Inlines(child),
                 ),
               );

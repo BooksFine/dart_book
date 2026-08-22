@@ -4,6 +4,20 @@
     "id": "urn:uuid:calibre-sample-epub2-uuid-98765",
     "language": "en",
     "layout": "reflowable",
+    "annotation": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "text",
+              "text": "A classic mystery novel exported via Calibre."
+            }
+          ]
+        }
+      ],
+      "footnotes": []
+    },
     "genres": [
       {
         "code": "Mystery",

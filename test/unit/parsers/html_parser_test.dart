@@ -621,5 +621,80 @@ void main() {
         GoldenComparator.assertContentEquals(content, expectedContent);
       });
     });
+
+    group('10. Multimedia, Figures, Line Breaks, and Mixed List Items', () {
+      test('Parses audio and video elements with poster and controls', () {
+        const html = '''
+        <audio src="audio/track.mp3" controls></audio>
+        <video src="video/clip.mp4" poster="images/poster.jpg" controls></video>
+        ''';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(2));
+
+        final audio = blocks[0] as BookAudioBlock;
+        expect(audio.ref.id, equals('audio/track.mp3'));
+        expect(audio.controls, isTrue);
+
+        final video = blocks[1] as BookVideoBlock;
+        expect(video.ref.id, equals('video/clip.mp4'));
+        expect(video.posterRef?.id, equals('images/poster.jpg'));
+        expect(video.controls, isTrue);
+      });
+
+      test('Parses figure with figcaption and image', () {
+        const html = '''
+        <figure>
+          <img src="img.png" alt="Alt fallback"/>
+          <figcaption>Diagram 1. System Architecture</figcaption>
+        </figure>
+        ''';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(1));
+        final img = blocks[0] as BookImageBlock;
+        expect(img.ref.id, equals('img.png'));
+        expect(img.alt, equals('Diagram 1. System Architecture'));
+      });
+
+      test('Parses hr and br elements', () {
+        const html = '<p>Line 1<br/>Line 2</p><hr/><p>Line 3</p>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(3));
+        expect(blocks[0], isA<BookParagraph>());
+        final p1 = blocks[0] as BookParagraph;
+        expect(p1.inlines.any((i) => i is BookLineBreak), isTrue);
+        expect(blocks[1], isA<BookHorizontalRule>());
+        expect(blocks[2], isA<BookParagraph>());
+      });
+
+      test('Preserves direct text in list items before sublists', () {
+        const html = '''
+        <ul>
+          <li>Parent item text
+            <ul>
+              <li>Child item</li>
+            </ul>
+          </li>
+        </ul>
+        ''';
+        final blocks = parser.parseFromString(html);
+        final list = blocks[0] as BookList;
+        final parentItem = list.items[0];
+        expect(parentItem.blocks.length, equals(2));
+        final p = parentItem.blocks[0] as BookParagraph;
+        final text = (p.inlines.first as BookText).text;
+        expect(text, contains('Parent item text'));
+        expect(parentItem.blocks[1], isA<BookList>());
+      });
+
+      test('Parses multi-class span with style- prefix', () {
+        const html = '<p><span class="highlight style-red-text active">Styled text</span></p>';
+        final blocks = parser.parseFromString(html);
+        final p = blocks[0] as BookParagraph;
+        final namedStyle = p.inlines.first as BookNamedStyle;
+        expect(namedStyle.name, equals('red-text'));
+        final text = (namedStyle.inlines.first as BookText).text;
+        expect(text, contains('Styled text'));
+      });
+    });
   });
 }

@@ -12,6 +12,9 @@ List<BookResourceRequest> collectResourceRequestsFromBook(Book book) {
     );
   }
   _crrFromBlocks(book.content.blocks, output);
+  for (final fn in book.content.footnotes) {
+    _crrFromBlocks(fn.blocks, output);
+  }
   if (book.metadata.annotation != null) {
     _crrFromBlocks(book.metadata.annotation!.blocks, output);
   }
@@ -56,6 +59,31 @@ void _crrFromBlocks(List<BookBlock> blocks, List<BookResourceRequest> output) {
             isInline: false,
           ),
         );
+      case BookAudioBlock audio:
+        output.add(
+          BookResourceRequest(
+            id: audio.ref.id,
+            source: audio.attributes['source-src'],
+            isInline: false,
+          ),
+        );
+      case BookVideoBlock video:
+        output.add(
+          BookResourceRequest(
+            id: video.ref.id,
+            source: video.attributes['source-src'],
+            isInline: false,
+          ),
+        );
+        if (video.posterRef != null) {
+          output.add(
+            BookResourceRequest(
+              id: video.posterRef!.id,
+              source: video.attributes['source-poster-src'],
+              isInline: false,
+            ),
+          );
+        }
       default:
         break;
     }
@@ -88,6 +116,8 @@ void _crrFromInlines(
         _crrFromInlines(superscript.children, output);
       case BookSubscript subscript:
         _crrFromInlines(subscript.children, output);
+      case BookNamedStyle namedStyle:
+        _crrFromInlines(namedStyle.inlines, output);
       case BookFootnoteRef footnoteRef:
         _crrFromInlines(footnoteRef.label, output);
       default:

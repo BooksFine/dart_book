@@ -189,7 +189,7 @@ void main() {
         // Verify Chapters & Content Blocks
         expect(book.content.blocks, isNotEmpty);
         final sections = book.content.blocks.whereType<BookSection>().toList();
-        expect(sections, isNotEmpty);
+        expect(sections.length, equals(22));
 
         // Verify Resources (Fonts, Images, CSS)
         expect(book.resources, isNotEmpty);
@@ -207,9 +207,11 @@ void main() {
           isTrue,
         );
 
-        // Golden JSON Serialization
-        final goldenJson = GoldenComparator.contentToJson(book.content);
-        expect(goldenJson['blocks'], isNotEmpty);
+        // Verify AST roundtrip stability
+        final reEncoded = await EpubConverter.bookToEpub(book);
+        final reDecoded = await EpubConverter.epubToBook(reEncoded);
+        expect(reDecoded.metadata.title, equals('Accessible EPUB 3'));
+        expect(reDecoded.content.blocks.whereType<BookSection>().length, equals(22));
       },
     );
 
@@ -234,14 +236,25 @@ void main() {
         equals('Herman Melville'),
       );
 
-      // Verify Chapters
+      // Verify 144 spine sections (136 chapters + frontmatter/epilogue)
       expect(book.content.blocks, isNotEmpty);
       final sections = book.content.blocks.whereType<BookSection>().toList();
-      expect(sections.length, greaterThan(10));
+      expect(sections.length, equals(144));
 
-      // Golden JSON Serialization
-      final goldenJson = GoldenComparator.contentToJson(book.content);
-      expect(goldenJson['blocks'], isNotEmpty);
+      // Verify first narrative chapter ("Chapter 1. Loomings" - "Call me Ishmael.")
+      final chapter1 = sections.firstWhere((s) => s.id == 'xchapter_001');
+      expect(chapter1.title.first, isA<BookText>());
+      expect((chapter1.title.first as BookText).text, contains('Chapter 1'));
+      String extractAllText(BookBlock block) {
+        if (block is BookParagraph) {
+          return block.inlines.whereType<BookText>().map((t) => t.text).join(' ');
+        } else if (block is BookSection) {
+          return block.blocks.map(extractAllText).join(' ');
+        }
+        return '';
+      }
+      final chapter1Text = chapter1.blocks.map(extractAllText).join(' ');
+      expect(chapter1Text, contains('Call me Ishmael'));
     });
   });
 }

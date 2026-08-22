@@ -64,5 +64,31 @@ void main() {
       expect(doc2.clips[0].clipBegin, isNull);
       expect(doc2.clips[0].clipEnd, isNull);
     });
+
+    test('Parses full SMIL 3.0 clock formats (hh:mm:ss, mm:ss, ms, min, h)', () {
+      const clockXml = '''
+<smil>
+  <body>
+    <par><text src="c1.xhtml"/><audio src="a.mp3" clipBegin="01:23:45.500" clipEnd="02:00:00"/></par>
+    <par><text src="c2.xhtml"/><audio src="a.mp3" clipBegin="12:34.5" clipEnd="500ms"/></par>
+    <par><text src="c3.xhtml"/><audio src="a.mp3" clipBegin="2min" clipEnd="1.5h"/></par>
+  </body>
+</smil>''';
+
+      final doc = EpubSmilDocument.parseFromString(clockXml);
+      expect(doc.clips.length, equals(3));
+
+      // 01:23:45.500 = 3600 + 23*60 + 45.5 = 3600 + 1380 + 45.5 = 5025.5
+      expect(doc.clips[0].clipBegin, equals(5025.5));
+      expect(doc.clips[0].clipEnd, equals(7200.0));
+
+      // 12:34.5 = 12*60 + 34.5 = 754.5; 500ms = 0.5s
+      expect(doc.clips[1].clipBegin, equals(754.5));
+      expect(doc.clips[1].clipEnd, equals(0.5));
+
+      // 2min = 120s; 1.5h = 5400s
+      expect(doc.clips[2].clipBegin, equals(120.0));
+      expect(doc.clips[2].clipEnd, equals(5400.0));
+    });
   });
 }

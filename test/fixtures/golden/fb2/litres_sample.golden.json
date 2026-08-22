@@ -4,6 +4,20 @@
     "id": "litres-book-uuid-123456",
     "language": "ru",
     "layout": "reflowable",
+    "annotation": {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "text",
+              "text": "Шедевр русской классической литературы."
+            }
+          ]
+        }
+      ],
+      "footnotes": []
+    },
     "genres": [
       {
         "code": "prose_classic",
@@ -107,7 +121,28 @@
             "inlines": [
               {
                 "type": "text",
-                "text": "«Мой дядя самых честных правил,Когда не в шутку занемог,Он уважать себя заставилИ лучше выдумать не мог"
+                "text": "«Мой дядя самых честных правил,"
+              },
+              {
+                "type": "line_break"
+              },
+              {
+                "type": "text",
+                "text": "Когда не в шутку занемог,"
+              },
+              {
+                "type": "line_break"
+              },
+              {
+                "type": "text",
+                "text": "Он уважать себя заставил"
+              },
+              {
+                "type": "line_break"
+              },
+              {
+                "type": "text",
+                "text": "И лучше выдумать не мог"
               },
               {
                 "type": "footnote_ref",
