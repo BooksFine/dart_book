@@ -40,8 +40,12 @@ class EpubConverter implements BookConverter {
       _encoder.encode(book, options: options);
 
   /// Удобный статический метод: кодирует [book] в EPUB.
-  static Future<Uint8List> bookToEpub(Book book) async =>
-      EpubEncoder().encode(book);
+  static Future<Uint8List> bookToEpub(
+    Book book, {
+    BookEncodingOptions? options,
+  }) async =>
+      EpubEncoder().encode(book, options: options);
+
 
   /// Удобный статический метод: декодирует EPUB из [bytes].
   static Future<Book> epubToBook(

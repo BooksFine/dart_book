@@ -47,6 +47,7 @@ class Fb2Converter implements BookConverter {
     Book book, {
     bool isZip = false,
     BookResourceResolver? resourceResolver,
+    BookEncodingOptions? options,
   }) async {
     if (isZip) {
       return await Fb2ZipConverter.bookToFb2Zip(
@@ -54,8 +55,13 @@ class Fb2Converter implements BookConverter {
         resourceResolver: resourceResolver,
       );
     }
-    return await Fb2Encoder().encode(book, resourceResolver: resourceResolver);
+    return await Fb2Encoder().encode(
+      book,
+      resourceResolver: resourceResolver,
+      options: options,
+    );
   }
+
 
   /// Удобный статический метод: кодирует [book] прямо в `fb2.zip` архив.
   static Future<Uint8List> bookToFb2Zip(
