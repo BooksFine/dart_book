@@ -1,6 +1,5 @@
 # dart_book
 
-[![Dart CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](#)
 [![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen.svg)](#)
 [![Coverage](https://img.shields.io/badge/coverage-96.8%25-brightgreen.svg)](#)
 [![Branch Coverage](https://img.shields.io/badge/branch%20coverage-93.6%25-brightgreen.svg)](#)
