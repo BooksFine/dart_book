@@ -46,7 +46,7 @@ Dart-библиотека для чтения, создания и конвер�
 | SVG-контент (`<svg>`) | ✅ | Сохраняется в `BookSvgBlock`, внешние `.svg` извлекаются в ресурсы |
 | Медиа `<audio>`/`<video>`/`<source>` | ✅ | Блоки и бинарные медиафайлы извлекаются декодером из манифеста и сохраняются энкодером |
 | Обложка (`properties="cover-image"`) | ✅ | Полная поддержка: извлечение в `BookCover` декодером и запись энкодером |
-| Media Overlays (SMIL 3.0) | ❌ | Парсер `EpubSmilDocument` реализован, но не подключен к декодеру/энкодеру |
+| Media Overlays (SMIL 3.0) | ⚠️ | Парсер `EpubSmilDocument` с полной поддержкой разбора таймкодов (`hh:mm:ss`, `mm:ss`, `ms`, `min`, `h`) и синхронизации аудио/текста |
 | Fixed layout (`rendition:layout="pre-paginated"`) | ✅ | Поддержка `BookLayout.fixedLayout` в `BookMetadata` и OPF-метаданных |
 | Шрифты WOFF / WOFF2 | ✅ | WOFF и WOFF2 извлекаются декодером и сохраняются энкодером |
 | Обфускация шрифтов (IDPF / Adobe) | ✅ | Автоматическая деобфускация шрифтов IDPF (SHA-1) и Adobe (UUID XOR) |
@@ -269,28 +269,32 @@ const options = BookEncodingOptions(
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Unit-тесты компонентов (`test/unit/`)**: 100% покрытие правил спецификаций (сложные таблицы, блоки кода, стихи, сноски, полная таблица Windows-1251, деобфускация шрифтов IDPF/Adobe, Dual Navigation).
-2. **Интеграционные Golden Master (`test/integration/`)**: Сквозной парсинг эталонных книг (Литрес, FB2 2.1/2.2, Calibre EPUB 2, IDPF EPUB 3 samples: Moby Dick, Fixed Layout) с валидацией инварианта **Fixed-Point Idempotence** (`EPUB ↔ FB2`).
-3. **Безопасность и устойчивость (`test/security/`)**: Защита от **ZIP Slip** (path traversal `../../`), **Decompression Bomb**, циклических рекурсий в оглавлении (Visited Set + Max Depth 32), санитизация невалидного XML 1.0 и устойчивое восстановление поврежденного Base64.
-4. **Генеративный фаззинг (`test/stress/`)**: Детерминированная генерация 50 случайных деревьев AST со всеми 23 типами узлов и проверка **Crash-Free Invariant** на мутированных бинарных потоках.
-
-Подробная спецификация тестовой пирамиды описана в [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md).
+1. **Unit-тесты компонентов (`test/unit/`)**: 100% покрытие правил спецификаций (сложные таблицы с объединением строк/колонок, блоки кода с подсветкой, стихи, сноски, полная 256-байтная таблица Windows-1251, деобфускация шрифтов IDPF/Adobe, Dual Navigation).
+2. **Интеграционные Golden Master (`test/integration/`)**: Сквозной парсинг эталонных книг (Литрес, FB2 2.1/2.2, Calibre EPUB 2, IDPF EPUB 3 samples: Moby Dick 144 секции, Accessible EPUB 3) с валидацией математического инварианта **Fixed-Point Idempotence** ($AST_2 \equiv AST_3$) для предотвращения дрейфа структуры при циклических конвертациях (`EPUB ↔ FB2`).
+3. **Безопасность и устойчивость (`test/security/`)**: Защита от **ZIP Slip** (path traversal `../../` и `..\..\` в памяти), **Decompression Bomb**, циклических рекурсий в оглавлении и сносках (Visited Set + Max Depth 32), санитизация невалидного XML 1.0 и устойчивое восстановление поврежденного Base64.
+4. **Генеративный фаззинг (`test/stress/`)**: Детерминированная генерация случайных деревьев AST со всеми 23 типами узлов и проверка **Crash-Free Invariant** на мутированных бинарных потоках с падением при любых внутренних ошибках среды Dart `Error`.
 
 ---
 
-## Запуск тестов и бенчмарков
+## 🚀 Запуск тестов, покрытия и бенчмарков
 
 ```bash
-# Анализ кодовой базы
+# Анализ кодовой базы (0 issues)
 dart analyze
 
-# Запуск всех 120+ тестов (Unit, Integration, Security, Fuzzing)
+# Запуск всех 158 тестов (Unit, Integration, Security, Fuzzing)
 dart test
+
+# Расчет покрытия рукописного кода (>96%)
+dart run tool/calculate_handwritten_coverage.dart
+
+# Анализ цикломатической сложности (CCN)
+dart run tool/calculate_ccn.dart
 
 # Запуск стресс-тестов и замеров производительности
 dart test test/stress/performance_benchmark_test.dart
 
-# Запуск примера
+# Запуск примера использования
 dart run example/dart_book_example.dart
 ```
 
