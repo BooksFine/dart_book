@@ -127,7 +127,8 @@ void processBlocks(Book book) {
   for (final block in book.content.blocks) {
     switch (block) {
       case BookHeading(:final level, :final text):
-        print('H$level: ${text.map((t) => t.text).join()}');
+        final headingText = text.whereType<BookText>().map((t) => t.text).join();
+        print('H$level: $headingText');
 
       case BookParagraph(:final inlines):
         final text = inlines.whereType<BookText>().map((t) => t.text).join();
@@ -137,10 +138,15 @@ void processBlocks(Book book) {
         print('Таблица: ${rows.length} строк');
 
       case BookQuote(:final blocks, :final citation):
-        print('Цитата: ${citation.map((c) => c.text).join()}');
+        final cite = citation.whereType<BookText>().map((c) => c.text).join();
+        print('Цитата: $cite');
 
       case BookSection(:final title, :final blocks):
-        print('Раздел: ${title?.map((t) => t.text).join()}');
+        final titleText = title.whereType<BookText>().map((t) => t.text).join();
+        print('Раздел: $titleText');
+
+      default:
+        break;
     }
   }
 }
@@ -195,15 +201,15 @@ abstract class DartBook {
 - `EpubConverter.bookToEpub(book, {options})` — сборка EPUB 3 с оглавлением (NAV + NCX).
 - `Fb2Converter.fb2ToBook(bytes, {options})` — декодирование FB2 (UTF-8, Windows-1251).
 - `Fb2Converter.bookToFb2(book, {isZip = false, options})` — сериализация в FB2 XML.
-- `Fb2Converter.bookToFb2Zip(book, {options})` — сериализация в `.fb2.zip`.
+- `Fb2Converter.bookToFb2Zip(book, {resourceResolver})` — упаковка книги в `.fb2.zip`.
 
 ### Парсер HTML `HtmlParser`
 
 Парсит HTML5 строки или фрагменты документов в блоки AST:
 
 ```dart
-final parser = const HtmlParser();
-final blocks = parser.parse('<p>Текст статьи с <strong>жирным</strong> шрифтом</p>');
+final parser = HtmlParser();
+final blocks = parser.parseFromString('<p>Текст статьи с <strong>жирным</strong> шрифтом</p>');
 ```
 
 ### Конструктор книг `BookBuilder`
@@ -251,7 +257,7 @@ final book = await DartBook.load(
 ### Опции
 
 ```dart
-const decodingOptions = BookDecodingOptions(
+final decodingOptions = BookDecodingOptions(
   strictMode: false,             // true — выбрасывать исключения при неизвестных тегах/ошибках
   logger: (warn) => print(warn), // Обработчик предупреждений
 );

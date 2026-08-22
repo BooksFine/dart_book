@@ -89,10 +89,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       case 'empty-line':
         return [const BookEmptyLine()];
       case 'image':
-        final href =
-            element.getAttribute('l:href') ??
-            element.getAttribute('href') ??
-            '';
+        final href = _getFb2Href(element);
         final imgId = element.getAttribute('id');
         final alt = element.getAttribute('alt');
         final title = element.getAttribute('title');
@@ -229,10 +226,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
           case 'empty-line':
             inlines.add(const BookLineBreak());
           case 'a':
-            final href =
-                child.getAttribute('l:href') ??
-                child.getAttribute('href') ??
-                '';
+            final href = _getFb2Href(child);
             final type = child.getAttribute('type');
             if (type == 'note' ||
                 href.startsWith('#n_') ||
@@ -251,10 +245,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
               );
             }
           case 'image':
-            final href =
-                child.getAttribute('l:href') ??
-                child.getAttribute('href') ??
-                '';
+            final href = _getFb2Href(child);
             final imgId = child.getAttribute('id');
             final alt = child.getAttribute('alt');
             final title = child.getAttribute('title');
@@ -275,6 +266,15 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
       }
     }
     return inlines;
+  }
+
+  static String _getFb2Href(XmlElement element) {
+    return element.getAttribute('l:href') ??
+        element.getAttribute('xlink:href') ??
+        element.getAttribute('href', namespaceUri: 'http://www.w3.org/1999/xlink') ??
+        element.attributes.where((a) => a.name.local == 'href').firstOrNull?.value ??
+        element.getAttribute('href') ??
+        '';
   }
 
   List<BookInline> _parseFb2Title(XmlElement titleElement) {

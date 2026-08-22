@@ -15,7 +15,7 @@ import '../models/exceptions.dart';
 /// final parser = HtmlParser(
 ///   registrar: (src, {required isInline}) => Uri.parse(src).pathSegments.last,
 /// );
-/// final blocks = parser.parseFragment('<h1>Заголовок</h1><p>Текст</p>');
+/// final blocks = parser.parseFromString('<h1>Заголовок</h1><p>Текст</p>');
 /// ```
 class HtmlParser implements Parser<Iterable<dom.Node>> {
   HtmlParser({this.registrar, this.strictMode = false, this.logger});

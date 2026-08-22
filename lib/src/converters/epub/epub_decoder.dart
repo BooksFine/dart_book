@@ -260,11 +260,15 @@ class EpubDecoder implements BookDecoder {
     BookCover? cover,
   }) {
     final metadataElement = opfXml.findAllElements('metadata').first;
-
-    final id = metadataElement
-        .findAllElements('dc:identifier')
-        .firstOrNull
-        ?.innerText;
+    final uniqueIdAttr = opfXml.rootElement.getAttribute('unique-identifier');
+    final identifiers = metadataElement.findAllElements('dc:identifier').toList();
+    final primaryIdentifier = (uniqueIdAttr != null
+            ? identifiers
+                .where((e) => e.getAttribute('id') == uniqueIdAttr)
+                .firstOrNull
+            : null) ??
+        identifiers.firstOrNull;
+    final id = primaryIdentifier?.innerText;
 
     final titleElement = metadataElement
         .findAllElements('dc:title')

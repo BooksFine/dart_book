@@ -133,7 +133,7 @@ class OcfContainer {
     } else if (algorithm == 'http://ns.adobe.com/pdf/enc#RC') {
       // Adobe algorithm: UUID hex digits to 16 bytes, XOR first 1024 bytes (64 * 16 bytes)
       final hex = cleanUid
-          .replaceAll('urn:uuid:', '')
+          .replaceAll(RegExp(r'^urn:uuid:', caseSensitive: false), '')
           .replaceAll('-', '')
           .replaceAll(':', '');
       final key = <int>[];
