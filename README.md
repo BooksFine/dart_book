@@ -141,12 +141,11 @@ void processBlocks(Book book) {
         final cite = citation.whereType<BookText>().map((c) => c.text).join();
         print('Цитата: $cite');
 
-      case BookSection(:final title, :final blocks):
+      case BookSection(:final title):
         final titleText = title.whereType<BookText>().map((t) => t.text).join();
         print('Раздел: $titleText');
 
-      default:
-        break;
+      case _:
     }
   }
 }
