@@ -33,7 +33,7 @@ jobs:
         run: dart analyze --fatal-infos
 
       - name: Run Full Test Suite (Unit, Integration, Security, Fuzzing)
-        run: dart test
+        run: dart test --reporter=expanded
 
       - name: Run Performance Benchmarks
-        run: dart test test/stress/performance_benchmark_test.dart
+        run: dart test test/stress/performance_benchmark_test.dart --reporter=expanded
