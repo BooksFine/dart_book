@@ -15,6 +15,7 @@
 ## Возможности
 
 - **Форматы и конвертация:** чтение, сборка и двусторонняя конвертация между EPUB (2.0.1, 3.0–3.4), FB2 (2.0–2.2) и архивами FB2.zip.
+- **Парсинг HTML5 и сборка книг:** прямой разбор HTML5 (`HtmlParser`) в блоки AST и конструктор `BookBuilder` для поглавной сборки книг из веб-источников и CMS.
 - **Структура и элементы книги:** разбор глав, оглавления, сносок, таблиц (`colspan`, `rowspan`), блоков кода, стихов, цитат, формул MathML, векторного SVG, аудио и видео.
 - **Метаданные и ресурсы:** извлечение авторов, переводчиков, серий, издательских данных, языка/названия оригинала, графических обложек и медиафайлов.
 - **Синхронизация звука (SMIL 3.0):** извлечение аудиодорожек и разбор временных меток для аудиокниг (Media Overlays).
@@ -195,6 +196,25 @@ abstract class DartBook {
 - `Fb2Converter.fb2ToBook(bytes, {options})` — декодирование FB2 (UTF-8, Windows-1251).
 - `Fb2Converter.bookToFb2(book, {isZip = false, options})` — сериализация в FB2 XML.
 - `Fb2Converter.bookToFb2Zip(book, {options})` — сериализация в `.fb2.zip`.
+
+### Парсер HTML `HtmlParser`
+
+Парсит HTML5 строки или фрагменты документов в блоки AST:
+
+```dart
+final parser = const HtmlParser();
+final blocks = parser.parse('<p>Текст статьи с <strong>жирным</strong> шрифтом</p>');
+```
+
+### Конструктор книг `BookBuilder`
+
+Позволяет поглавно собирать книгу из HTML-разметки с автоматической параллельной загрузкой изображений:
+
+```dart
+final builder = BookBuilder(title: 'Моя книга', language: 'ru');
+await builder.addChapterHtml('<h2>Глава 1</h2><p>Текст...</p>', title: 'Глава 1');
+final book = await builder.build();
+```
 
 ### Реестр форматов `BookRegistry`
 
