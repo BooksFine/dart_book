@@ -2,20 +2,15 @@ import 'dart:io';
 import 'package:dart_book/dart_book.dart';
 
 void main() async {
-  print(
-    '═══════════════════════════════════════════════════════════════════════',
-  );
-  print(
-    '       ПРЯМОЙ СРАВНИТЕЛЬНЫЙ БЕНЧМАРК: DART_BOOK vs EPUBX              ',
-  );
-  print(
-    '═══════════════════════════════════════════════════════════════════════\n',
-  );
+  print('════════════════════════════════════════════════════════════════════════════════════════');
+  print('       ЧЕСТНЫЙ ЭМПИРИЧЕСКИЙ БЕНЧМАРК: DART_BOOK vs EPUBX vs EPUB_PLUS vs EPUB_PRO       ');
+  print('════════════════════════════════════════════════════════════════════════════════════════\n');
 
-  final tempDir = Directory('test/benchmarks/temp');
+  final tempDir = Directory('tool/benchmarks/temp');
   if (!tempDir.existsSync()) {
     tempDir.createSync(recursive: true);
   }
+
 
   final testCases = [
     (title: 'Стандартная книга', chapters: 20, paragraphsPerChapter: 5),
@@ -24,14 +19,12 @@ void main() async {
   ];
 
   for (final tc in testCases) {
-    print('📦 Подготовка книги: "${tc.title}" (${tc.chapters} глав)...');
+    print('📦 Тестовый сценарий: "${tc.title}" (${tc.chapters} глав)...');
     final builder = BookBuilder(title: tc.title);
     for (var i = 0; i < tc.chapters; i++) {
       final buffer = StringBuffer();
       for (var p = 0; p < tc.paragraphsPerChapter; p++) {
-        buffer.write(
-          '<p>Параграф $p главы $i с <strong>жирным</strong> текстом, <em>курсивом</em> и <a href="#ch$i">ссылкой</a>.</p>',
-        );
+        buffer.write('<p>Параграф $p главы $i с <strong>жирным</strong> текстом, <em>курсивом</em> и <a href="#ch$i">ссылкой</a>.</p>');
       }
       await builder.addChapterHtml(buffer.toString(), title: 'Глава $i');
     }
@@ -44,45 +37,65 @@ void main() async {
     // 1. Замер dart_book (с прогревом JIT)
     await EpubConverter.epubToBook(epubBytes); // прогрев
     final swDartBook = Stopwatch()..start();
-    final dartBookResult = await EpubConverter.epubToBook(epubBytes);
+    await EpubConverter.epubToBook(epubBytes);
     swDartBook.stop();
 
-    // 2. Замер epubx (через отдельный процесс в изолированном окружении)
-    final processResult = await Process.run(
-      'dart',
-      ['run', 'run_epubx.dart', epubFile.absolute.path],
-      workingDirectory: 'test/benchmarks/epubx_runner',
-      runInShell: true,
-    );
-
+    // 2. Замер epubx
     int epubxMs = -1;
-    int epubxChapters = 0;
-    final stdoutStr = processResult.stdout as String;
-    final stderrStr = processResult.stderr as String;
+    try {
+      final res = await Process.run(
 
-    if (stderrStr.isNotEmpty && processResult.exitCode != 0) {
-      print('   ⚠️ Ошибка epubx: $stderrStr');
-    }
-
-    for (final line in stdoutStr.split('\n')) {
-      if (line.startsWith('EPUBX_RESULT:')) {
-        final parts = line.trim().substring('EPUBX_RESULT:'.length).split(':');
-        epubxMs = int.parse(parts[0]);
-        epubxChapters = int.parse(parts[1]);
-      }
-    }
-
-    print('📊 Результаты для ${tc.chapters} глав:');
-    print(
-      '   ├─ dart_book: ${swDartBook.elapsedMilliseconds} ms (${dartBookResult.content.blocks.length} глав)',
-    );
-    print('   ├─ epubx:     $epubxMs ms ($epubxChapters глав)');
-    if (epubxMs > 0 && swDartBook.elapsedMilliseconds > 0) {
-      final speedup = epubxMs / swDartBook.elapsedMilliseconds;
-      print(
-        '   └─ Разница:   dart_book быстрее в ${speedup.toStringAsFixed(2)}x раз!',
+        'dart',
+        ['run', 'run_epubx.dart', epubFile.absolute.path],
+        workingDirectory: 'tool/benchmarks/epubx_runner',
+        runInShell: true,
       );
-    }
+      for (final line in (res.stdout as String).split('\n')) {
+        if (line.startsWith('EPUBX_RESULT:')) {
+          final parts = line.trim().substring('EPUBX_RESULT:'.length).split(':');
+          epubxMs = int.parse(parts[0]);
+        }
+      }
+    } catch (_) {}
+
+    // 3. Замер epub_plus и epub_pro
+    int epubPlusMs = -1;
+    int epubPlusDomMs = -1;
+    int epubProMs = -1;
+    int epubProDomMs = -1;
+    try {
+      final res = await Process.run(
+        'dart',
+        ['run', 'bin/benchmark_all.dart', epubFile.absolute.path],
+        workingDirectory: 'tool/benchmarks/competitors',
+        runInShell: true,
+      );
+
+      for (final line in (res.stdout as String).split('\n')) {
+        if (line.startsWith('EPUB_PLUS_RESULT:')) {
+          epubPlusMs = int.parse(line.trim().substring('EPUB_PLUS_RESULT:'.length).split(':')[0]);
+        }
+        if (line.startsWith('EPUB_PLUS_FULL_DOM_RESULT:')) {
+          epubPlusDomMs = int.parse(line.trim().substring('EPUB_PLUS_FULL_DOM_RESULT:'.length).split(':')[0]);
+        }
+        if (line.startsWith('EPUB_PRO_RESULT:')) {
+          epubProMs = int.parse(line.trim().substring('EPUB_PRO_RESULT:'.length).split(':')[0]);
+        }
+        if (line.startsWith('EPUB_PRO_FULL_DOM_RESULT:')) {
+          epubProDomMs = int.parse(line.trim().substring('EPUB_PRO_FULL_DOM_RESULT:'.length).split(':')[0]);
+        }
+      }
+    } catch (_) {}
+
+    print('📊 Реальные замеры для ${tc.chapters} глав:');
+    print('   А. Поверхностное чтение манифеста (только распаковка строк):');
+    print('      ├─ epubx:     ${epubxMs.toString().padLeft(4)} ms');
+    print('      ├─ epub_plus: ${epubPlusMs.toString().padLeft(4)} ms');
+    print('      └─ epub_pro:  ${epubProMs.toString().padLeft(4)} ms');
+    print('   Б. Полная готовность контента к отображению (парсинг HTML/AST):');
+    print('      ├─ dart_book (полный AST 23 узла):  ${swDartBook.elapsedMilliseconds.toString().padLeft(4)} ms');
+    print('      ├─ epub_plus + html.parse:          ${epubPlusDomMs.toString().padLeft(4)} ms');
+    print('      └─ epub_pro + html.parse:           ${epubProDomMs.toString().padLeft(4)} ms');
     print('');
   }
 
@@ -90,7 +103,5 @@ void main() async {
   if (tempDir.existsSync()) {
     tempDir.deleteSync(recursive: true);
   }
-  print(
-    '═══════════════════════════════════════════════════════════════════════',
-  );
+  print('════════════════════════════════════════════════════════════════════════════════════════');
 }

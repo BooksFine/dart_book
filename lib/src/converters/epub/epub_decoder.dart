@@ -39,8 +39,10 @@ class EpubDecoder implements BookDecoder {
     final opfPath = ocfContainer.primaryOpfPath;
 
     final opfFile = archive.findFile(opfPath);
-    if (opfFile == null)
+    if (opfFile == null) {
       throw Exception('Invalid EPUB: OPF file not found at $opfPath');
+    }
+
 
     final opfXml = XmlDocument.parse(utf8.decode(opfFile.content));
     final opfDir = opfPath.contains('/')

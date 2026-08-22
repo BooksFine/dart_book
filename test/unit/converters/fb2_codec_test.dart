@@ -20,8 +20,10 @@ void main() {
 
         for (var b = 0x20; b <= 0xFF; b++) {
           // Avoid XML special characters in raw text inside <p>
-          if (b == 0x3C || b == 0x3E || b == 0x26 || b == 0x7F)
+          if (b == 0x3C || b == 0x3E || b == 0x26 || b == 0x7F) {
             continue; // '<', '>', '&', DEL
+          }
+
           byteList.add(b);
 
           if (b < 0x80) {

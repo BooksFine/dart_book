@@ -1,13 +1,13 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dart_book/dart_book.dart';
 import 'package:test/test.dart';
 import '../utils/golden_comparator.dart';
 
+
 void main() {
   group('FB2 Golden Master Integration Tests', () {
     test(
-      'Parses LitRes FB2 sample (Win-1251, verses, epigraphs, footnotes, publish-info)',
+      'Parses LitRes FB2 sample (Win-1251, verses, epigraphs, footnotes, publish-info) and matches Golden snapshot',
       () async {
         final file = File('test/fixtures/fb2/litres_sample.fb2');
         expect(
@@ -119,17 +119,11 @@ void main() {
         expect(book.content.footnotes.any((fn) => fn.id == 'note_1'), isTrue);
         expect(book.content.footnotes.any((fn) => fn.id == 'note_2'), isTrue);
 
-        // 3. Golden JSON serialization
-        final goldenJson = GoldenComparator.contentToJson(book.content);
-        expect(goldenJson['blocks'], isNotEmpty);
-        expect(goldenJson['footnotes'], hasLength(2));
-
-        final jsonStr = jsonEncode(goldenJson);
-        expect(jsonStr, contains('poem'));
-        expect(jsonStr, contains('quote'));
-        expect(jsonStr, contains('footnote_ref'));
-        expect(jsonStr, contains('note_1'));
-        expect(jsonStr, contains('note_2'));
+        // 3. Golden Snapshot File Matching
+        GoldenComparator.assertBookMatchesGoldenFile(
+          book,
+          'test/fixtures/goldens/fb2/litres_sample.golden.json',
+        );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
         final fb2Bytes = await Fb2Converter.bookToFb2(book);
@@ -148,7 +142,7 @@ void main() {
     );
 
     test(
-      'Parses FB2 2.1 reference sample (code, sub, sup, strike, complex tables, src-title-info)',
+      'Parses FB2 2.1 reference sample (code, sub, sup, strike, complex tables, src-title-info) and matches Golden snapshot',
       () async {
         final file = File('test/fixtures/fb2/fb2_21_sample.fb2');
         expect(
@@ -239,20 +233,11 @@ void main() {
         expect(blockImg.alt, equals('Architecture Diagram'));
         expect(blockImg.title, equals('Figure 1. System Architecture'));
 
-        // 3. Golden JSON serialization
-        final goldenJson = GoldenComparator.contentToJson(book.content);
-        expect(goldenJson['blocks'], isNotEmpty);
-
-        final jsonStr = jsonEncode(goldenJson);
-        expect(jsonStr, contains('subscript'));
-        expect(jsonStr, contains('superscript'));
-        expect(jsonStr, contains('strike'));
-        expect(jsonStr, contains('code_span'));
-        expect(jsonStr, contains('table'));
-        expect(jsonStr, contains('colSpan'));
-        expect(jsonStr, contains('rowSpan'));
-        expect(jsonStr, contains('image_inline'));
-        expect(jsonStr, contains('image_block'));
+        // 3. Golden Snapshot File Matching
+        GoldenComparator.assertBookMatchesGoldenFile(
+          book,
+          'test/fixtures/goldens/fb2/fb2_21_sample.golden.json',
+        );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
         final fb2Bytes = await Fb2Converter.bookToFb2(book);
@@ -271,7 +256,7 @@ void main() {
     );
 
     test(
-      'Parses FB2 2.2 sample (style name, custom-info, multiple bodies)',
+      'Parses FB2 2.2 sample (style name, custom-info, multiple bodies) and matches Golden snapshot',
       () async {
         final file = File('test/fixtures/fb2/fb2_22_sample.fb2');
         expect(
@@ -342,14 +327,11 @@ void main() {
         expect(book.content.footnotes.length, equals(1));
         expect(book.content.footnotes.first.id, equals('note_lem_1'));
 
-        // 3. Golden JSON serialization
-        final goldenJson = GoldenComparator.contentToJson(book.content);
-        expect(goldenJson['blocks'], isNotEmpty);
-
-        final jsonStr = jsonEncode(goldenJson);
-        expect(jsonStr, contains('named_style'));
-        expect(jsonStr, contains('highlight'));
-        expect(jsonStr, contains('code-style'));
+        // 3. Golden Snapshot File Matching
+        GoldenComparator.assertBookMatchesGoldenFile(
+          book,
+          'test/fixtures/goldens/fb2/fb2_22_sample.golden.json',
+        );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
         final fb2Bytes = await Fb2Converter.bookToFb2(book);

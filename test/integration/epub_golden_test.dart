@@ -29,7 +29,7 @@ Uint8List packEpubDirectory(Directory dir) {
 void main() {
   group('EPUB Golden Master Integration Tests', () {
     test(
-      'Parses Calibre EPUB 2 sample (calibre:series, toc.ncx, cover, AST, roundtrip)',
+      'Parses Calibre EPUB 2 sample (calibre:series, toc.ncx, cover, AST, roundtrip) and matches Golden snapshot',
       () async {
         final file = File('test/fixtures/epub/calibre_sample.epub');
         expect(
@@ -125,15 +125,11 @@ void main() {
         final list = chap2.blocks.firstWhere((b) => b is BookList) as BookList;
         expect(list.items.length, equals(2));
 
-        // 3. Golden JSON Serialization
-        final goldenJson = GoldenComparator.contentToJson(book.content);
-        expect(goldenJson['blocks'], hasLength(3));
-
-        final jsonStr = jsonEncode(goldenJson);
-        expect(jsonStr, contains('quote'));
-        expect(jsonStr, contains('list'));
-        expect(jsonStr, contains('Chapter 1: The Adventure Begins'));
-        expect(jsonStr, contains('Chapter 2: The Clues'));
+        // 3. Golden Snapshot File Matching
+        GoldenComparator.assertBookMatchesGoldenFile(
+          book,
+          'test/fixtures/goldens/epub/calibre_sample.golden.json',
+        );
 
         // 4. Lossless EPUB Roundtrip & Fixed-Point Idempotence
         final reEncodedEpub1 = await EpubConverter.bookToEpub(book);

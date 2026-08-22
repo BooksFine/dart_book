@@ -206,8 +206,10 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     final contentNodes = <dom.Node>[];
     for (final child in element.nodes) {
       if (identical(child, titleNode) ||
-          (titleNode != null && titleNode.contains(child)))
+          (titleNode != null && titleNode.contains(child))) {
         continue;
+      }
+
       contentNodes.add(child);
     }
 

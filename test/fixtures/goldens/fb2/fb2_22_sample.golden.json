@@ -1,0 +1,151 @@
+{
+  "metadata": {
+    "title": "FB2 2.2 Advanced Reference",
+    "id": "fb2-22-spec-reference-doc-002",
+    "language": "ru",
+    "layout": "reflowable",
+    "genres": [
+      {
+        "code": "sf",
+        "name": "sf"
+      }
+    ],
+    "contributors": [
+      {
+        "role": "author",
+        "name": {
+          "first": "Станислав",
+          "last": "Лем",
+          "display": "Станислав Лем"
+        }
+      }
+    ],
+    "series": [
+      {
+        "name": "Кибериада",
+        "number": 7
+      }
+    ]
+  },
+  "content": {
+    "blocks": [
+      {
+        "type": "section",
+        "title": [
+          {
+            "type": "text",
+            "text": "Глава 1. Киберотические эксперименты"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Текст с именованным стилем "
+              },
+              {
+                "type": "named_style",
+                "name": "highlight",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "критически важный термин"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " и еще "
+              },
+              {
+                "type": "named_style",
+                "name": "term",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "конструкт"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Смешанное форматирование: "
+              },
+              {
+                "type": "strong",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "жирный и "
+                  },
+                  {
+                    "type": "named_style",
+                    "name": "code-style",
+                    "inlines": [
+                      {
+                        "type": "text",
+                        "text": "стилизованный код"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " внутри абзаца."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "title": [
+          {
+            "type": "text",
+            "text": "Комментарий к главе 1"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Дополнительный анализ киберотических конструктов и кибернетических моделей."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "footnotes": [
+      {
+        "id": "note_lem_1",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Сноска к тексту Лема о природе разума."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "resources": []
+}

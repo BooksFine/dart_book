@@ -1,0 +1,233 @@
+{
+  "metadata": {
+    "title": "Евгений Онегин и стихотворения",
+    "id": "litres-book-uuid-123456",
+    "language": "ru",
+    "layout": "reflowable",
+    "genres": [
+      {
+        "code": "prose_classic",
+        "name": "prose_classic"
+      },
+      {
+        "code": "poetry",
+        "name": "poetry"
+      }
+    ],
+    "contributors": [
+      {
+        "role": "author",
+        "name": {
+          "first": "Александр",
+          "middle": "Сергеевич",
+          "last": "Пушкин",
+          "display": "Александр Сергеевич Пушкин"
+        },
+        "email": "pushkin@litres.ru"
+      }
+    ],
+    "series": [
+      {
+        "name": "Русская Классика",
+        "number": 1
+      }
+    ],
+    "publishInfo": {
+      "publisher": "Издательство Литрес Эксмо",
+      "city": "Москва",
+      "year": 2023,
+      "isbn": "978-5-04-123456-7"
+    },
+    "cover": {
+      "ref": "cover.jpg"
+    }
+  },
+  "content": {
+    "blocks": [
+      {
+        "type": "quote",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "И жить торопится, и чувствовать спешит."
+              }
+            ]
+          }
+        ],
+        "citation": [
+          {
+            "type": "text",
+            "text": "Кн. Вяземский"
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "title": [
+          {
+            "type": "text",
+            "text": "Глава I"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "quote",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "И в голос все решили так,"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "Что он опаснейший чудак."
+                  }
+                ]
+              }
+            ],
+            "citation": [
+              {
+                "type": "text",
+                "text": "Грибоедов"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "«Мой дядя самых честных правил,Когда не в шутку занемог,Он уважать себя заставилИ лучше выдумать не мог"
+              },
+              {
+                "type": "footnote_ref",
+                "id": "note_1",
+                "label": [
+                  {
+                    "type": "text",
+                    "text": "[1]"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ".»"
+              }
+            ]
+          },
+          {
+            "type": "poem",
+            "stanzas": [
+              {
+                "lines": [
+                  {
+                    "inlines": [
+                      {
+                        "type": "text",
+                        "text": "Так думал молодой повеса,"
+                      }
+                    ]
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "type": "text",
+                        "text": "Летя в пыли на почтовых,"
+                      }
+                    ]
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "type": "text",
+                        "text": "Всевышней волею Зевеса"
+                      }
+                    ]
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "type": "text",
+                        "text": "Наследник всех своих родных."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Служив отлично благородно, долгами жил его отец"
+              },
+              {
+                "type": "footnote_ref",
+                "id": "note_2",
+                "label": [
+                  {
+                    "type": "text",
+                    "text": "[2]"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "footnotes": [
+      {
+        "id": "note_1",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Ирония на басню И. А. Крылова «Осел и Мужик»."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "note_2",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Обычная судьба петербургского дворянства того времени."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "resources": [
+    {
+      "id": "cover.jpg",
+      "mediaType": "image/jpeg",
+      "size": 134
+    }
+  ]
+}

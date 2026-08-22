@@ -1,0 +1,306 @@
+{
+  "metadata": {
+    "title": "FB2 2.1 Specification Reference",
+    "id": "fb2-21-spec-reference-doc-001",
+    "language": "ru",
+    "layout": "reflowable",
+    "genres": [
+      {
+        "code": "science",
+        "name": "science"
+      }
+    ],
+    "contributors": [
+      {
+        "role": "author",
+        "name": {
+          "first": "Alan",
+          "last": "Turing",
+          "display": "Alan Turing"
+        }
+      }
+    ],
+    "srcTitleInfo": {
+      "title": "Computing Machinery and Intelligence",
+      "language": "en"
+    }
+  },
+  "content": {
+    "blocks": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": [
+          {
+            "type": "text",
+            "text": "\n      Comprehensive Element Reference\n    "
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "title": [
+          {
+            "type": "text",
+            "text": "1. Formatting and Formulas"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Formula representation: water is H"
+              },
+              {
+                "type": "subscript",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "2"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "O and relativity is E=mc"
+              },
+              {
+                "type": "superscript",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "2"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Editorial revisions: "
+              },
+              {
+                "type": "strike",
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "deprecated algorithm"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " replaced with modern approach."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Source code snippet: "
+              },
+              {
+                "type": "code_span",
+                "code": "int factorial(int n) => n <= 1 ? 1 : n * factorial(n - 1);"
+              },
+              {
+                "type": "text",
+                "text": " in Dart."
+              }
+            ]
+          },
+          {
+            "type": "empty_line"
+          },
+          {
+            "type": "paragraph",
+            "inlines": [
+              {
+                "type": "text",
+                "text": "Inline icon "
+              },
+              {
+                "type": "image_inline",
+                "ref": "icon.png",
+                "id": "inline-img-01",
+                "alt": "Code Icon",
+                "title": "Inline Programming Icon"
+              },
+              {
+                "type": "text",
+                "text": " illustrates syntax highlighting."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "title": [
+          {
+            "type": "text",
+            "text": "2. Complex Tables"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "table",
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "colSpan": 2,
+                    "align": "center",
+                    "vAlign": "top",
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "inlines": [
+                          {
+                            "type": "text",
+                            "text": "Header spanning 2 columns"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "rowSpan": 2,
+                    "align": "right",
+                    "vAlign": "middle",
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "inlines": [
+                          {
+                            "type": "text",
+                            "text": "Side Header spanning 2 rows"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "cells": [
+                  {
+                    "align": "left",
+                    "vAlign": "bottom",
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "inlines": [
+                          {
+                            "type": "text",
+                            "text": "Data Cell 1.1"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "align": "justify",
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "inlines": [
+                          {
+                            "type": "text",
+                            "text": "Data Cell 1.2"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "cells": [
+                  {
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "inlines": [
+                          {
+                            "type": "text",
+                            "text": "Data Cell 2.1"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "colSpan": 2,
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "inlines": [
+                          {
+                            "type": "text",
+                            "text": "Wide Bottom Cell"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "quote",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "Science is what we understand well enough to explain to a computer."
+                  }
+                ]
+              }
+            ],
+            "citation": [
+              {
+                "type": "text",
+                "text": "Donald Knuth"
+              }
+            ]
+          },
+          {
+            "type": "image_block",
+            "ref": "diagram.png",
+            "id": "block-img-01",
+            "alt": "Architecture Diagram",
+            "title": "Figure 1. System Architecture"
+          }
+        ]
+      }
+    ],
+    "footnotes": []
+  },
+  "resources": [
+    {
+      "id": "icon.png",
+      "mediaType": "image/png",
+      "size": 70
+    },
+    {
+      "id": "diagram.png",
+      "mediaType": "image/png",
+      "size": 70
+    }
+  ]
+}

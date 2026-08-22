@@ -5,11 +5,26 @@ import 'package:dart_book/dart_book.dart';
 /// Устраняет косметические различия, возникающие из-за форматирования:
 /// - Сливает идущие подряд текстовые узлы [BookText].
 /// - Удаляет пустые текстовые узлы [BookText] (`""`).
-/// - Рекурсивно нормализует дочерние узлы в блоках и инлайнах.
+/// - Рекурсивно нормализует все дочерние узлы во всех блоках и инлайнах.
+///
+/// Внимание: Все типы [BookBlock] и [BookInline] матчатся исчерпывающе без `_ =>`.
 class AstNormalizer {
   /// Нормализует всю книгу [Book].
   static Book normalizeBook(Book book) {
-    return book.copyWith(content: normalizeContent(book.content));
+    return book.copyWith(
+      metadata: normalizeMetadata(book.metadata),
+      content: normalizeContent(book.content),
+    );
+  }
+
+  /// Нормализует метаданные книги [BookMetadata].
+  static BookMetadata normalizeMetadata(BookMetadata metadata) {
+    return metadata.copyWith(
+      title: metadata.title.trim(),
+      annotation: metadata.annotation != null
+          ? normalizeContent(metadata.annotation!)
+          : null,
+    );
   }
 
   /// Нормализует контент книги [BookContent].
@@ -40,66 +55,121 @@ class AstNormalizer {
     return result;
   }
 
-  /// Нормализует отдельный блок [BookBlock].
+  /// Исчерпывающий нормализатор блоков [BookBlock] без wildcard `_ =>`.
   static BookBlock? normalizeBlock(BookBlock block) {
     return switch (block) {
-      BookParagraph p => BookParagraph(inlines: normalizeInlines(p.inlines)),
+      BookParagraph p => BookParagraph(
+          inlines: normalizeInlines(p.inlines),
+          attributes: p.attributes,
+        ),
       BookHeading h => BookHeading(
-        level: h.level,
-        text: normalizeInlines(h.text),
-      ),
+          level: h.level,
+          text: normalizeInlines(h.text),
+          attributes: h.attributes,
+        ),
       BookSection s => BookSection(
-        id: s.id,
-        title: normalizeInlines(s.title),
-        blocks: normalizeBlocks(s.blocks),
-        children: s.children
-            .map(normalizeBlock)
-            .whereType<BookSection>()
-            .toList(),
-      ),
+          id: s.id,
+          title: normalizeInlines(s.title),
+          blocks: normalizeBlocks(s.blocks),
+          children: s.children
+              .map(normalizeBlock)
+              .whereType<BookSection>()
+              .toList(),
+          attributes: s.attributes,
+        ),
       BookQuote q => BookQuote(
-        blocks: normalizeBlocks(q.blocks),
-        citation: normalizeInlines(q.citation),
-      ),
+          blocks: normalizeBlocks(q.blocks),
+          citation: normalizeInlines(q.citation),
+          attributes: q.attributes,
+        ),
       BookList l => BookList(
-        ordered: l.ordered,
-        items: l.items
-            .map((item) => BookListItem(blocks: normalizeBlocks(item.blocks)))
-            .toList(),
-      ),
+          ordered: l.ordered,
+          items: l.items
+              .map((item) => BookListItem(blocks: normalizeBlocks(item.blocks)))
+              .toList(),
+          attributes: l.attributes,
+        ),
       BookTable t => BookTable(
-        rows: t.rows
-            .map(
-              (row) => BookTableRow(
-                cells: row.cells
-                    .map(
-                      (cell) => BookTableCell(
-                        blocks: normalizeBlocks(cell.blocks),
-                        colSpan: cell.colSpan,
-                        rowSpan: cell.rowSpan,
-                        align: cell.align,
-                        vAlign: cell.vAlign,
-                      ),
-                    )
-                    .toList(),
-              ),
-            )
-            .toList(),
-      ),
+          rows: t.rows
+              .map(
+                (row) => BookTableRow(
+                  cells: row.cells
+                      .map(
+                        (cell) => BookTableCell(
+                          blocks: normalizeBlocks(cell.blocks),
+                          colSpan: cell.colSpan,
+                          rowSpan: cell.rowSpan,
+                          align: cell.align,
+                          vAlign: cell.vAlign,
+                        ),
+                      )
+                      .toList(),
+                ),
+              )
+              .toList(),
+          attributes: t.attributes,
+        ),
       BookPoem poem => BookPoem(
-        stanzas: poem.stanzas
-            .map(
-              (s) => BookStanza(
-                lines: s.lines
-                    .map(
-                      (l) => BookPoemLine(inlines: normalizeInlines(l.inlines)),
-                    )
-                    .toList(),
-              ),
-            )
-            .toList(),
-      ),
-      _ => block,
+          stanzas: poem.stanzas
+              .map(
+                (s) => BookStanza(
+                  lines: s.lines
+                      .map(
+                        (l) => BookPoemLine(
+                          inlines: normalizeInlines(l.inlines),
+                        ),
+                      )
+                      .toList(),
+                ),
+              )
+              .toList(),
+          attributes: poem.attributes,
+        ),
+      BookCodeBlock c => BookCodeBlock(
+          code: c.code,
+          language: c.language,
+          attributes: c.attributes,
+        ),
+      BookImageBlock img => BookImageBlock(
+          id: img.id,
+          ref: img.ref,
+          alt: img.alt,
+          title: img.title,
+          attributes: img.attributes,
+        ),
+      BookAudioBlock a => BookAudioBlock(
+          ref: a.ref,
+          controls: a.controls,
+          attributes: a.attributes,
+        ),
+      BookVideoBlock v => BookVideoBlock(
+          ref: v.ref,
+          posterRef: v.posterRef,
+          controls: v.controls,
+          attributes: v.attributes,
+        ),
+      BookMathBlock m => BookMathBlock(
+          mathml: m.mathml.trim(),
+          attributes: m.attributes,
+        ),
+      BookSvgBlock svg => BookSvgBlock(
+          svg: svg.svg.trim(),
+          attributes: svg.attributes,
+        ),
+      BookHorizontalRule hr => BookHorizontalRule(
+          attributes: hr.attributes,
+        ),
+      BookEmptyLine el => BookEmptyLine(
+          attributes: el.attributes,
+        ),
+      BookRawHtmlBlock rawHtml => BookRawHtmlBlock(
+          rawHtml.html,
+          attributes: rawHtml.attributes,
+        ),
+      BookRawXmlBlock rawXml => BookRawXmlBlock(
+          rawXml.xml,
+          attributes: rawXml.attributes,
+        ),
     };
   }
 
@@ -125,33 +195,72 @@ class AstNormalizer {
     return merged;
   }
 
-  /// Нормализует отдельный строчный узел [BookInline].
+  /// Исчерпывающий нормализатор инлайнов [BookInline] без wildcard `_ =>`.
   static BookInline? normalizeInline(BookInline inline) {
     return switch (inline) {
-      BookText t => t.text.isEmpty ? null : BookText(t.text),
-      BookEmphasis e => BookEmphasis(children: normalizeInlines(e.children)),
-      BookStrong s => BookStrong(children: normalizeInlines(s.children)),
-      BookStrike st => BookStrike(children: normalizeInlines(st.children)),
-      BookCodeSpan c => c,
+      BookText t => t.text.isEmpty ? null : BookText(t.text, attributes: t.attributes),
+      BookEmphasis e => BookEmphasis(
+          children: normalizeInlines(e.children),
+          attributes: e.attributes,
+        ),
+      BookStrong s => BookStrong(
+          children: normalizeInlines(s.children),
+          attributes: s.attributes,
+        ),
+      BookStrike st => BookStrike(
+          children: normalizeInlines(st.children),
+          attributes: st.attributes,
+        ),
+      BookCodeSpan c => BookCodeSpan(
+          c.code,
+          attributes: c.attributes,
+        ),
       BookNamedStyle ns => BookNamedStyle(
-        name: ns.name,
-        inlines: normalizeInlines(ns.inlines),
-      ),
+          name: ns.name,
+          inlines: normalizeInlines(ns.inlines),
+          attributes: ns.attributes,
+        ),
       BookLink l => BookLink(
-        href: l.href,
-        children: normalizeInlines(l.children),
-      ),
-      BookSuperscript sup => BookSuperscript(
-        children: normalizeInlines(sup.children),
-      ),
-      BookSubscript sub => BookSubscript(
-        children: normalizeInlines(sub.children),
-      ),
+          href: l.href,
+          children: normalizeInlines(l.children),
+          attributes: l.attributes,
+        ),
+      BookAnchor a => BookAnchor(
+          a.id,
+          attributes: a.attributes,
+        ),
+
+      BookImageInline img => BookImageInline(
+          id: img.id,
+          ref: img.ref,
+          alt: img.alt,
+          title: img.title,
+          attributes: img.attributes,
+        ),
       BookFootnoteRef fn => BookFootnoteRef(
-        id: fn.id,
-        label: normalizeInlines(fn.label),
-      ),
-      _ => inline,
+          id: fn.id,
+          label: normalizeInlines(fn.label),
+          attributes: fn.attributes,
+        ),
+      BookSuperscript sup => BookSuperscript(
+          children: normalizeInlines(sup.children),
+          attributes: sup.attributes,
+        ),
+      BookSubscript sub => BookSubscript(
+          children: normalizeInlines(sub.children),
+          attributes: sub.attributes,
+        ),
+      BookLineBreak lb => BookLineBreak(
+          attributes: lb.attributes,
+        ),
+      BookRawHtmlInline rawHtml => BookRawHtmlInline(
+          rawHtml.html,
+          attributes: rawHtml.attributes,
+        ),
+      BookRawXmlInline rawXml => BookRawXmlInline(
+          rawXml.xml,
+          attributes: rawXml.attributes,
+        ),
     };
   }
 }

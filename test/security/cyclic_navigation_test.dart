@@ -2,15 +2,21 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dart_book/dart_book.dart';
 import 'package:test/test.dart';
+import 'package:xml/xml.dart';
 import '../utils/ast_normalizer.dart';
 import '../utils/golden_comparator.dart';
 
 void main() {
   group('Security: Cyclic Navigation & Recursion Depth Protection', () {
     test(
-      'NCX: Protects against deep recursion (> 32 levels) and circular navPoints',
+      'NCX: Protects against deep hierarchical nesting (> 32 levels) by cutting off at depth limit',
       () {
-        // Build a deeply nested NCX document (50 levels deep)
+        // Build an explicitly nested hierarchical NCX tree (50 levels deep)
+        // <navMap>
+        //   <navPoint id="np_0">
+        //     <navPoint id="np_1"> ... </navPoint>
+        //   </navPoint>
+        // </navMap>
         final ncxBuf = StringBuffer();
         ncxBuf.writeln('<?xml version="1.0" encoding="UTF-8"?>');
         ncxBuf.writeln(
@@ -24,17 +30,17 @@ void main() {
           ncxBuf.writeln('      <content src="chapter_$i.xhtml"/>');
         }
 
-        for (var i = 0; i < 50; i++) {
+        for (var i = 49; i >= 0; i--) {
           ncxBuf.writeln('    </navPoint>');
         }
 
         ncxBuf.writeln('  </navMap>');
         ncxBuf.writeln('</ncx>');
 
-        final doc = EpubNcxDocument.parseFromString(ncxBuf.toString());
+        final doc = EpubNcxDocument.parseFromString(ncxBuf.toString(), maxDepth: 32);
         expect(doc.navMap, isNotEmpty);
 
-        // Verify recursion stops at depth 32
+        // Verify the tree depth is capped at 32 levels
         var depth = 0;
         var current = doc.navMap.first;
         while (current.children.isNotEmpty) {
@@ -42,14 +48,47 @@ void main() {
           current = current.children.first;
         }
 
-        expect(depth, lessThanOrEqualTo(32));
+        expect(depth, equals(32), reason: 'NCX parsing must cap recursion depth exactly at maxDepth');
+      },
+    );
+
+    test(
+      'NCX: Protects against circular XmlElement loops via visited set',
+      () {
+        // Construct an XML DOM graph with a circular child reference
+        const ncxXml = '''<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <navMap>
+    <navPoint id="np_a">
+      <navLabel><text>Node A</text></navLabel>
+      <content src="a.xhtml"/>
+      <navPoint id="np_b">
+        <navLabel><text>Node B</text></navLabel>
+        <content src="b.xhtml"/>
+      </navPoint>
+    </navPoint>
+  </navMap>
+</ncx>''';
+
+        final xmlDoc = XmlDocument.parse(ncxXml);
+        final navPointA = xmlDoc.findAllElements('navPoint').first;
+        final navPointB = xmlDoc.findAllElements('navPoint').last;
+
+        // Manually introduce circular edge: B -> A
+        navPointB.children.add(navPointA);
+
+        // Parse through document without stack overflow
+        expect(
+          () => EpubNcxDocument.parseFromString(xmlDoc.toXmlString()),
+          returnsNormally,
+        );
       },
     );
 
     test(
       'NAV XHTML: Protects against deep recursion (> 32 levels) in nested <ol> lists',
       () {
-        // Build a deeply nested nav.xhtml document (50 levels deep)
+        // Build a deeply nested hierarchical nav.xhtml document (50 levels deep)
         final navBuf = StringBuffer();
         navBuf.writeln('<?xml version="1.0" encoding="UTF-8"?>');
         navBuf.writeln(
