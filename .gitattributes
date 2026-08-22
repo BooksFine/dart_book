@@ -1,0 +1,8 @@
+# Set default behavior to automatically normalize line endings to LF
+* text=auto eol=lf
+
+*.dart text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
