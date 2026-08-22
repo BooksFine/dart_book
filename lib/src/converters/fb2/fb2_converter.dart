@@ -62,7 +62,6 @@ class Fb2Converter implements BookConverter {
     );
   }
 
-
   /// Удобный статический метод: кодирует [book] прямо в `fb2.zip` архив.
   static Future<Uint8List> bookToFb2Zip(
     Book book, {

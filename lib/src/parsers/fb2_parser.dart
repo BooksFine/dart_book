@@ -238,10 +238,7 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
             } else {
               final uri = Uri.tryParse(href) ?? Uri();
               inlines.add(
-                BookLink(
-                  href: uri,
-                  children: _parseFb2Inlines(child),
-                ),
+                BookLink(href: uri, children: _parseFb2Inlines(child)),
               );
             }
           case 'image':
@@ -271,8 +268,14 @@ class Fb2Parser implements Parser<Iterable<XmlNode>> {
   static String _getFb2Href(XmlElement element) {
     return element.getAttribute('l:href') ??
         element.getAttribute('xlink:href') ??
-        element.getAttribute('href', namespaceUri: 'http://www.w3.org/1999/xlink') ??
-        element.attributes.where((a) => a.name.local == 'href').firstOrNull?.value ??
+        element.getAttribute(
+          'href',
+          namespaceUri: 'http://www.w3.org/1999/xlink',
+        ) ??
+        element.attributes
+            .where((a) => a.name.local == 'href')
+            .firstOrNull
+            ?.value ??
         element.getAttribute('href') ??
         '';
   }

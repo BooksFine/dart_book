@@ -2,15 +2,20 @@ import 'dart:io';
 import 'package:dart_book/dart_book.dart';
 
 void main() async {
-  print('════════════════════════════════════════════════════════════════════════════════════════');
-  print('       ЧЕСТНЫЙ ЭМПИРИЧЕСКИЙ БЕНЧМАРК: DART_BOOK vs EPUBX vs EPUB_PLUS vs EPUB_PRO       ');
-  print('════════════════════════════════════════════════════════════════════════════════════════\n');
+  print(
+    '════════════════════════════════════════════════════════════════════════════════════════',
+  );
+  print(
+    '       ЧЕСТНЫЙ ЭМПИРИЧЕСКИЙ БЕНЧМАРК: DART_BOOK vs EPUBX vs EPUB_PLUS vs EPUB_PRO       ',
+  );
+  print(
+    '════════════════════════════════════════════════════════════════════════════════════════\n',
+  );
 
   final tempDir = Directory('tool/benchmarks/temp');
   if (!tempDir.existsSync()) {
     tempDir.createSync(recursive: true);
   }
-
 
   final testCases = [
     (title: 'Стандартная книга', chapters: 20, paragraphsPerChapter: 5),
@@ -24,7 +29,9 @@ void main() async {
     for (var i = 0; i < tc.chapters; i++) {
       final buffer = StringBuffer();
       for (var p = 0; p < tc.paragraphsPerChapter; p++) {
-        buffer.write('<p>Параграф $p главы $i с <strong>жирным</strong> текстом, <em>курсивом</em> и <a href="#ch$i">ссылкой</a>.</p>');
+        buffer.write(
+          '<p>Параграф $p главы $i с <strong>жирным</strong> текстом, <em>курсивом</em> и <a href="#ch$i">ссылкой</a>.</p>',
+        );
       }
       await builder.addChapterHtml(buffer.toString(), title: 'Глава $i');
     }
@@ -44,7 +51,6 @@ void main() async {
     int epubxMs = -1;
     try {
       final res = await Process.run(
-
         'dart',
         ['run', 'run_epubx.dart', epubFile.absolute.path],
         workingDirectory: 'tool/benchmarks/epubx_runner',
@@ -52,7 +58,10 @@ void main() async {
       );
       for (final line in (res.stdout as String).split('\n')) {
         if (line.startsWith('EPUBX_RESULT:')) {
-          final parts = line.trim().substring('EPUBX_RESULT:'.length).split(':');
+          final parts = line
+              .trim()
+              .substring('EPUBX_RESULT:'.length)
+              .split(':');
           epubxMs = int.parse(parts[0]);
         }
       }
@@ -73,16 +82,30 @@ void main() async {
 
       for (final line in (res.stdout as String).split('\n')) {
         if (line.startsWith('EPUB_PLUS_RESULT:')) {
-          epubPlusMs = int.parse(line.trim().substring('EPUB_PLUS_RESULT:'.length).split(':')[0]);
+          epubPlusMs = int.parse(
+            line.trim().substring('EPUB_PLUS_RESULT:'.length).split(':')[0],
+          );
         }
         if (line.startsWith('EPUB_PLUS_FULL_DOM_RESULT:')) {
-          epubPlusDomMs = int.parse(line.trim().substring('EPUB_PLUS_FULL_DOM_RESULT:'.length).split(':')[0]);
+          epubPlusDomMs = int.parse(
+            line
+                .trim()
+                .substring('EPUB_PLUS_FULL_DOM_RESULT:'.length)
+                .split(':')[0],
+          );
         }
         if (line.startsWith('EPUB_PRO_RESULT:')) {
-          epubProMs = int.parse(line.trim().substring('EPUB_PRO_RESULT:'.length).split(':')[0]);
+          epubProMs = int.parse(
+            line.trim().substring('EPUB_PRO_RESULT:'.length).split(':')[0],
+          );
         }
         if (line.startsWith('EPUB_PRO_FULL_DOM_RESULT:')) {
-          epubProDomMs = int.parse(line.trim().substring('EPUB_PRO_FULL_DOM_RESULT:'.length).split(':')[0]);
+          epubProDomMs = int.parse(
+            line
+                .trim()
+                .substring('EPUB_PRO_FULL_DOM_RESULT:'.length)
+                .split(':')[0],
+          );
         }
       }
     } catch (_) {}
@@ -93,9 +116,15 @@ void main() async {
     print('      ├─ epub_plus: ${epubPlusMs.toString().padLeft(4)} ms');
     print('      └─ epub_pro:  ${epubProMs.toString().padLeft(4)} ms');
     print('   Б. Полная готовность контента к отображению (парсинг HTML/AST):');
-    print('      ├─ dart_book (полный AST 23 узла):  ${swDartBook.elapsedMilliseconds.toString().padLeft(4)} ms');
-    print('      ├─ epub_plus + html.parse:          ${epubPlusDomMs.toString().padLeft(4)} ms');
-    print('      └─ epub_pro + html.parse:           ${epubProDomMs.toString().padLeft(4)} ms');
+    print(
+      '      ├─ dart_book (полный AST 23 узла):  ${swDartBook.elapsedMilliseconds.toString().padLeft(4)} ms',
+    );
+    print(
+      '      ├─ epub_plus + html.parse:          ${epubPlusDomMs.toString().padLeft(4)} ms',
+    );
+    print(
+      '      └─ epub_pro + html.parse:           ${epubProDomMs.toString().padLeft(4)} ms',
+    );
     print('');
   }
 
@@ -103,5 +132,7 @@ void main() async {
   if (tempDir.existsSync()) {
     tempDir.deleteSync(recursive: true);
   }
-  print('════════════════════════════════════════════════════════════════════════════════════════');
+  print(
+    '════════════════════════════════════════════════════════════════════════════════════════',
+  );
 }

@@ -99,7 +99,8 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
   BookCodeBlock _parseCodeBlock(dom.Element node) {
     final codeElem = node.querySelector('code') ?? node;
-    String? lang = codeElem.attributes['data-language'] ??
+    String? lang =
+        codeElem.attributes['data-language'] ??
         node.attributes['data-language'] ??
         codeElem.attributes['lang'] ??
         node.attributes['lang'];
@@ -113,7 +114,8 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       }
     }
     if (lang == null) {
-      final classAttr = codeElem.attributes['class'] ?? node.attributes['class'];
+      final classAttr =
+          codeElem.attributes['class'] ?? node.attributes['class'];
       if (classAttr != null && classAttr.isNotEmpty) {
         lang = classAttr.split(' ').first;
       }
@@ -254,7 +256,9 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       void flushInlines() {
         if (currentInlines.isNotEmpty) {
           final inlines = _parseInlines(currentInlines);
-          final hasVisible = inlines.any((i) => i is! BookText || i.text.trim().isNotEmpty);
+          final hasVisible = inlines.any(
+            (i) => i is! BookText || i.text.trim().isNotEmpty,
+          );
           if (hasVisible) {
             blocks.add(BookParagraph(inlines: inlines));
           }

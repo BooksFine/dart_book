@@ -19,38 +19,71 @@ void main() {
         expect(book1.metadata.language, equals('en'));
         expect(book1.metadata.contributors, isNotEmpty);
         expect(book1.metadata.series, isNotEmpty);
-        expect(book1.metadata.series.first.name, equals('Sherlock Holmes Collection'));
+        expect(
+          book1.metadata.series.first.name,
+          equals('Sherlock Holmes Collection'),
+        );
         expect(book1.metadata.series.first.number, equals(2));
         expect(book1.resources, isNotEmpty);
 
         // Iteration 1: EPUB -> FB2 -> EPUB
         final fb2Bytes1 = await Fb2Converter.bookToFb2(book1);
-        final bookFb2_1 = await DartBook.load(fb2Bytes1, filename: 'converted1.fb2');
+        final bookFb2_1 = await DartBook.load(
+          fb2Bytes1,
+          filename: 'converted1.fb2',
+        );
         expect(bookFb2_1.metadata.title, equals(book1.metadata.title));
         expect(bookFb2_1.metadata.language, equals(book1.metadata.language));
-        expect(bookFb2_1.metadata.contributors.first.name.display, equals(book1.metadata.contributors.first.name.display));
-        expect(bookFb2_1.metadata.series.first.name, equals(book1.metadata.series.first.name));
-        expect(bookFb2_1.metadata.series.first.number, equals(book1.metadata.series.first.number));
+        expect(
+          bookFb2_1.metadata.contributors.first.name.display,
+          equals(book1.metadata.contributors.first.name.display),
+        );
+        expect(
+          bookFb2_1.metadata.series.first.name,
+          equals(book1.metadata.series.first.name),
+        );
+        expect(
+          bookFb2_1.metadata.series.first.number,
+          equals(book1.metadata.series.first.number),
+        );
         expect(bookFb2_1.resources.length, greaterThanOrEqualTo(1));
 
         final epubBytes1 = await EpubConverter.bookToEpub(bookFb2_1);
-        final bookEpub_1 = await DartBook.load(epubBytes1, filename: 'converted1.epub');
+        final bookEpub_1 = await DartBook.load(
+          epubBytes1,
+          filename: 'converted1.epub',
+        );
         expect(bookEpub_1.metadata.title, equals(book1.metadata.title));
-        expect(bookEpub_1.metadata.series.first.name, equals(book1.metadata.series.first.name));
+        expect(
+          bookEpub_1.metadata.series.first.name,
+          equals(book1.metadata.series.first.name),
+        );
 
         // Iteration 2: BookEPUB_1 -> FB2 -> BookFB2_2 -> EPUB -> BookEPUB_2
         final fb2Bytes2 = await Fb2Converter.bookToFb2(bookEpub_1);
-        final bookFb2_2 = await DartBook.load(fb2Bytes2, filename: 'converted2.fb2');
+        final bookFb2_2 = await DartBook.load(
+          fb2Bytes2,
+          filename: 'converted2.fb2',
+        );
 
         final epubBytes2 = await EpubConverter.bookToEpub(bookFb2_2);
-        final bookEpub_2 = await DartBook.load(epubBytes2, filename: 'converted2.epub');
+        final bookEpub_2 = await DartBook.load(
+          epubBytes2,
+          filename: 'converted2.epub',
+        );
 
         // Iteration 3: BookEPUB_2 -> FB2 -> BookFB2_3 -> EPUB -> BookEPUB_3
         final fb2Bytes3 = await Fb2Converter.bookToFb2(bookEpub_2);
-        final bookFb2_3 = await DartBook.load(fb2Bytes3, filename: 'converted3.fb2');
+        final bookFb2_3 = await DartBook.load(
+          fb2Bytes3,
+          filename: 'converted3.fb2',
+        );
 
         final epubBytes3 = await EpubConverter.bookToEpub(bookFb2_3);
-        final bookEpub_3 = await DartBook.load(epubBytes3, filename: 'converted3.epub');
+        final bookEpub_3 = await DartBook.load(
+          epubBytes3,
+          filename: 'converted3.epub',
+        );
 
         // Fixed-Point Idempotence: Content
         GoldenComparator.assertContentEquals(
@@ -67,14 +100,29 @@ void main() {
 
         // Fixed-Point Idempotence: Metadata & Resources
         expect(bookFb2_2.metadata.title, equals(bookFb2_3.metadata.title));
-        expect(bookFb2_2.metadata.language, equals(bookFb2_3.metadata.language));
-        expect(bookFb2_2.metadata.series.first.name, equals(bookFb2_3.metadata.series.first.name));
-        expect(bookFb2_2.metadata.series.first.number, equals(bookFb2_3.metadata.series.first.number));
+        expect(
+          bookFb2_2.metadata.language,
+          equals(bookFb2_3.metadata.language),
+        );
+        expect(
+          bookFb2_2.metadata.series.first.name,
+          equals(bookFb2_3.metadata.series.first.name),
+        );
+        expect(
+          bookFb2_2.metadata.series.first.number,
+          equals(bookFb2_3.metadata.series.first.number),
+        );
         expect(bookFb2_2.resources.length, equals(bookFb2_3.resources.length));
 
         expect(bookEpub_2.metadata.title, equals(bookEpub_3.metadata.title));
-        expect(bookEpub_2.metadata.series.first.name, equals(bookEpub_3.metadata.series.first.name));
-        expect(bookEpub_2.resources.length, equals(bookEpub_3.resources.length));
+        expect(
+          bookEpub_2.metadata.series.first.name,
+          equals(bookEpub_3.metadata.series.first.name),
+        );
+        expect(
+          bookEpub_2.resources.length,
+          equals(bookEpub_3.resources.length),
+        );
       },
     );
 
@@ -87,8 +135,14 @@ void main() {
         final rawFb2Bytes = fb2File.readAsBytesSync();
         final book1 = await DartBook.load(rawFb2Bytes, filename: 'litres.fb2');
         expect(book1.metadata.title, equals('Евгений Онегин и стихотворения'));
-        expect(book1.metadata.contributors.first.name.display, equals('Александр Сергеевич Пушкин'));
-        expect(book1.metadata.publishInfo?.publisher, equals('Издательство Литрес Эксмо'));
+        expect(
+          book1.metadata.contributors.first.name.display,
+          equals('Александр Сергеевич Пушкин'),
+        );
+        expect(
+          book1.metadata.publishInfo?.publisher,
+          equals('Издательство Литрес Эксмо'),
+        );
         expect(book1.metadata.publishInfo?.year, equals(2023));
         expect(book1.metadata.series.first.name, equals('Русская Классика'));
         expect(book1.metadata.cover, isNotNull);
@@ -96,32 +150,62 @@ void main() {
 
         // Iteration 1: FB2 -> EPUB -> FB2
         final epubBytes1 = await EpubConverter.bookToEpub(book1);
-        final bookEpub_1 = await DartBook.load(epubBytes1, filename: 'converted1.epub');
+        final bookEpub_1 = await DartBook.load(
+          epubBytes1,
+          filename: 'converted1.epub',
+        );
         expect(bookEpub_1.metadata.title, equals(book1.metadata.title));
-        expect(bookEpub_1.metadata.contributors.first.name.display, equals(book1.metadata.contributors.first.name.display));
-        expect(bookEpub_1.metadata.series.first.name, equals(book1.metadata.series.first.name));
-        expect(bookEpub_1.metadata.publishInfo?.publisher, equals(book1.metadata.publishInfo?.publisher));
+        expect(
+          bookEpub_1.metadata.contributors.first.name.display,
+          equals(book1.metadata.contributors.first.name.display),
+        );
+        expect(
+          bookEpub_1.metadata.series.first.name,
+          equals(book1.metadata.series.first.name),
+        );
+        expect(
+          bookEpub_1.metadata.publishInfo?.publisher,
+          equals(book1.metadata.publishInfo?.publisher),
+        );
         expect(bookEpub_1.resources, isNotEmpty);
 
         final fb2Bytes1 = await Fb2Converter.bookToFb2(bookEpub_1);
-        final bookFb2_1 = await DartBook.load(fb2Bytes1, filename: 'converted1.fb2');
+        final bookFb2_1 = await DartBook.load(
+          fb2Bytes1,
+          filename: 'converted1.fb2',
+        );
         expect(bookFb2_1.metadata.title, equals(book1.metadata.title));
-        expect(bookFb2_1.metadata.series.first.name, equals(book1.metadata.series.first.name));
+        expect(
+          bookFb2_1.metadata.series.first.name,
+          equals(book1.metadata.series.first.name),
+        );
         expect(bookFb2_1.resources, isNotEmpty);
 
         // Iteration 2: BookFB2_1 -> EPUB -> BookEPUB_2 -> FB2 -> BookFB2_2
         final epubBytes2 = await EpubConverter.bookToEpub(bookFb2_1);
-        final bookEpub_2 = await DartBook.load(epubBytes2, filename: 'converted2.epub');
+        final bookEpub_2 = await DartBook.load(
+          epubBytes2,
+          filename: 'converted2.epub',
+        );
 
         final fb2Bytes2 = await Fb2Converter.bookToFb2(bookEpub_2);
-        final bookFb2_2 = await DartBook.load(fb2Bytes2, filename: 'converted2.fb2');
+        final bookFb2_2 = await DartBook.load(
+          fb2Bytes2,
+          filename: 'converted2.fb2',
+        );
 
         // Iteration 3: BookFB2_2 -> EPUB -> BookEPUB_3 -> FB2 -> BookFB2_3
         final epubBytes3 = await EpubConverter.bookToEpub(bookFb2_2);
-        final bookEpub_3 = await DartBook.load(epubBytes3, filename: 'converted3.epub');
+        final bookEpub_3 = await DartBook.load(
+          epubBytes3,
+          filename: 'converted3.epub',
+        );
 
         final fb2Bytes3 = await Fb2Converter.bookToFb2(bookEpub_3);
-        final bookFb2_3 = await DartBook.load(fb2Bytes3, filename: 'converted3.fb2');
+        final bookFb2_3 = await DartBook.load(
+          fb2Bytes3,
+          filename: 'converted3.fb2',
+        );
 
         // Fixed-Point Idempotence: Content
         GoldenComparator.assertContentEquals(
@@ -138,14 +222,29 @@ void main() {
 
         // Fixed-Point Idempotence: Metadata & Resources
         expect(bookFb2_2.metadata.title, equals(bookFb2_3.metadata.title));
-        expect(bookFb2_2.metadata.contributors.first.name.display, equals(bookFb2_3.metadata.contributors.first.name.display));
-        expect(bookFb2_2.metadata.series.first.name, equals(bookFb2_3.metadata.series.first.name));
-        expect(bookFb2_2.metadata.publishInfo?.publisher, equals(bookFb2_3.metadata.publishInfo?.publisher));
+        expect(
+          bookFb2_2.metadata.contributors.first.name.display,
+          equals(bookFb2_3.metadata.contributors.first.name.display),
+        );
+        expect(
+          bookFb2_2.metadata.series.first.name,
+          equals(bookFb2_3.metadata.series.first.name),
+        );
+        expect(
+          bookFb2_2.metadata.publishInfo?.publisher,
+          equals(bookFb2_3.metadata.publishInfo?.publisher),
+        );
         expect(bookFb2_2.resources.length, equals(bookFb2_3.resources.length));
 
         expect(bookEpub_2.metadata.title, equals(bookEpub_3.metadata.title));
-        expect(bookEpub_2.metadata.series.first.name, equals(bookEpub_3.metadata.series.first.name));
-        expect(bookEpub_2.resources.length, equals(bookEpub_3.resources.length));
+        expect(
+          bookEpub_2.metadata.series.first.name,
+          equals(bookEpub_3.metadata.series.first.name),
+        );
+        expect(
+          bookEpub_2.resources.length,
+          equals(bookEpub_3.resources.length),
+        );
       },
     );
 
@@ -158,7 +257,10 @@ void main() {
         final rawFb2Bytes = fb2File.readAsBytesSync();
         final book1 = await DartBook.load(rawFb2Bytes, filename: 'fb2_21.fb2');
         expect(book1.metadata.title, equals('FB2 2.1 Specification Reference'));
-        expect(book1.metadata.srcTitleInfo?.title, equals('Computing Machinery and Intelligence'));
+        expect(
+          book1.metadata.srcTitleInfo?.title,
+          equals('Computing Machinery and Intelligence'),
+        );
 
         // Iteration 1
         final epubBytes1 = await EpubConverter.bookToEpub(book1);
@@ -194,7 +296,10 @@ void main() {
         expect(bookFb2_2.metadata.title, equals(bookFb2_3.metadata.title));
         expect(bookFb2_2.resources.length, equals(bookFb2_3.resources.length));
         expect(bookEpub_2.metadata.title, equals(bookEpub_3.metadata.title));
-        expect(bookEpub_2.resources.length, equals(bookEpub_3.resources.length));
+        expect(
+          bookEpub_2.resources.length,
+          equals(bookEpub_3.resources.length),
+        );
       },
     );
 
@@ -218,19 +323,28 @@ void main() {
         final fb2Bytes1 = await Fb2Converter.bookToFb2(bookEpub0);
         final bookFb2_1 = await DartBook.load(fb2Bytes1, filename: 'gen1.fb2');
         final epubBytes1 = await EpubConverter.bookToEpub(bookFb2_1);
-        final bookEpub_1 = await DartBook.load(epubBytes1, filename: 'gen1.epub');
+        final bookEpub_1 = await DartBook.load(
+          epubBytes1,
+          filename: 'gen1.epub',
+        );
 
         // Iteration 2: EPUB -> FB2 -> EPUB
         final fb2Bytes2 = await Fb2Converter.bookToFb2(bookEpub_1);
         final bookFb2_2 = await DartBook.load(fb2Bytes2, filename: 'gen2.fb2');
         final epubBytes2 = await EpubConverter.bookToEpub(bookFb2_2);
-        final bookEpub_2 = await DartBook.load(epubBytes2, filename: 'gen2.epub');
+        final bookEpub_2 = await DartBook.load(
+          epubBytes2,
+          filename: 'gen2.epub',
+        );
 
         // Iteration 3: EPUB -> FB2 -> EPUB
         final fb2Bytes3 = await Fb2Converter.bookToFb2(bookEpub_2);
         final bookFb2_3 = await DartBook.load(fb2Bytes3, filename: 'gen3.fb2');
         final epubBytes3 = await EpubConverter.bookToEpub(bookFb2_3);
-        final bookEpub_3 = await DartBook.load(epubBytes3, filename: 'gen3.epub');
+        final bookEpub_3 = await DartBook.load(
+          epubBytes3,
+          filename: 'gen3.epub',
+        );
 
         // Fixed-Point Idempotence Verification
         GoldenComparator.assertContentEquals(
@@ -248,7 +362,10 @@ void main() {
         expect(bookFb2_2.metadata.title, equals(bookFb2_3.metadata.title));
         expect(bookFb2_2.resources.length, equals(bookFb2_3.resources.length));
         expect(bookEpub_2.metadata.title, equals(bookEpub_3.metadata.title));
-        expect(bookEpub_2.resources.length, equals(bookEpub_3.resources.length));
+        expect(
+          bookEpub_2.resources.length,
+          equals(bookEpub_3.resources.length),
+        );
       },
     );
   });

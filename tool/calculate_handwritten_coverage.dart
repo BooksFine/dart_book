@@ -19,7 +19,9 @@ void main() {
 
       for (final item in coverageList) {
         final source = item['source'] as String?;
-        if (source == null || !source.startsWith('package:dart_book/')) continue;
+        if (source == null || !source.startsWith('package:dart_book/')) {
+          continue;
+        }
 
         final hitsMap = fileHits.putIfAbsent(source, () => <int, int>{});
         final hits = item['hits'] as List<dynamic>? ?? [];
@@ -54,6 +56,10 @@ void main() {
     }
   }
 
-  print('Общее покрытие (включая .gen/): ${(hitLines / totalLines * 100).toStringAsFixed(2)}%');
-  print('Покрытие рукописного кода (без кодогенерации Freezed): ${(handHitLines / handTotalLines * 100).toStringAsFixed(2)}% ($handHitLines из $handTotalLines строк)');
+  print(
+    'Общее покрытие (включая .gen/): ${(hitLines / totalLines * 100).toStringAsFixed(2)}%',
+  );
+  print(
+    'Покрытие рукописного кода (без кодогенерации Freezed): ${(handHitLines / handTotalLines * 100).toStringAsFixed(2)}% ($handHitLines из $handTotalLines строк)',
+  );
 }

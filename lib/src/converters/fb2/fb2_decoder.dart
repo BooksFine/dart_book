@@ -58,7 +58,6 @@ class Fb2Decoder implements BookDecoder {
       } on XmlException catch (e) {
         throw BookParseException(e.message);
       }
-
     } else {
       content = _sanitizeXml(rawContent);
       try {
@@ -128,11 +127,17 @@ class Fb2Decoder implements BookDecoder {
         .firstOrNull;
     final coverHref = coverImageElem != null
         ? (coverImageElem.getAttribute('l:href') ??
-            coverImageElem.getAttribute('xlink:href') ??
-            coverImageElem.getAttribute('href', namespaceUri: 'http://www.w3.org/1999/xlink') ??
-            coverImageElem.attributes.where((a) => a.name.local == 'href').firstOrNull?.value ??
-            coverImageElem.getAttribute('href') ??
-            '')
+              coverImageElem.getAttribute('xlink:href') ??
+              coverImageElem.getAttribute(
+                'href',
+                namespaceUri: 'http://www.w3.org/1999/xlink',
+              ) ??
+              coverImageElem.attributes
+                  .where((a) => a.name.local == 'href')
+                  .firstOrNull
+                  ?.value ??
+              coverImageElem.getAttribute('href') ??
+              '')
         : '';
     final coverId = coverHref.startsWith('#')
         ? coverHref.substring(1)

@@ -687,7 +687,8 @@ void main() {
       });
 
       test('Parses multi-class span with style- prefix', () {
-        const html = '<p><span class="highlight style-red-text active">Styled text</span></p>';
+        const html =
+            '<p><span class="highlight style-red-text active">Styled text</span></p>';
         final blocks = parser.parseFromString(html);
         final p = blocks[0] as BookParagraph;
         final namedStyle = p.inlines.first as BookNamedStyle;

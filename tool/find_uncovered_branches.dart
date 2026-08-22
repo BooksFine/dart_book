@@ -21,10 +21,15 @@ void main() {
 
       for (final item in coverageList) {
         final source = item['source'] as String?;
-        if (source == null || !source.startsWith('package:dart_book/')) continue;
+        if (source == null || !source.startsWith('package:dart_book/')) {
+          continue;
+        }
 
         // Line hits
-        final lineHitsMap = fileLineHits.putIfAbsent(source, () => <int, int>{});
+        final lineHitsMap = fileLineHits.putIfAbsent(
+          source,
+          () => <int, int>{},
+        );
         final lineHits = item['hits'] as List<dynamic>? ?? [];
         for (var i = 0; i < lineHits.length; i += 2) {
           final line = lineHits[i] as int;
@@ -35,7 +40,10 @@ void main() {
         // Branch hits
         final branchHitsList = item['branchHits'] as List<dynamic>? ?? [];
         if (branchHitsList.isNotEmpty) {
-          final branchHitsMap = fileBranchHits.putIfAbsent(source, () => <int, int>{});
+          final branchHitsMap = fileBranchHits.putIfAbsent(
+            source,
+            () => <int, int>{},
+          );
           for (var i = 0; i < branchHitsList.length; i += 2) {
             final branchId = branchHitsList[i] as int;
             final count = branchHitsList[i + 1] as int;
@@ -58,14 +66,14 @@ void main() {
 
     if (percent < 95.0) {
       final shortName = source.replaceFirst('package:dart_book/', '');
-      print('=== $shortName (${percent.toStringAsFixed(1)}% - $hit/$total branches) ===');
+      print(
+        '=== $shortName (${percent.toStringAsFixed(1)}% - $hit/$total branches) ===',
+      );
 
       final lineHits = fileLineHits[source] ?? {};
-      final uncoveredLines = lineHits.entries
-          .where((e) => e.value == 0)
-          .map((e) => e.key)
-          .toList()
-        ..sort();
+      final uncoveredLines =
+          lineHits.entries.where((e) => e.value == 0).map((e) => e.key).toList()
+            ..sort();
       print('  Uncovered lines: $uncoveredLines');
     }
   }

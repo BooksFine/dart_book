@@ -37,7 +37,10 @@ void main() {
         ncxBuf.writeln('  </navMap>');
         ncxBuf.writeln('</ncx>');
 
-        final doc = EpubNcxDocument.parseFromString(ncxBuf.toString(), maxDepth: 32);
+        final doc = EpubNcxDocument.parseFromString(
+          ncxBuf.toString(),
+          maxDepth: 32,
+        );
         expect(doc.navMap, isNotEmpty);
 
         // Verify the tree depth is capped at 32 levels
@@ -48,15 +51,17 @@ void main() {
           current = current.children.first;
         }
 
-        expect(depth, equals(32), reason: 'NCX parsing must cap recursion depth exactly at maxDepth');
+        expect(
+          depth,
+          equals(32),
+          reason: 'NCX parsing must cap recursion depth exactly at maxDepth',
+        );
       },
     );
 
-    test(
-      'NCX: Protects against circular XmlElement loops via visited set',
-      () {
-        // Construct an XML DOM graph with a circular child reference
-        const ncxXml = '''<?xml version="1.0" encoding="UTF-8"?>
+    test('NCX: Protects against circular XmlElement loops via visited set', () {
+      // Construct an XML DOM graph with a circular child reference
+      const ncxXml = '''<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
   <navMap>
     <navPoint id="np_a">
@@ -70,20 +75,19 @@ void main() {
   </navMap>
 </ncx>''';
 
-        final xmlDoc = XmlDocument.parse(ncxXml);
-        final navPointA = xmlDoc.findAllElements('navPoint').first;
-        final navPointB = xmlDoc.findAllElements('navPoint').last;
+      final xmlDoc = XmlDocument.parse(ncxXml);
+      final navPointA = xmlDoc.findAllElements('navPoint').first;
+      final navPointB = xmlDoc.findAllElements('navPoint').last;
 
-        // Manually introduce circular edge: B -> A
-        navPointB.children.add(navPointA);
+      // Manually introduce circular edge: B -> A
+      navPointB.children.add(navPointA);
 
-        // Parse through document without stack overflow
-        expect(
-          () => EpubNcxDocument.parseFromString(xmlDoc.toXmlString()),
-          returnsNormally,
-        );
-      },
-    );
+      // Parse through document without stack overflow
+      expect(
+        () => EpubNcxDocument.parseFromString(xmlDoc.toXmlString()),
+        returnsNormally,
+      );
+    });
 
     test(
       'NAV XHTML: Protects against deep recursion (> 32 levels) in nested <ol> lists',

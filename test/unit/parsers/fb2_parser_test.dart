@@ -493,43 +493,53 @@ void main() {
       });
     });
 
-    group('9. Multiple Text-Authors, Inline Empty-Lines, and Robust URI Parsing', () {
-      test('Parses epigraph and cite with multiple text-author elements', () {
-        const xml = '''
+    group(
+      '9. Multiple Text-Authors, Inline Empty-Lines, and Robust URI Parsing',
+      () {
+        test('Parses epigraph and cite with multiple text-author elements', () {
+          const xml = '''
         <epigraph>
           <p>Цитата эпиграфа</p>
           <text-author>Автор Первый</text-author>
           <text-author>Автор Второй (перевод)</text-author>
         </epigraph>
         ''';
-        final blocks = parser.parseFromString(xml);
-        expect(blocks.length, equals(1));
-        final epigraph = blocks[0] as BookQuote;
-        final citationText = epigraph.citation
-            .whereType<BookText>()
-            .map((t) => t.text)
-            .join();
-        expect(citationText, contains('Автор Первый, Автор Второй (перевод)'));
-      });
+          final blocks = parser.parseFromString(xml);
+          expect(blocks.length, equals(1));
+          final epigraph = blocks[0] as BookQuote;
+          final citationText = epigraph.citation
+              .whereType<BookText>()
+              .map((t) => t.text)
+              .join();
+          expect(
+            citationText,
+            contains('Автор Первый, Автор Второй (перевод)'),
+          );
+        });
 
-      test('Parses inline empty-line inside paragraph as BookLineBreak', () {
-        const xml = '<p>Строка 1<empty-line/>Строка 2</p>';
-        final blocks = parser.parseFromString(xml);
-        expect(blocks.length, equals(1));
-        final p = blocks[0] as BookParagraph;
-        expect(p.inlines.length, equals(3));
-        expect((p.inlines[0] as BookText).text, equals('Строка 1'));
-        expect(p.inlines[1], isA<BookLineBreak>());
-        expect((p.inlines[2] as BookText).text, equals('Строка 2'));
-      });
+        test('Parses inline empty-line inside paragraph as BookLineBreak', () {
+          const xml = '<p>Строка 1<empty-line/>Строка 2</p>';
+          final blocks = parser.parseFromString(xml);
+          expect(blocks.length, equals(1));
+          final p = blocks[0] as BookParagraph;
+          expect(p.inlines.length, equals(3));
+          expect((p.inlines[0] as BookText).text, equals('Строка 1'));
+          expect(p.inlines[1], isA<BookLineBreak>());
+          expect((p.inlines[2] as BookText).text, equals('Строка 2'));
+        });
 
-      test('Gracefully parses malformed links without throwing FormatException', () {
-        const xml = '<p><a l:href="ht tp://invalid uri with spaces">Link</a></p>';
-        final blocks = parser.parseFromString(xml);
-        expect(blocks.length, equals(1));
-        final p = blocks[0] as BookParagraph;
-        expect(p.inlines.first, isA<BookLink>());
-      });
-    });
+        test(
+          'Gracefully parses malformed links without throwing FormatException',
+          () {
+            const xml =
+                '<p><a l:href="ht tp://invalid uri with spaces">Link</a></p>';
+            final blocks = parser.parseFromString(xml);
+            expect(blocks.length, equals(1));
+            final p = blocks[0] as BookParagraph;
+            expect(p.inlines.first, isA<BookLink>());
+          },
+        );
+      },
+    );
   });
 }

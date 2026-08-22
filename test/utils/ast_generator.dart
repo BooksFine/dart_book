@@ -232,7 +232,16 @@ class AstGenerator {
       BookResource(
         id: 'video1.mp4',
         mediaType: 'video/mp4',
-        bytes: Uint8List.fromList([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
+        bytes: Uint8List.fromList([
+          0x00,
+          0x00,
+          0x00,
+          0x18,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+        ]),
       ),
     ];
   }

@@ -40,7 +40,9 @@ class EpubDecoder implements BookDecoder {
 
     final opfFile = archive.findFile(opfPath);
     if (opfFile == null) {
-      throw EpubInvalidPackageException('Invalid EPUB: OPF file not found at $opfPath');
+      throw EpubInvalidPackageException(
+        'Invalid EPUB: OPF file not found at $opfPath',
+      );
     }
 
     final opfXml = XmlDocument.parse(utf8.decode(opfFile.content));
@@ -261,11 +263,14 @@ class EpubDecoder implements BookDecoder {
   }) {
     final metadataElement = opfXml.findAllElements('metadata').first;
     final uniqueIdAttr = opfXml.rootElement.getAttribute('unique-identifier');
-    final identifiers = metadataElement.findAllElements('dc:identifier').toList();
-    final primaryIdentifier = (uniqueIdAttr != null
+    final identifiers = metadataElement
+        .findAllElements('dc:identifier')
+        .toList();
+    final primaryIdentifier =
+        (uniqueIdAttr != null
             ? identifiers
-                .where((e) => e.getAttribute('id') == uniqueIdAttr)
-                .firstOrNull
+                  .where((e) => e.getAttribute('id') == uniqueIdAttr)
+                  .firstOrNull
             : null) ??
         identifiers.firstOrNull;
     final id = primaryIdentifier?.innerText;

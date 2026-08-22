@@ -3,7 +3,6 @@ import 'package:dart_book/dart_book.dart';
 import 'package:test/test.dart';
 import '../utils/golden_comparator.dart';
 
-
 void main() {
   group('FB2 Golden Master Integration Tests', () {
     test(
@@ -123,7 +122,6 @@ void main() {
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
           'test/fixtures/golden/fb2/litres_sample.golden.json',
-
         );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
@@ -238,7 +236,6 @@ void main() {
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
           'test/fixtures/golden/fb2/fb2_21_sample.golden.json',
-
         );
 
         // 4. Lossless FB2 Re-encoding Roundtrip
@@ -333,7 +330,6 @@ void main() {
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
           'test/fixtures/golden/fb2/fb2_22_sample.golden.json',
-
         );
 
         // 4. Lossless FB2 Re-encoding Roundtrip

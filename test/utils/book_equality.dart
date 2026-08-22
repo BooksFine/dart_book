@@ -258,7 +258,11 @@ void assertBlockEquals(
       break;
 
     case (BookRawHtmlBlock a, BookRawHtmlBlock e):
-      expect(a.html, equals(e.html), reason: '$path: raw html должен совпадать');
+      expect(
+        a.html,
+        equals(e.html),
+        reason: '$path: raw html должен совпадать',
+      );
 
     case (BookRawXmlBlock a, BookRawXmlBlock e):
       expect(a.xml, equals(e.xml), reason: '$path: raw xml должен совпадать');

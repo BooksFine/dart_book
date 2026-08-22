@@ -31,41 +31,73 @@ void main() {
 
   for (final file in files) {
     final lines = file.readAsLinesSync();
-    final relativePath = file.path.replaceAll('\\', '/').replaceFirst('lib/', '');
+    final relativePath = file.path
+        .replaceAll('\\', '/')
+        .replaceFirst('lib/', '');
     allFunctions.addAll(_analyzeFile(relativePath, lines));
   }
 
   allFunctions.sort((a, b) => b.ccn.compareTo(a.ccn));
 
-  print('════════════════════════════════════════════════════════════════════════════════');
-  print('          АНАЛИЗ ЦИКЛОМАТИЧЕСКОЙ СЛОЖНОСТИ МАККЕЙБА (CYCLOMATIC COMPLEXITY / CCN)');
-  print('════════════════════════════════════════════════════════════════════════════════\n');
+  print(
+    '════════════════════════════════════════════════════════════════════════════════',
+  );
+  print(
+    '          АНАЛИЗ ЦИКЛОМАТИЧЕСКОЙ СЛОЖНОСТИ МАККЕЙБА (CYCLOMATIC COMPLEXITY / CCN)',
+  );
+  print(
+    '════════════════════════════════════════════════════════════════════════════════\n',
+  );
 
   final totalFunctions = allFunctions.length;
   final totalCcn = allFunctions.fold(0, (sum, f) => sum + f.ccn);
-  final avgCcn = totalFunctions > 0 ? (totalCcn / totalFunctions).toStringAsFixed(2) : '0';
+  final avgCcn = totalFunctions > 0
+      ? (totalCcn / totalFunctions).toStringAsFixed(2)
+      : '0';
 
   final lowRisk = allFunctions.where((f) => f.ccn <= 5).length;
-  final moderateRisk = allFunctions.where((f) => f.ccn >= 6 && f.ccn <= 10).length;
+  final moderateRisk = allFunctions
+      .where((f) => f.ccn >= 6 && f.ccn <= 10)
+      .length;
   final highRisk = allFunctions.where((f) => f.ccn >= 11 && f.ccn <= 20).length;
   final veryHighRisk = allFunctions.where((f) => f.ccn > 20).length;
 
   print('📊 Общие метрики кодовой базы:');
   print('   • Всего проанализировано функций/методов : $totalFunctions');
-  print('   • Средняя сложность (Average CCN)        : $avgCcn (Отлично, норма NIST < 10)');
-  print('   • Максимальная сложность (Max CCN)       : ${allFunctions.isNotEmpty ? allFunctions.first.ccn : 0}\n');
+  print(
+    '   • Средняя сложность (Average CCN)        : $avgCcn (Отлично, норма NIST < 10)',
+  );
+  print(
+    '   • Максимальная сложность (Max CCN)       : ${allFunctions.isNotEmpty ? allFunctions.first.ccn : 0}\n',
+  );
 
   print('📈 Распределение по уровням сложности (NIST / McCabe Standard):');
-  print('   • 🟢 Простой код (CCN 1–5)       : $lowRisk (${(lowRisk / totalFunctions * 100).toStringAsFixed(1)}%) — идеальная поддерживаемость');
-  print('   • 🟡 Умеренная сложность (CCN 6–10): $moderateRisk (${(moderateRisk / totalFunctions * 100).toStringAsFixed(1)}%) — хороший баланс');
-  print('   • 🟠 Повышенная сложность (CCN 11–20): $highRisk (${(highRisk / totalFunctions * 100).toStringAsFixed(1)}%) — тяжелые парсеры/мапперы');
-  print('   • 🔴 Высокая сложность (CCN > 20) : $veryHighRisk (${(veryHighRisk / totalFunctions * 100).toStringAsFixed(1)}%)\n');
+  print(
+    '   • 🟢 Простой код (CCN 1–5)       : $lowRisk (${(lowRisk / totalFunctions * 100).toStringAsFixed(1)}%) — идеальная поддерживаемость',
+  );
+  print(
+    '   • 🟡 Умеренная сложность (CCN 6–10): $moderateRisk (${(moderateRisk / totalFunctions * 100).toStringAsFixed(1)}%) — хороший баланс',
+  );
+  print(
+    '   • 🟠 Повышенная сложность (CCN 11–20): $highRisk (${(highRisk / totalFunctions * 100).toStringAsFixed(1)}%) — тяжелые парсеры/мапперы',
+  );
+  print(
+    '   • 🔴 Высокая сложность (CCN > 20) : $veryHighRisk (${(veryHighRisk / totalFunctions * 100).toStringAsFixed(1)}%)\n',
+  );
 
-  print('────────────────────────────────────────────────────────────────────────────────');
+  print(
+    '────────────────────────────────────────────────────────────────────────────────',
+  );
   print('ТОП САМЫХ СЛОЖНЫХ МЕТОДОВ (Высокий CCN):');
-  print('────────────────────────────────────────────────────────────────────────────────');
-  print('CCN   Строка  Метод / Функция                                       Файл');
-  print('────────────────────────────────────────────────────────────────────────────────');
+  print(
+    '────────────────────────────────────────────────────────────────────────────────',
+  );
+  print(
+    'CCN   Строка  Метод / Функция                                       Файл',
+  );
+  print(
+    '────────────────────────────────────────────────────────────────────────────────',
+  );
 
   for (final fn in allFunctions.take(15)) {
     final ccnStr = fn.ccn.toString().padLeft(3);
@@ -75,7 +107,9 @@ void main() {
         : fn.functionName.padRight(40);
     print('$ccnStr  $lineStr  $nameStr  ${fn.file}');
   }
-  print('════════════════════════════════════════════════════════════════════════════════');
+  print(
+    '════════════════════════════════════════════════════════════════════════════════',
+  );
 }
 
 List<FunctionComplexity> _analyzeFile(String filePath, List<String> lines) {
@@ -167,7 +201,8 @@ int _countDecisionPoints(String code) {
   final ternaryMatches = RegExp(r'\?(?![?\.])').allMatches(code).length;
   final nullCoalescing = RegExp(r'\?\?').allMatches(code).length;
 
-  count += ifMatches +
+  count +=
+      ifMatches +
       whileMatches +
       forMatches +
       catchMatches +

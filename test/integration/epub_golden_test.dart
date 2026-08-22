@@ -129,7 +129,6 @@ void main() {
         GoldenComparator.assertBookMatchesGoldenFile(
           book,
           'test/fixtures/golden/epub/calibre_sample.golden.json',
-
         );
 
         // 4. Lossless EPUB Roundtrip & Fixed-Point Idempotence
@@ -211,7 +210,10 @@ void main() {
         final reEncoded = await EpubConverter.bookToEpub(book);
         final reDecoded = await EpubConverter.epubToBook(reEncoded);
         expect(reDecoded.metadata.title, equals('Accessible EPUB 3'));
-        expect(reDecoded.content.blocks.whereType<BookSection>().length, equals(22));
+        expect(
+          reDecoded.content.blocks.whereType<BookSection>().length,
+          equals(22),
+        );
       },
     );
 
@@ -247,12 +249,16 @@ void main() {
       expect((chapter1.title.first as BookText).text, contains('Chapter 1'));
       String extractAllText(BookBlock block) {
         if (block is BookParagraph) {
-          return block.inlines.whereType<BookText>().map((t) => t.text).join(' ');
+          return block.inlines
+              .whereType<BookText>()
+              .map((t) => t.text)
+              .join(' ');
         } else if (block is BookSection) {
           return block.blocks.map(extractAllText).join(' ');
         }
         return '';
       }
+
       final chapter1Text = chapter1.blocks.map(extractAllText).join(' ');
       expect(chapter1Text, contains('Call me Ishmael'));
     });

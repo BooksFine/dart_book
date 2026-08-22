@@ -120,7 +120,9 @@ void main() {
           try {
             await DartBook.load(bytes, filename: 'fuzz_$i.epub');
           } on Error catch (e, st) {
-            fail('Unhandled Error in DartBook.load (EPUB) for length $length: $e\n$st');
+            fail(
+              'Unhandled Error in DartBook.load (EPUB) for length $length: $e\n$st',
+            );
           } on Exception catch (_) {
             // Expected exception cleanly handled
           }
@@ -128,7 +130,9 @@ void main() {
           try {
             await DartBook.load(bytes, filename: 'fuzz_$i.fb2');
           } on Error catch (e, st) {
-            fail('Unhandled Error in DartBook.load (FB2) for length $length: $e\n$st');
+            fail(
+              'Unhandled Error in DartBook.load (FB2) for length $length: $e\n$st',
+            );
           } on Exception catch (_) {
             // Expected exception cleanly handled
           }
@@ -155,7 +159,9 @@ void main() {
           try {
             Fb2ZipDecoder().decode(bytes);
           } on Error catch (e, st) {
-            fail('Unhandled Error in Fb2ZipDecoder for length $length: $e\n$st');
+            fail(
+              'Unhandled Error in Fb2ZipDecoder for length $length: $e\n$st',
+            );
           } on Exception catch (_) {
             // Expected exception cleanly handled
           }
@@ -181,7 +187,9 @@ void main() {
           try {
             EpubNavDocument.parseFromString(asString);
           } on Error catch (e, st) {
-            fail('Unhandled Error in EpubNavDocument for length $length: $e\n$st');
+            fail(
+              'Unhandled Error in EpubNavDocument for length $length: $e\n$st',
+            );
           } on Exception catch (_) {
             // Expected exception cleanly handled
           }
@@ -189,7 +197,9 @@ void main() {
           try {
             EpubNcxDocument.parseFromString(asString);
           } on Error catch (e, st) {
-            fail('Unhandled Error in EpubNcxDocument for length $length: $e\n$st');
+            fail(
+              'Unhandled Error in EpubNcxDocument for length $length: $e\n$st',
+            );
           } on Exception catch (_) {
             // Expected exception cleanly handled
           }
