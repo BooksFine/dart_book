@@ -2,7 +2,7 @@
 
 [English version](README.md) | [Русская версия](README.ru.md)
 
-[![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/tests-166%20passed-brightgreen.svg)](#)
 [![Coverage](https://img.shields.io/badge/coverage-96.8%25-brightgreen.svg)](#)
 [![Branch Coverage](https://img.shields.io/badge/branch%20coverage-93.6%25-brightgreen.svg)](#)
 [![Dart SDK](https://img.shields.io/badge/Dart-3.3+-blue.svg)](pubspec.yaml)
@@ -17,7 +17,7 @@ At the core of the library is a unified syntax tree (`Book` AST). Book formats a
 ## Features
 
 - **Formats & Conversion:** Read, assemble, and perform bidirectional conversion between EPUB (2.0.1, 3.0–3.4), FB2 (2.0–2.2), and FB2.zip archives.
-- **HTML5 Parsing & Book Building:** Direct HTML5 parsing (`HtmlParser`) into AST blocks and a chapter-by-chapter `BookBuilder` for assembling books from web scrapers, CMS, or feeds.
+- **HTML5 Parsing & Book Building:** Direct HTML5 parsing (`HtmlParser`) into AST blocks with error resilience against tag soup, malformed nesting, unclosed tags, and smart paragraph splitting (preserving inline styles, line breaks, and Unicode separators) along with `BookBuilder` for assembling books from scrapers or CMS.
 - **Rich Document Structure:** Full support for chapters, hierarchical table of contents, footnotes, complex tables (`colspan`, `rowspan`), code blocks, poems, blockquotes, MathML formulas, vector SVG, audio, and video.
 - **Metadata & Resources:** Extract authors, translators, series/sequences, publishing info, original language/title, book covers, fonts, stylesheets, and media files.
 - **Audio Synchronization (SMIL 3.0):** Extract audio tracks and parse sync timestamps for audiobooks (Media Overlays).
@@ -26,7 +26,7 @@ At the core of the library is a unified syntax tree (`Book` AST). Book formats a
 
 - **Unified AST:** The document is modeled as a strongly typed Dart 3 `sealed class` hierarchy with exhaustive pattern matching support.
 - **Background Isolates:** Offload heavy parsing and encoding to `Isolate.run` to ensure 0 ms UI thread blocking (60/120/144 FPS friendly).
-- **Error Resilient:** Automatic character encoding detection (UTF-8, Windows-1251), sanitization of malformed XML 1.0, automatic font deobfuscation (IDPF, Adobe), and safe in-memory archive operations.
+- **Error Resilient:** Automatic character encoding detection (UTF-8, Windows-1251), sanitization of malformed XML 1.0, error-tolerant HTML tag soup parsing, automatic font deobfuscation (IDPF, Adobe), and safe in-memory archive operations.
 - **Extensible:** Register custom decoders and encoders with priority overrides via `BookRegistry`.
 
 ---
