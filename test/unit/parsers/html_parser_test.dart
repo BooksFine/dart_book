@@ -1,8 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:dart_book/dart_book.dart';
-import 'package:html/dom.dart' as dom;
-import 'package:html/parser.dart' as html;
 import 'package:test/test.dart';
 
 import '../../utils/ast_normalizer.dart';

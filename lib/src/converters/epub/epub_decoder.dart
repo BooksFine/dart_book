@@ -494,33 +494,6 @@ class EpubDecoder implements BookDecoder {
     }
     return _joinPath(contextDir, normalized);
   }
-
-  String _inlinesToText(List<BookInline> inlines) {
-    final buffer = StringBuffer();
-    for (final inline in inlines) {
-      switch (inline) {
-        case BookText text:
-          buffer.write(text.text);
-        case BookEmphasis emphasis:
-          buffer.write(_inlinesToText(emphasis.children));
-        case BookStrong strong:
-          buffer.write(_inlinesToText(strong.children));
-        case BookStrike strike:
-          buffer.write(_inlinesToText(strike.children));
-        case BookNamedStyle style:
-          buffer.write(_inlinesToText(style.inlines));
-        case BookLink link:
-          buffer.write(_inlinesToText(link.children));
-        case BookSuperscript sup:
-          buffer.write(_inlinesToText(sup.children));
-        case BookSubscript sub:
-          buffer.write(_inlinesToText(sub.children));
-        default:
-          break;
-      }
-    }
-    return buffer.toString();
-  }
 }
 
 class _EpubItem {

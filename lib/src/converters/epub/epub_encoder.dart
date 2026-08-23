@@ -164,7 +164,7 @@ class EpubEncoder implements BookEncoder {
     );
     _addStringFile(archive, 'OEBPS/content.opf', opfXml);
 
-    return Uint8List.fromList(ZipEncoder().encode(archive) ?? []);
+    return Uint8List.fromList(ZipEncoder().encode(archive));
   }
 
   void _addStringFile(Archive archive, String name, String content) {
