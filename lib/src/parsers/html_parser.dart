@@ -137,14 +137,20 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
   List<BookBlock> _inlinesToParagraphBlocks(List<BookInline> inlines) {
     final hasContent = inlines.any((inline) {
-      if (inline is BookText) return inline.text.trim().isNotEmpty;
+      if (inline is BookText) {
+        final clean = inline.text.replaceAll(
+          RegExp(
+            r'^[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+|[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+$',
+          ),
+          '',
+        );
+        return clean.isNotEmpty;
+      }
       if (inline is BookLineBreak) return false;
       return true;
     });
     if (!hasContent) {
-      return inlines.any((inline) => inline is BookLineBreak)
-          ? const <BookBlock>[BookEmptyLine()]
-          : const <BookBlock>[];
+      return const <BookBlock>[];
     }
     final chunks = _splitInlinesByLineBreaks(inlines);
     if (chunks.isEmpty) return const <BookBlock>[];
@@ -172,7 +178,20 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     return switch (tag) {
       'section' || 'article' => [_parseSection(node)],
       'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6' => [_parseHeading(node)],
-      'p' => _inlinesToParagraphBlocks(_parseInlines(node.nodes)),
+      'p' => () {
+        final inlines = _parseInlines(node.nodes);
+        final hasContent = inlines.any((inline) {
+          if (inline is BookText) return inline.text.trim().isNotEmpty;
+          if (inline is BookLineBreak) return false;
+          return true;
+        });
+        if (!hasContent) {
+          return inlines.any((inline) => inline is BookLineBreak)
+              ? const <BookBlock>[BookEmptyLine()]
+              : const <BookBlock>[];
+        }
+        return _inlinesToParagraphBlocks(inlines);
+      }(),
       'blockquote' => [_parseQuote(node)],
       'ul' || 'ol' => [_parseList(node, ordered: tag == 'ol')],
       'pre' => [_parseCodeBlock(node)],
@@ -399,10 +418,12 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
         if (currentInlines.isNotEmpty) {
           final inlines = _parseInlines(currentInlines);
           final hasVisible = inlines.any(
-            (i) => i is! BookText || i.text.trim().isNotEmpty,
+            (i) =>
+                (i is BookText && i.text.trim().isNotEmpty) ||
+                (i is! BookText && i is! BookLineBreak),
           );
           if (hasVisible) {
-            blocks.add(BookParagraph(inlines: inlines));
+            blocks.addAll(_inlinesToParagraphBlocks(inlines));
           }
           currentInlines.clear();
         }
@@ -528,23 +549,29 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   List<BookInline> _parseInlineNode(dom.Node node) {
     if (node is dom.Text) {
       if (node.text.isEmpty) return const [];
-      if (node.text.trim().isEmpty) {
-        return const [BookText(' ')];
-      }
       final hasNewline = RegExp(r'[\r\n\u2028\u2029\u0085]').hasMatch(node.text);
       if (hasNewline) {
         final parts = node.text.split(RegExp(r'[\r\n\u2028\u2029\u0085]+'));
         final inlines = <BookInline>[];
         for (var i = 0; i < parts.length; i++) {
           final part = parts[i];
-          if (part.trim().isNotEmpty) {
-            inlines.add(BookText(part));
+          final trimmedPart = part.replaceAll(
+            RegExp(
+              r'^[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+|[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+$',
+            ),
+            '',
+          );
+          if (trimmedPart.isNotEmpty) {
+            inlines.add(BookText(trimmedPart));
           }
           if (i < parts.length - 1) {
             inlines.add(const BookLineBreak());
           }
         }
         return inlines;
+      }
+      if (node.text.trim().isEmpty) {
+        return const [BookText(' ')];
       }
       return [BookText(node.text)];
     }
