@@ -711,6 +711,7 @@ class _Fb2XmlWriter {
 
   String _escape(String input) {
     return input
+        .replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]'), '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')

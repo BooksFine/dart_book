@@ -174,13 +174,17 @@ class AstGenerator {
         return const BookEmptyLine();
       case 14:
       default:
+        final titleText = _generateString(5, 20);
         return BookSection(
           id: 'sec-${_random.nextInt(10000)}',
-          title: [BookText(_generateString(5, 20))],
-          blocks: List.generate(
-            _random.nextInt(2) + 1,
-            (_) => _generateBlock(depth: depth - 1),
-          ),
+          title: [BookText(titleText)],
+          blocks: [
+            BookHeading(level: 2, text: [BookText(titleText)]),
+            ...List.generate(
+              _random.nextInt(2) + 1,
+              (_) => _generateBlock(depth: depth - 1),
+            ),
+          ],
         );
     }
   }

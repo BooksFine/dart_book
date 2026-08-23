@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:dart_book/dart_book.dart';
+import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart' as html;
 import 'package:test/test.dart';
 
 import '../../utils/ast_normalizer.dart';
@@ -10,6 +14,28 @@ void main() {
 
     setUp(() {
       parser = HtmlParser();
+    });
+
+    test('Parses plain text with newline-separated paragraphs and indents correctly', () {
+      const html = '''
+        <div class="part_text">
+          &nbsp;&nbsp;&nbsp;&nbsp;Первый абзац текста фанфика с <i>курсивом</i> внутри.
+          &nbsp;&nbsp;&nbsp;&nbsp;Второй абзац текста фанфика с <b>жирным</b> шрифтом.
+          &nbsp;&nbsp;&nbsp;&nbsp;Третий абзац диалога:
+          - Привет! - сказал герой.
+          - Здравствуй! - ответила героиня.
+        </div>
+      ''';
+      final blocks = parser.parseFromString(html);
+      expect(blocks.length, equals(5));
+      for (final block in blocks) {
+        expect(block, isA<BookParagraph>());
+      }
+      expect(((blocks[0] as BookParagraph).inlines.first as BookText).text, contains('Первый абзац'));
+      expect(((blocks[1] as BookParagraph).inlines.first as BookText).text, contains('Второй абзац'));
+      expect(((blocks[2] as BookParagraph).inlines.first as BookText).text, contains('Третий абзац'));
+      expect(((blocks[3] as BookParagraph).inlines.first as BookText).text, contains('- Привет!'));
+      expect(((blocks[4] as BookParagraph).inlines.first as BookText).text, contains('- Здравствуй!'));
     });
 
     group('1. Nested and Complex Lists', () {
@@ -658,12 +684,13 @@ void main() {
       test('Parses hr and br elements', () {
         const html = '<p>Line 1<br/>Line 2</p><hr/><p>Line 3</p>';
         final blocks = parser.parseFromString(html);
-        expect(blocks.length, equals(3));
+        expect(blocks.length, equals(4));
         expect(blocks[0], isA<BookParagraph>());
-        final p1 = blocks[0] as BookParagraph;
-        expect(p1.inlines.any((i) => i is BookLineBreak), isTrue);
-        expect(blocks[1], isA<BookHorizontalRule>());
-        expect(blocks[2], isA<BookParagraph>());
+        expect(((blocks[0] as BookParagraph).inlines.first as BookText).text, equals('Line 1'));
+        expect(blocks[1], isA<BookParagraph>());
+        expect(((blocks[1] as BookParagraph).inlines.first as BookText).text, equals('Line 2'));
+        expect(blocks[2], isA<BookHorizontalRule>());
+        expect(blocks[3], isA<BookParagraph>());
       });
 
       test('Preserves direct text in list items before sublists', () {
@@ -695,6 +722,93 @@ void main() {
         expect(namedStyle.name, equals('red-text'));
         final text = (namedStyle.inlines.first as BookText).text;
         expect(text, contains('Styled text'));
+      });
+    });
+
+    group('11. Tag Soup & Malformed HTML Resiliency', () {
+      test('Unwraps spans and fonts wrapping block-level paragraphs', () {
+        const html = '''
+          <span style="font-size: 14px">
+            <font color="red">
+              <p>Paragraph One</p>
+              <p>Paragraph Two</p>
+            </font>
+          </span>
+        ''';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(2));
+        expect(blocks[0], isA<BookParagraph>());
+        expect(blocks[1], isA<BookParagraph>());
+        expect(((blocks[0] as BookParagraph).inlines.first as BookText).text, equals('Paragraph One'));
+        expect(((blocks[1] as BookParagraph).inlines.first as BookText).text, equals('Paragraph Two'));
+      });
+
+      test('Pushes bold / italic formatting into wrapped paragraphs', () {
+        const html = '<b><p>Bold Paragraph 1</p><p>Bold Paragraph 2</p></b>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(2));
+        expect(blocks[0], isA<BookParagraph>());
+        expect(blocks[1], isA<BookParagraph>());
+
+        final p1 = blocks[0] as BookParagraph;
+        expect(p1.inlines.first, isA<BookStrong>());
+        expect(((p1.inlines.first as BookStrong).children.first as BookText).text, equals('Bold Paragraph 1'));
+      });
+
+      test('Handles mixed text and paragraphs inside divs cleanly', () {
+        const html = '<div>Text before <p>Inner paragraph</p> Text after</div>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(3));
+        expect(blocks[0], isA<BookParagraph>());
+        expect(blocks[1], isA<BookParagraph>());
+        expect(blocks[2], isA<BookParagraph>());
+        expect(((blocks[0] as BookParagraph).inlines.first as BookText).text.trim(), equals('Text before'));
+        expect(((blocks[1] as BookParagraph).inlines.first as BookText).text.trim(), equals('Inner paragraph'));
+        expect(((blocks[2] as BookParagraph).inlines.first as BookText).text.trim(), equals('Text after'));
+      });
+
+      test('Converts multiple br tags and empty paragraphs into BookEmptyLine', () {
+        const html = '<p>P1</p><br/><br/><p><br/></p><p>P2</p>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(5));
+        expect(blocks[0], isA<BookParagraph>());
+        expect(blocks[1], isA<BookEmptyLine>());
+        expect(blocks[2], isA<BookEmptyLine>());
+        expect(blocks[3], isA<BookEmptyLine>());
+        expect(blocks[4], isA<BookParagraph>());
+      });
+
+      test('Unwraps anchor tag wrapping paragraphs', () {
+        const html = '<a name="anchor-link"><p>Chapter 1 Heading</p></a>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(1));
+        expect(blocks[0], isA<BookParagraph>());
+        expect(((blocks[0] as BookParagraph).inlines.first as BookText).text, equals('Chapter 1 Heading'));
+      });
+
+      test('Splits <p> with inner <br> and nested <em> into distinct BookParagraph blocks', () {
+        const html = '<p><em>First italic line<br/>Second italic line</em></p>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(2));
+        expect(blocks[0], isA<BookParagraph>());
+        expect(blocks[1], isA<BookParagraph>());
+
+        final p1 = blocks[0] as BookParagraph;
+        final p2 = blocks[1] as BookParagraph;
+        expect(p1.inlines.first, isA<BookEmphasis>());
+        expect(((p1.inlines.first as BookEmphasis).children.first as BookText).text, equals('First italic line'));
+        expect(p2.inlines.first, isA<BookEmphasis>());
+        expect(((p2.inlines.first as BookEmphasis).children.first as BookText).text, equals('Second italic line'));
+      });
+
+      test('Splits text on Unicode line separators (LS \u2028, PS \u2029, NEL \u0085)', () {
+        const html = '<p>Line 1\u2028Line 2\u2029Line 3\u0085Line 4</p>';
+        final blocks = parser.parseFromString(html);
+        expect(blocks.length, equals(4));
+        for (var i = 0; i < 4; i++) {
+          expect(blocks[i], isA<BookParagraph>());
+          expect(((blocks[i] as BookParagraph).inlines.first as BookText).text, equals('Line ${i + 1}'));
+        }
       });
     });
   });

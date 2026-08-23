@@ -32,6 +32,86 @@ class EpubEncoder implements BookEncoder {
     final spineItems = <String>[];
     final chapters = _buildChapters(book, ctx);
 
+    final isRu = book.metadata.language.toLowerCase().startsWith('ru');
+    final coverTitle = isRu ? 'Обложка' : 'Cover';
+    final coverRawId = book.metadata.cover?.ref.id;
+    final coverCleanId =
+        coverRawId != null ? ctx.getId(coverRawId, isCover: true) : null;
+    final hasCoverInContent =
+        coverRawId != null && _hasCoverImage(book.content.blocks, coverRawId);
+    final hasExistingCoverPage =
+        hasCoverInContent ||
+        chapters.any((c) => c.id == 'cover' || c.href == 'cover.xhtml');
+
+    // 3a. Cover page
+    if (coverCleanId != null && !hasExistingCoverPage) {
+      final coverContent =
+          '<div style="text-align: center; margin: 0; padding: 0;">\n'
+          '  <img src="resources/$coverCleanId" alt="$coverTitle" style="max-width: 100%; max-height: 100%; height: auto;"/>\n'
+          '</div>';
+      final coverXhtml = _wrapXhtml(coverTitle, coverContent);
+      _addStringFile(archive, 'OEBPS/cover.xhtml', coverXhtml);
+      manifestItems.add(
+        '<item id="cover_page" href="cover.xhtml" media-type="application/xhtml+xml"/>',
+      );
+      spineItems.add('<itemref idref="cover_page"/>');
+    }
+
+    // 3b. Title page & Annotation
+    final hasExistingTitlePage = chapters.any(
+      (c) =>
+          c.id == 'titlepage' ||
+          c.href == 'titlepage.xhtml' ||
+          c.id == 'cover' ||
+          c.id == 'c01',
+    );
+    final hasTitleOrAnnotation =
+        book.metadata.title.isNotEmpty ||
+        (book.metadata.annotation != null &&
+            book.metadata.annotation!.blocks.isNotEmpty);
+
+    if (hasTitleOrAnnotation && !hasExistingTitlePage && !hasCoverInContent) {
+      final authors = book.metadata.contributorsByRole(
+        BookContributorRole.author,
+      );
+      final authorsHtml = authors.isNotEmpty
+          ? '<p style="font-size: 1.2em; font-style: italic; margin-bottom: 1.5em;">${authors.map((a) => _escapeHtml(a.name.toDisplayString())).join(', ')}</p>\n'
+          : '';
+
+      final seriesHtml = book.metadata.series.isNotEmpty
+          ? '<p style="font-size: 1.0em; color: #555; margin-bottom: 2em;">${book.metadata.series.map((s) => _escapeHtml('${s.name}${s.number != null ? " #${s.number}" : ""}')).join(', ')}</p>\n'
+          : '';
+
+      final annotation = book.metadata.annotation;
+      final annotationTitle = isRu ? 'Аннотация' : 'Annotation';
+      final annotationHtml =
+          (annotation != null && annotation.blocks.isNotEmpty)
+              ? '<div style="text-align: left; margin: 2em auto; max-width: 85%; border-top: 1px solid #ccc; padding-top: 1.5em;">\n'
+                  '  <h2 style="font-size: 1.2em; font-weight: bold; margin-bottom: 0.5em;">$annotationTitle</h2>\n'
+                  '  ${_blocksToXhtml(annotation.blocks, ctx)}\n'
+                  '</div>\n'
+              : '';
+
+      final titleContent =
+          '<div style="text-align: center; margin-top: 3em;">\n'
+          '  <h1 style="font-size: 2em; font-weight: bold; margin-bottom: 0.5em;">${_escapeHtml(book.metadata.title)}</h1>\n'
+          '  $authorsHtml'
+          '  $seriesHtml'
+          '  $annotationHtml'
+          '</div>';
+
+      final titleXhtml = _wrapXhtml(book.metadata.title, titleContent);
+      _addStringFile(archive, 'OEBPS/titlepage.xhtml', titleXhtml);
+      manifestItems.add(
+        '<item id="title_page" href="titlepage.xhtml" media-type="application/xhtml+xml"/>',
+      );
+      spineItems.add('<itemref idref="title_page"/>');
+    }
+
+    // 3c. Table of contents in spine
+    spineItems.add('<itemref idref="nav"/>');
+
+    // 3d. Chapter content pages
     for (final chapter in chapters) {
       final xhtml = _wrapXhtml(chapter.title, chapter.content);
       _addStringFile(archive, 'OEBPS/${chapter.href}', xhtml);
@@ -41,8 +121,7 @@ class EpubEncoder implements BookEncoder {
       spineItems.add('<itemref idref="${chapter.id}"/>');
     }
 
-    // 4. Resources (Images)
-    final coverRawId = book.metadata.cover?.ref.id;
+    // 4. Resources (Images, Fonts, Audio, Video, CSS)
     for (final res in book.resources) {
       final isCover = coverRawId != null && coverRawId == res.id;
       final cleanId = ctx.getId(res.id, isCover: isCover);
@@ -68,24 +147,24 @@ class EpubEncoder implements BookEncoder {
       );
     }
 
-    // 5. content.opf
-    final opfXml = _generateOpf(
-      book,
-      manifestItems,
-      spineItems,
-      options: options,
-    );
-    _addStringFile(archive, 'OEBPS/content.opf', opfXml);
-
-    // 6. navigation (nav.xhtml and toc.ncx for dual EPUB 2/3 compatibility)
+    // 5. Navigation documents (EPUB 3 nav.xhtml & EPUB 2 toc.ncx)
     final navXhtml = _generateNav(book, chapters);
     _addStringFile(archive, 'OEBPS/nav.xhtml', navXhtml);
 
     final ncxXml = _generateNcx(book, chapters, options: options);
     _addStringFile(archive, 'OEBPS/toc.ncx', ncxXml);
 
-    final bytes = ZipEncoder().encode(archive);
-    return Uint8List.fromList(bytes);
+    // 6. OPF Package document
+    final opfXml = _generateOpf(
+      book,
+      manifestItems,
+      spineItems,
+      coverCleanId: coverCleanId,
+      options: options,
+    );
+    _addStringFile(archive, 'OEBPS/content.opf', opfXml);
+
+    return Uint8List.fromList(ZipEncoder().encode(archive) ?? []);
   }
 
   void _addStringFile(Archive archive, String name, String content) {
@@ -93,7 +172,10 @@ class EpubEncoder implements BookEncoder {
     archive.addFile(ArchiveFile(name, bytes.length, bytes));
   }
 
-  List<_ChapterData> _buildChapters(Book book, _EpubContext ctx) {
+  List<_ChapterData> _buildChapters(
+    Book book,
+    _EpubContext ctx,
+  ) {
     final chapters = <_ChapterData>[];
     final looseBlocks = <BookBlock>[];
     var sectionIndex = 1;
@@ -102,8 +184,9 @@ class EpubEncoder implements BookEncoder {
       if (looseBlocks.isEmpty) return;
       final id = 'chapter_$sectionIndex';
       final href = 'chapter_$sectionIndex.xhtml';
+      final title = 'Часть $sectionIndex';
       final content = _blocksToXhtml(looseBlocks, ctx);
-      chapters.add(_ChapterData(id, href, 'Часть $sectionIndex', content));
+      chapters.add(_ChapterData(id, href, title, content));
       looseBlocks.clear();
       sectionIndex++;
     }
@@ -119,8 +202,14 @@ class EpubEncoder implements BookEncoder {
             ? _inlinesToText(block.title)
             : 'Глава $sectionIndex';
 
+        final hasHeading =
+            block.blocks.isNotEmpty && block.blocks.first is BookHeading;
+        final titleHeading = (block.title.isNotEmpty && !hasHeading)
+            ? '<h2>${_inlinesToXhtml(block.title, ctx)}</h2>\n'
+            : '';
+
         final innerBlocks = [...block.blocks, ...block.children];
-        final content = _blocksToXhtml(innerBlocks, ctx);
+        final content = '$titleHeading${_blocksToXhtml(innerBlocks, ctx)}';
         chapters.add(_ChapterData(id, href, title, content));
         sectionIndex++;
       } else {
@@ -148,6 +237,7 @@ class EpubEncoder implements BookEncoder {
     Book book,
     List<String> items,
     List<String> spine, {
+    String? coverCleanId,
     BookEncodingOptions? options,
   }) {
     final metadata = book.metadata;
@@ -195,6 +285,15 @@ class EpubEncoder implements BookEncoder {
     if (metadata.srcLang != null) {
       buffer.writeln(
         '    <meta property="source-language">${_escapeHtml(metadata.srcLang!)}</meta>',
+      );
+    }
+
+    if (coverCleanId != null) {
+      buffer.writeln('    <meta name="cover" content="$coverCleanId"/>');
+    }
+    if (metadata.annotation != null && metadata.annotation!.blocks.isNotEmpty) {
+      buffer.writeln(
+        '    <dc:description>${_escapeHtml(_blocksToPlainText(metadata.annotation!.blocks))}</dc:description>',
       );
     }
 
@@ -248,20 +347,41 @@ class EpubEncoder implements BookEncoder {
       buffer.writeln('    $item');
     }
     buffer.writeln('  </spine>');
+    final guide = <String>[];
+    if (coverCleanId != null) {
+      guide.add(
+        '    <reference type="cover" title="Cover" href="cover.xhtml"/>',
+      );
+    }
+    if (spine.any((s) => s.contains('title_page'))) {
+      guide.add(
+        '    <reference type="title-page" title="Title Page" href="titlepage.xhtml"/>',
+      );
+    }
+    guide.add(
+      '    <reference type="toc" title="Table of Contents" href="nav.xhtml"/>',
+    );
+    buffer.writeln('  <guide>');
+    for (final g in guide) {
+      buffer.writeln(g);
+    }
+    buffer.writeln('  </guide>');
     buffer.writeln('</package>');
     return buffer.toString();
   }
 
   String _generateNav(Book book, List<_ChapterData> chapters) {
     final buffer = StringBuffer();
+    final isRu = book.metadata.language.toLowerCase().startsWith('ru');
+    final tocTitle = isRu ? 'Оглавление' : 'Table of Contents';
     buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
     buffer.writeln(
       '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">',
     );
-    buffer.writeln('<head><title>Navigation</title></head>');
+    buffer.writeln('<head><title>$tocTitle</title></head>');
     buffer.writeln('<body>');
     buffer.writeln('  <nav epub:type="toc" id="toc">');
-    buffer.writeln('    <h1>Table of Contents</h1>');
+    buffer.writeln('    <h1>$tocTitle</h1>');
     buffer.writeln('    <ol>');
     for (final chapter in chapters) {
       buffer.writeln(
@@ -273,6 +393,18 @@ class EpubEncoder implements BookEncoder {
     buffer.writeln('</body>');
     buffer.writeln('</html>');
     return buffer.toString();
+  }
+
+  String _blocksToPlainText(List<BookBlock> blocks) {
+    final buffer = StringBuffer();
+    for (final b in blocks) {
+      if (b is BookParagraph) {
+        buffer.writeln(_inlinesToText(b.inlines));
+      } else if (b is BookHeading) {
+        buffer.writeln(_inlinesToText(b.text));
+      }
+    }
+    return buffer.toString().trim();
   }
 
   String _generateNcx(
@@ -506,11 +638,35 @@ class EpubEncoder implements BookEncoder {
 
   String _escapeHtml(String input) {
     return input
+        .replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]'), '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
+  }
+
+  static bool _hasCoverImage(Iterable<BookBlock> blocks, String coverId) {
+    for (final block in blocks) {
+      if (block is BookImageBlock) {
+        if (block.ref.id == coverId || block.ref.id.contains(coverId) || coverId.contains(block.ref.id)) {
+          return true;
+        }
+      } else if (block is BookSection) {
+        if (_hasCoverImage(block.blocks, coverId) || _hasCoverImage(block.children, coverId)) {
+          return true;
+        }
+      } else if (block is BookParagraph) {
+        for (final inline in block.inlines) {
+          if (inline is BookImageInline) {
+            if (inline.ref.id == coverId || inline.ref.id.contains(coverId) || coverId.contains(inline.ref.id)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   String _inlinesToText(List<BookInline> inlines) {

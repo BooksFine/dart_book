@@ -35,24 +35,135 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     return parse(nodes);
   }
 
+  static const _blockTags = {
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'section',
+    'article',
+    'blockquote',
+    'ul',
+    'ol',
+    'pre',
+    'figure',
+    'hr',
+    'table',
+    'div',
+    'main',
+    'body',
+    'header',
+    'footer',
+    'nav',
+    'aside',
+    'details',
+    'summary',
+    'address',
+    'math',
+    'svg',
+    'audio',
+    'video',
+    'img',
+    'br',
+    'center',
+    'font',
+  };
+
+  static const _inlineTags = {
+    'a',
+    'b',
+    'strong',
+    'i',
+    'em',
+    'u',
+    's',
+    'del',
+    'strike',
+    'code',
+    'kbd',
+    'samp',
+    'sup',
+    'sub',
+    'span',
+    'small',
+    'mark',
+    'abbr',
+    'q',
+    'time',
+    'var',
+    'cite',
+    'wbr',
+  };
+
+  static bool _isBlockNode(dom.Node node) {
+    if (node is dom.Element) {
+      final tag = node.localName?.toLowerCase();
+      if (_blockTags.contains(tag)) return true;
+      // If a known inline tag contains block elements, it must be treated as a block container
+      if (node.nodes.any(_isBlockNode)) return true;
+      // Any element not recognized as a known inline is treated as a block element
+      if (!_inlineTags.contains(tag)) return true;
+    }
+    return false;
+  }
+
   @override
   List<BookBlock> parse(Iterable<dom.Node> nodes) {
     final blocks = <BookBlock>[];
-    for (final node in nodes) {
-      blocks.addAll(_parseBlockNode(node));
+    final inlineBuffer = <dom.Node>[];
+
+    void flushInlines() {
+      if (inlineBuffer.isEmpty) return;
+      final inlines = _parseInlines(inlineBuffer);
+      inlineBuffer.clear();
+      blocks.addAll(_inlinesToParagraphBlocks(inlines));
     }
+
+    for (final node in nodes) {
+      if (_isBlockNode(node)) {
+        flushInlines();
+        blocks.addAll(_parseBlockNode(node));
+      } else {
+        inlineBuffer.add(node);
+      }
+    }
+
+    flushInlines();
     return blocks;
   }
 
-  List<BookBlock> _parseBlockNode(dom.Node node) {
-    if (node is dom.Text) {
-      final text = node.text.trim();
-      if (text.isEmpty) return const [];
-      return [
-        BookParagraph(inlines: [BookText(text)]),
-      ];
+  List<BookBlock> _inlinesToParagraphBlocks(List<BookInline> inlines) {
+    final hasContent = inlines.any((inline) {
+      if (inline is BookText) return inline.text.trim().isNotEmpty;
+      if (inline is BookLineBreak) return false;
+      return true;
+    });
+    if (!hasContent) {
+      return inlines.any((inline) => inline is BookLineBreak)
+          ? const <BookBlock>[BookEmptyLine()]
+          : const <BookBlock>[];
     }
+    final chunks = _splitInlinesByLineBreaks(inlines);
+    if (chunks.isEmpty) return const <BookBlock>[];
+    final result = <BookBlock>[];
+    for (final chunk in chunks) {
+      if (chunk.isEmpty) {
+        result.add(const BookEmptyLine());
+      } else {
+        final hasText =
+            chunk.any((i) => i is! BookText || i.text.trim().isNotEmpty);
+        if (hasText) {
+          result.add(BookParagraph(inlines: chunk));
+        }
+      }
+    }
+    return result;
+  }
 
+  List<BookBlock> _parseBlockNode(dom.Node node) {
     if (node is! dom.Element) {
       return const [];
     }
@@ -61,7 +172,7 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     return switch (tag) {
       'section' || 'article' => [_parseSection(node)],
       'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6' => [_parseHeading(node)],
-      'p' => [BookParagraph(inlines: _parseInlines(node.nodes))],
+      'p' => _inlinesToParagraphBlocks(_parseInlines(node.nodes)),
       'blockquote' => [_parseQuote(node)],
       'ul' || 'ol' => [_parseList(node, ordered: tag == 'ol')],
       'pre' => [_parseCodeBlock(node)],
@@ -83,8 +194,21 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'aside' ||
       'details' ||
       'summary' ||
-      'address' =>
+      'address' ||
+      'center' ||
+      'font' ||
+      'span' =>
         node.classes.contains('poem') ? [_parsePoem(node)] : parse(node.nodes),
+      'strong' ||
+      'b' ||
+      'em' ||
+      'i' ||
+      'u' ||
+      's' ||
+      'del' ||
+      'strike' ||
+      'a' =>
+        _wrapBlocksWithInline(parse(node.nodes), tag),
       _ => () {
         if (strictMode) {
           throw BookParseException('Unhandled HTML element <$tag>', tag: tag);
@@ -95,6 +219,24 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
         return <BookBlock>[BookRawHtmlBlock(node.outerHtml)];
       }(),
     };
+  }
+
+  List<BookBlock> _wrapBlocksWithInline(List<BookBlock> blocks, String? tag) {
+    if (tag == null || tag == 'a') return blocks;
+    return blocks.map((block) {
+      if (block is BookParagraph) {
+        final wrapped = switch (tag) {
+          'strong' || 'b' => BookStrong(children: block.inlines),
+          'em' || 'i' || 'u' => BookEmphasis(children: block.inlines),
+          's' || 'del' || 'strike' => BookStrike(children: block.inlines),
+          _ => null,
+        };
+        if (wrapped != null) {
+          return BookParagraph(inlines: [wrapped]);
+        }
+      }
+      return block;
+    }).toList();
   }
 
   BookCodeBlock _parseCodeBlock(dom.Element node) {
@@ -386,6 +528,24 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   List<BookInline> _parseInlineNode(dom.Node node) {
     if (node is dom.Text) {
       if (node.text.isEmpty) return const [];
+      if (node.text.trim().isEmpty) {
+        return const [BookText(' ')];
+      }
+      final hasNewline = RegExp(r'[\r\n\u2028\u2029\u0085]').hasMatch(node.text);
+      if (hasNewline) {
+        final parts = node.text.split(RegExp(r'[\r\n\u2028\u2029\u0085]+'));
+        final inlines = <BookInline>[];
+        for (var i = 0; i < parts.length; i++) {
+          final part = parts[i];
+          if (part.trim().isNotEmpty) {
+            inlines.add(BookText(part));
+          }
+          if (i < parts.length - 1) {
+            inlines.add(const BookLineBreak());
+          }
+        }
+        return inlines;
+      }
       return [BookText(node.text)];
     }
 
@@ -419,6 +579,29 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
       'img' => _parseInlineImage(node),
       'span' => _parseSpan(node),
       'small' || 'mark' || 'abbr' || 'q' || 'time' => _parseInlines(node.nodes),
+      'font' ||
+      'center' ||
+      'div' ||
+      'main' ||
+      'body' ||
+      'header' ||
+      'footer' ||
+      'nav' ||
+      'aside' ||
+      'details' ||
+      'summary' ||
+      'address' ||
+      'p' ||
+      'h1' ||
+      'h2' ||
+      'h3' ||
+      'h4' ||
+      'h5' ||
+      'h6' ||
+      'section' ||
+      'article' ||
+      'blockquote' =>
+        _parseInlines(node.nodes),
       _ => _handleUnhandledInline(node, tag),
     };
 
@@ -504,5 +687,83 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     }
 
     return children;
+  }
+
+  List<List<BookInline>> _splitInlinesByLineBreaks(List<BookInline> inlines) {
+    var chunks = <List<BookInline>>[[]];
+    var lastWasLineBreak = false;
+
+    for (final inline in inlines) {
+      if (inline is BookLineBreak) {
+        if (!lastWasLineBreak) {
+          chunks.add([]);
+          lastWasLineBreak = true;
+        }
+      } else {
+        lastWasLineBreak = false;
+        final splitResults = _splitSingleInline(inline);
+        for (var i = 0; i < splitResults.length; i++) {
+          final subInline = splitResults[i];
+          if (subInline != null) {
+            chunks.last.add(subInline);
+          }
+          if (i < splitResults.length - 1) {
+            chunks.add([]);
+          }
+        }
+      }
+    }
+
+    return chunks.where((c) => c.isNotEmpty).toList();
+  }
+
+  List<BookInline?> _splitSingleInline(BookInline inline) {
+    return switch (inline) {
+      BookStrong s => _wrapSplitChildren(
+          s.children,
+          (c) => BookStrong(children: c, attributes: s.attributes),
+        ),
+      BookEmphasis e => _wrapSplitChildren(
+          e.children,
+          (c) => BookEmphasis(children: c, attributes: e.attributes),
+        ),
+      BookStrike st => _wrapSplitChildren(
+          st.children,
+          (c) => BookStrike(children: c, attributes: st.attributes),
+        ),
+      BookNamedStyle ns => _wrapSplitChildren(
+          ns.inlines,
+          (c) => BookNamedStyle(
+            name: ns.name,
+            inlines: c,
+            attributes: ns.attributes,
+          ),
+        ),
+      BookLink l => _wrapSplitChildren(
+          l.children,
+          (c) => BookLink(href: l.href, children: c, attributes: l.attributes),
+        ),
+      BookSuperscript sup => _wrapSplitChildren(
+          sup.children,
+          (c) =>
+              BookSuperscript(children: c, attributes: sup.attributes),
+        ),
+      BookSubscript sub => _wrapSplitChildren(
+          sub.children,
+          (c) => BookSubscript(children: c, attributes: sub.attributes),
+        ),
+      _ => [inline],
+    };
+  }
+
+  List<BookInline?> _wrapSplitChildren(
+    List<BookInline> children,
+    BookInline Function(List<BookInline>) wrapper,
+  ) {
+    final subChunks = _splitInlinesByLineBreaks(children);
+    if (subChunks.isEmpty) return [null];
+    return subChunks
+        .map<BookInline?>((chunk) => chunk.isNotEmpty ? wrapper(chunk) : null)
+        .toList();
   }
 }

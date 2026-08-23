@@ -164,6 +164,9 @@ class EpubDecoder implements BookDecoder {
     for (final idref in spine) {
       final item = manifest[idref];
       if (item == null) continue;
+      if (idref == 'cover_page' || idref == 'title_page' || idref == 'nav') {
+        continue;
+      }
 
       final chapterPath = _joinPath(opfDir, item.href);
       final chapterFile = archive.findFile(chapterPath);
@@ -490,6 +493,33 @@ class EpubDecoder implements BookDecoder {
       return normalized;
     }
     return _joinPath(contextDir, normalized);
+  }
+
+  String _inlinesToText(List<BookInline> inlines) {
+    final buffer = StringBuffer();
+    for (final inline in inlines) {
+      switch (inline) {
+        case BookText text:
+          buffer.write(text.text);
+        case BookEmphasis emphasis:
+          buffer.write(_inlinesToText(emphasis.children));
+        case BookStrong strong:
+          buffer.write(_inlinesToText(strong.children));
+        case BookStrike strike:
+          buffer.write(_inlinesToText(strike.children));
+        case BookNamedStyle style:
+          buffer.write(_inlinesToText(style.inlines));
+        case BookLink link:
+          buffer.write(_inlinesToText(link.children));
+        case BookSuperscript sup:
+          buffer.write(_inlinesToText(sup.children));
+        case BookSubscript sub:
+          buffer.write(_inlinesToText(sub.children));
+        default:
+          break;
+      }
+    }
+    return buffer.toString();
   }
 }
 

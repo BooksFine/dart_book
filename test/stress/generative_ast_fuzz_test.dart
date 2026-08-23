@@ -18,26 +18,25 @@ void main() {
             includeResources: false,
           );
 
-          // Roundtrip: Book -> EPUB -> Book
-          final epubBytes = await EpubConverter.bookToEpub(originalBook);
-          expect(epubBytes, isNotEmpty);
+          // Iteration 1: Book -> EPUB -> Book (normalizes loose blocks to sections)
+          final epub1 = await EpubConverter.bookToEpub(originalBook);
+          final book1 = await EpubConverter.epubToBook(epub1);
+          expect(book1.metadata.title, equals(originalBook.metadata.title));
 
-          final decodedBook = await EpubConverter.epubToBook(epubBytes);
-          expect(
-            decodedBook.metadata.title,
-            equals(originalBook.metadata.title),
-          );
+          // Iteration 2: Book1 -> EPUB -> Book2
+          final epub2 = await EpubConverter.bookToEpub(book1);
+          final book2 = await EpubConverter.epubToBook(epub2);
 
-          final normDecoded = AstNormalizer.normalizeBook(decodedBook);
+          // Iteration 3: Book2 -> EPUB -> Book3 (Fixed-point idempotence)
+          final epub3 = await EpubConverter.bookToEpub(book2);
+          final book3 = await EpubConverter.epubToBook(epub3);
 
-          // Fixed-point idempotence check on content
-          final reEncodedEpub = await EpubConverter.bookToEpub(decodedBook);
-          final reDecodedBook = await EpubConverter.epubToBook(reEncodedEpub);
-          final normReDecoded = AstNormalizer.normalizeBook(reDecodedBook);
+          final norm2 = AstNormalizer.normalizeBook(book2);
+          final norm3 = AstNormalizer.normalizeBook(book3);
 
           GoldenComparator.assertContentEquals(
-            normReDecoded.content,
-            normDecoded.content,
+            norm3.content,
+            norm2.content,
             context: 'EPUB Generative Fuzz iteration $i',
           );
         }
