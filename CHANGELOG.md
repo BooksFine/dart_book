@@ -1,3 +1,10 @@
+## 0.2.1
+
+### Performance & Fixes
+- **Eliminated ReDoS Bottleneck**: Replaced regex-based whitespace trimming in `HtmlParser` with a fast $O(N)$ linear scanner (`_fastUnicodeTrim`), eliminating exponential backtracking on long sequences of whitespace and non-breaking spaces.
+- **AST Parsing Performance**: Optimized inline node collection (`_collectInlineNode`) to avoid intermediate list allocations and flattened AST traversal.
+- **Line Break Split Fast-Path**: Added fast-path exit in `_splitSingleInline` for nodes without line breaks, reducing parsing time on large chapters from tens of seconds to milliseconds.
+
 ## 0.2.0
 
 ### Added

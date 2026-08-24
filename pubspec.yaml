@@ -1,6 +1,6 @@
 name: dart_book
 description: A high-performance Dart library for parsing, serializing, and converting EPUB and FB2 e-books via a unified AST model.
-version: 0.2.0
+version: 0.2.1
 homepage: https://github.com/BooksFine/dart_book
 repository: https://github.com/BooksFine/dart_book
 issue_tracker: https://github.com/BooksFine/dart_book/issues

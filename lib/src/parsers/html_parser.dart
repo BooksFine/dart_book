@@ -18,7 +18,11 @@ import '../models/exceptions.dart';
 /// final blocks = parser.parseFromString('<h1>Заголовок</h1><p>Текст</p>');
 /// ```
 class HtmlParser implements Parser<Iterable<dom.Node>> {
-  HtmlParser({this.registrar, this.strictMode = false, this.logger});
+  HtmlParser({
+    this.registrar,
+    this.strictMode = false,
+    this.logger,
+  });
 
   @override
   final BookResourceRegistrar? registrar;
@@ -28,14 +32,54 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
 
   @override
   List<BookBlock> parseFromString(String src) {
-    final document = html.parse(src);
-    final nodes = document.body?.nodes;
-    if (nodes == null) return [];
+    dom.NodeList? nodes;
+    if (src.contains('<html') ||
+        src.contains('<!DOCTYPE') ||
+        src.contains('<!doctype') ||
+        src.contains('<?xml')) {
+      final document = html.parse(src);
+      nodes = document.body?.nodes;
+    } else {
+      final fragment = html.parseFragment(src);
+      nodes = fragment.nodes;
+    }
 
+    if (nodes == null) return [];
     return parse(nodes);
   }
 
+  static String _fastUnicodeTrim(String text) {
+    if (text.isEmpty) return text;
+    var start = 0;
+    var end = text.length - 1;
+
+    while (start <= end && _isWhitespace(text.codeUnitAt(start))) {
+      start++;
+    }
+    if (start > end) return '';
+
+    while (end >= start && _isWhitespace(text.codeUnitAt(end))) {
+      end--;
+    }
+
+    return text.substring(start, end + 1);
+  }
+
+  static bool _isWhitespace(int codeUnit) {
+    return codeUnit <= 0x20 ||
+        codeUnit == 0x00A0 ||
+        codeUnit == 0x1680 ||
+        (codeUnit >= 0x2000 && codeUnit <= 0x200A) ||
+        codeUnit == 0x202F ||
+        codeUnit == 0x205F ||
+        codeUnit == 0x3000;
+  }
+
+  static final _newlineMatchRegex = RegExp(r'[\r\n\u2028\u2029\u0085]');
+  static final _newlineSplitRegex = RegExp(r'[\r\n\u2028\u2029\u0085]+');
+
   static const _blockTags = {
+    'html',
     'p',
     'h1',
     'h2',
@@ -102,10 +146,11 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     if (node is dom.Element) {
       final tag = node.localName?.toLowerCase();
       if (_blockTags.contains(tag)) return true;
-      // If a known inline tag contains block elements, it must be treated as a block container
-      if (node.nodes.any(_isBlockNode)) return true;
-      // Any element not recognized as a known inline is treated as a block element
-      if (!_inlineTags.contains(tag)) return true;
+      if (_inlineTags.contains(tag)) {
+        if (node.children.isEmpty) return false;
+        return node.children.any(_isBlockNode);
+      }
+      return true;
     }
     return false;
   }
@@ -135,15 +180,21 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     return blocks;
   }
 
+  static bool _hasLineBreak(BookInline inline) {
+    if (inline is BookLineBreak) return true;
+    if (inline is BookEmphasis) return inline.children.any(_hasLineBreak);
+    if (inline is BookStrong) return inline.children.any(_hasLineBreak);
+    if (inline is BookStrike) return inline.children.any(_hasLineBreak);
+    if (inline is BookSuperscript) return inline.children.any(_hasLineBreak);
+    if (inline is BookSubscript) return inline.children.any(_hasLineBreak);
+    if (inline is BookNamedStyle) return inline.inlines.any(_hasLineBreak);
+    return false;
+  }
+
   List<BookBlock> _inlinesToParagraphBlocks(List<BookInline> inlines) {
     final hasContent = inlines.any((inline) {
       if (inline is BookText) {
-        final clean = inline.text.replaceAll(
-          RegExp(
-            r'^[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+|[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+$',
-          ),
-          '',
-        );
+        final clean = _fastUnicodeTrim(inline.text);
         return clean.isNotEmpty;
       }
       if (inline is BookLineBreak) return false;
@@ -151,6 +202,10 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     });
     if (!hasContent) {
       return const <BookBlock>[];
+    }
+    final hasBreaks = inlines.any(_hasLineBreak);
+    if (!hasBreaks) {
+      return [BookParagraph(inlines: inlines)];
     }
     final chunks = _splitInlinesByLineBreaks(inlines);
     if (chunks.isEmpty) return const <BookBlock>[];
@@ -538,114 +593,124 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
     );
   }
 
-  List<BookInline> _parseInlines(List<dom.Node> nodes) {
+  List<BookInline> _parseInlines(Iterable<dom.Node> nodes) {
     final inlines = <BookInline>[];
     for (final node in nodes) {
-      inlines.addAll(_parseInlineNode(node));
+      _collectInlineNode(node, inlines);
     }
     return inlines;
   }
 
-  List<BookInline> _parseInlineNode(dom.Node node) {
+  void _collectInlineNode(dom.Node node, List<BookInline> target) {
     if (node is dom.Text) {
-      if (node.text.isEmpty) return const [];
-      final hasNewline = RegExp(r'[\r\n\u2028\u2029\u0085]').hasMatch(node.text);
+      final text = node.text;
+      if (text.isEmpty) return;
+      final hasNewline = _newlineMatchRegex.hasMatch(text);
       if (hasNewline) {
-        final parts = node.text.split(RegExp(r'[\r\n\u2028\u2029\u0085]+'));
-        final inlines = <BookInline>[];
+        final parts = text.split(_newlineSplitRegex);
         for (var i = 0; i < parts.length; i++) {
           final part = parts[i];
-          final trimmedPart = part.replaceAll(
-            RegExp(
-              r'^[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+|[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+$',
-            ),
-            '',
-          );
+          final trimmedPart = _fastUnicodeTrim(part);
           if (trimmedPart.isNotEmpty) {
-            inlines.add(BookText(trimmedPart));
+            target.add(BookText(trimmedPart));
           }
           if (i < parts.length - 1) {
-            inlines.add(const BookLineBreak());
+            target.add(const BookLineBreak());
           }
         }
-        return inlines;
+        return;
       }
-      if (node.text.trim().isEmpty) {
-        return const [BookText(' ')];
+      if (text.trim().isEmpty) {
+        target.add(const BookText(' '));
+        return;
       }
-      return [BookText(node.text)];
+      target.add(BookText(text));
+      return;
     }
 
     if (node is! dom.Element) {
-      return const [];
+      return;
     }
 
     final tag = node.localName?.toLowerCase();
     final id = node.attributes['id'] ?? node.attributes['name'];
-    final inlines = <BookInline>[];
 
     if (id != null && id.isNotEmpty && tag != 'a' && tag != 'img') {
-      inlines.add(BookAnchor(id));
+      target.add(BookAnchor(id));
     }
 
-    final parsedInlines = switch (tag) {
-      'br' => const [BookLineBreak()],
-      'strong' || 'b' => [BookStrong(children: _parseInlines(node.nodes))],
-      'em' ||
-      'i' ||
-      'u' ||
-      'cite' ||
-      'var' => [BookEmphasis(children: _parseInlines(node.nodes))],
-      's' ||
-      'del' ||
-      'strike' => [BookStrike(children: _parseInlines(node.nodes))],
-      'code' || 'kbd' || 'samp' => [BookCodeSpan(node.text)],
-      'sup' => [BookSuperscript(children: _parseInlines(node.nodes))],
-      'sub' => [BookSubscript(children: _parseInlines(node.nodes))],
-      'a' => _parseLink(node),
-      'img' => _parseInlineImage(node),
-      'span' => _parseSpan(node),
-      'small' || 'mark' || 'abbr' || 'q' || 'time' => _parseInlines(node.nodes),
-      'font' ||
-      'center' ||
-      'div' ||
-      'main' ||
-      'body' ||
-      'header' ||
-      'footer' ||
-      'nav' ||
-      'aside' ||
-      'details' ||
-      'summary' ||
-      'address' ||
-      'p' ||
-      'h1' ||
-      'h2' ||
-      'h3' ||
-      'h4' ||
-      'h5' ||
-      'h6' ||
-      'section' ||
-      'article' ||
-      'blockquote' =>
-        _parseInlines(node.nodes),
-      _ => _handleUnhandledInline(node, tag),
-    };
-
-    inlines.addAll(parsedInlines);
-    return inlines;
+    switch (tag) {
+      case 'br':
+        target.add(const BookLineBreak());
+      case 'strong' || 'b':
+        target.add(BookStrong(children: _parseInlines(node.nodes)));
+      case 'em' || 'i' || 'u' || 'cite' || 'var':
+        target.add(BookEmphasis(children: _parseInlines(node.nodes)));
+      case 's' || 'del' || 'strike':
+        target.add(BookStrike(children: _parseInlines(node.nodes)));
+      case 'code' || 'kbd' || 'samp':
+        target.add(BookCodeSpan(node.text));
+      case 'sup':
+        target.add(BookSuperscript(children: _parseInlines(node.nodes)));
+      case 'sub':
+        target.add(BookSubscript(children: _parseInlines(node.nodes)));
+      case 'a':
+        target.addAll(_parseLink(node));
+      case 'img':
+        target.addAll(_parseInlineImage(node));
+      case 'span':
+        _collectSpan(node, target);
+      case 'small' ||
+            'mark' ||
+            'abbr' ||
+            'q' ||
+            'time' ||
+            'font' ||
+            'center' ||
+            'div' ||
+            'main' ||
+            'body' ||
+            'header' ||
+            'footer' ||
+            'nav' ||
+            'aside' ||
+            'details' ||
+            'summary' ||
+            'address' ||
+            'p' ||
+            'h1' ||
+            'h2' ||
+            'h3' ||
+            'h4' ||
+            'h5' ||
+            'h6' ||
+            'section' ||
+            'article' ||
+            'blockquote':
+        for (final child in node.nodes) {
+          _collectInlineNode(child, target);
+        }
+      default:
+        target.addAll(_handleUnhandledInline(node, tag));
+    }
   }
 
-  List<BookInline> _parseSpan(dom.Element node) {
-    for (final cls in node.classes) {
-      if (cls.startsWith('style-') && cls.length > 'style-'.length) {
-        final styleName = cls.substring('style-'.length);
-        return [
-          BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes)),
-        ];
+  void _collectSpan(dom.Element node, List<BookInline> target) {
+    final classAttr = node.attributes['class'];
+    if (classAttr != null && classAttr.contains('style-')) {
+      for (final cls in node.classes) {
+        if (cls.startsWith('style-') && cls.length > 'style-'.length) {
+          final styleName = cls.substring('style-'.length);
+          target.add(
+            BookNamedStyle(name: styleName, inlines: _parseInlines(node.nodes)),
+          );
+          return;
+        }
       }
     }
-    return _parseInlines(node.nodes);
+    for (final child in node.nodes) {
+      _collectInlineNode(child, target);
+    }
   }
 
   List<BookInline> _handleUnhandledInline(dom.Element node, String? tag) {
@@ -745,6 +810,9 @@ class HtmlParser implements Parser<Iterable<dom.Node>> {
   }
 
   List<BookInline?> _splitSingleInline(BookInline inline) {
+    if (!_hasLineBreak(inline)) {
+      return [inline];
+    }
     return switch (inline) {
       BookStrong s => _wrapSplitChildren(
           s.children,

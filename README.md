@@ -40,7 +40,7 @@ dependencies:
   dart_book:
     git:
       url: https://github.com/BooksFine/dart_book.git
-      ref: v0.2.0
+      ref: v0.2.1
 ```
 
 Or install the latest commit from `main`:
